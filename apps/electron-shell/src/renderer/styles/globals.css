@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/**
+ * P4 (UI design system): Tailwind 4 CSS-first tokens
+ * Themes switch via CSS variables (data-theme) only
+ */
+
+@theme {
+  --color-background: #030712; /* gray-950 */
+  --color-foreground: #ffffff;
+  --color-gray-400: #9ca3af;
+}

@@ -7,14 +7,19 @@
     "turbo.json",
     "pnpm-lock.yaml",
     "package.json",
-    "tsconfig.base.json"
+    "tsconfig.base.json",
+    "**/forge.config.ts"
   ],
   "tasks": {
     "dev": { "cache": false, "persistent": true },
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", "build/**", ".vite/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**", ".vite/**", "out/**"]
+    },
     "typecheck": { "dependsOn": ["^typecheck"], "outputs": [] },
     "lint": { "dependsOn": ["^lint"], "outputs": [] },
     "test": { "dependsOn": ["^test"], "outputs": [] },
+    "test:e2e": { "cache": false, "outputs": [] },
     "clean": { "cache": false }
   }
 }

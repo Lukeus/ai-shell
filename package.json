@@ -2,13 +2,27 @@
   "name": "ai-shell",
   "private": true,
   "packageManager": "pnpm@9.15.4",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo dev --concurrency=20",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "test": "turbo test",
+    "test:e2e": "playwright test --config=test/e2e/playwright.config.ts",
     "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@typescript-eslint/eslint-plugin": "8.50.0",
+    "@typescript-eslint/parser": "8.50.0",
+    "eslint": "9",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "playwright": "1.57.0",
+    "turbo": "2.6.3",
+    "typescript": "5.7.2"
   }
 }
