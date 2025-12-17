@@ -1,0 +1,12 @@
+{
+  "name": "packages-broker-main",
+  "private": true,
+  "scripts": {
+    "dev": "echo dev not wired yet",
+    "build": "echo build not wired yet",
+    "typecheck": "echo typecheck not wired yet",
+    "lint": "echo lint not wired yet",
+    "test": "echo test not wired yet",
+    "clean": "echo clean not wired yet"
+  }
+}
