@@ -6,6 +6,7 @@ An enterprise-grade Electron application shell with secure process architecture,
 
 - **Secure Process Architecture**: Sandboxed renderer with contextIsolation, minimal preload API
 - **VS Code-like Layout**: 6 resizable regions with keyboard shortcuts and persistent state
+- **Workspace Explorer**: File tree navigation with workspace persistence, secure filesystem operations
 - **Tailwind 4 Design System**: CSS-first tokens for consistent theming
 - **Monaco Editor**: Lazy-loaded via dynamic import (never in initial chunk)
 - **OS Keychain Integration**: Secure secrets via Electron safeStorage (no .env files)
@@ -48,6 +49,32 @@ The application features a VS Code-like layout with 6 resizable regions:
 - `Ctrl+Shift+E` (macOS: `Cmd+Shift+E`): Focus Explorer icon
 
 **State Persistence**: Layout state (panel sizes, collapsed states, active icon) persists to localStorage and restores on app restart.
+
+### Workspace Explorer
+
+The Workspace Explorer provides secure file system navigation and management:
+
+**Features**:
+- **Workspace Management**: Open folders, persist workspace across app restarts
+- **File Tree**: Recursive directory tree with lazy-loading, dotfile filtering, and folders-first sorting
+- **File Operations**: Create, rename, delete files/folders (moves to OS trash)
+- **Editor Tabs**: Multiple file tabs with deduplication, active tab highlighting
+- **Security**: All filesystem operations validated to prevent path traversal attacks
+
+**Keyboard Shortcuts**:
+- `Ctrl+K Ctrl+O` (macOS: `Cmd+K Cmd+O`): Open Folder
+- `F5`: Refresh Explorer
+
+**Menu Items**:
+- **File → Open Folder...**: Opens native folder picker
+- **File → Close Folder**: Closes current workspace
+- **File → Refresh Explorer**: Refreshes file tree (F5)
+
+**Architecture**:
+- **WorkspaceService**: Main process singleton managing workspace state and persistence
+- **FsBrokerService**: Main process filesystem broker with security validation
+- **FileTreeContext**: Renderer context managing tree state and localStorage persistence
+- All filesystem access via IPC (no Node.js access in renderer)
 
 ## Prerequisites
 

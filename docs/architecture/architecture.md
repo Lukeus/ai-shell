@@ -580,6 +580,288 @@ This prevents re-renders in components that only need actions but not state.
 2. **Initial Bundle**: Target < 500KB
 3. **First Paint**: < 2 seconds on dev machine
 
+## Workspace Management Services
+
+ai-shell implements workspace and file system management through two main-process services that provide secure, validated access to the file system for the renderer.
+
+### Service Architecture
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                   Renderer Process                             │
+│                                                                │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │  FileTreeContext (React Context)                      │   │
+│  │  • Manages file tree state                            │   │
+│  │  • Caches directory listings                          │   │
+│  │  • Handles expand/collapse                            │   │
+│  │  • Exposes actions to UI components                   │   │
+│  └───────────┬───────────────────────────────────────────┘   │
+│              │ window.api.* calls                             │
+└──────────────┼────────────────────────────────────────────────┘
+               │
+               │ IPC (invoke/handle)
+               │
+┌──────────────▼────────────────────────────────────────────────┐
+│                   Main Process                                 │
+│                                                                │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │           WorkspaceService (Singleton)               │    │
+│  │  • Manages single workspace path                     │    │
+│  │  • Persists workspace state to disk (JSON)           │    │
+│  │  • Validates paths with Zod schemas                  │    │
+│  │  • Provides workspace metadata (name, path)          │    │
+│  │  • Coordinates with FsBrokerService                  │    │
+│  └──────────────────┬───────────────────────────────────┘    │
+│                     │ uses                                     │
+│  ┌──────────────────▼───────────────────────────────────┐    │
+│  │          FsBrokerService (Singleton)                 │    │
+│  │  • Validates all file paths (no ../.. escape)        │    │
+│  │  • Provides fs.promises wrapper methods              │    │
+│  │  • Enforces workspace path boundaries                │    │
+│  │  • Implements trash operations (send to OS trash)    │    │
+│  │  • Returns FileEntry objects (Zod-validated)         │    │
+│  └──────────────────┬───────────────────────────────────┘    │
+│                     │                                          │
+│                     ▼                                          │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │      Node.js fs API + trash package                  │    │
+│  │  • fs.promises (readdir, stat, readFile, etc.)       │    │
+│  │  • trash (safe deletion to OS trash)                 │    │
+│  └──────────────────────────────────────────────────────┘    │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### WorkspaceService
+
+**Location**: `apps/electron-shell/src/main/services/WorkspaceService.ts`
+
+**Responsibilities**:
+- Manage the currently open workspace folder path
+- Persist workspace state to `~/.ai-shell/workspace-state.json`
+- Provide workspace metadata (name, path, isOpen)
+- Validate workspace paths before opening
+
+**API**:
+```typescript
+class WorkspaceService {
+  static getInstance(): WorkspaceService;
+  
+  async open(folderPath: string): Promise<WorkspaceState>;
+  async close(): Promise<void>;
+  async refresh(): Promise<void>;
+  
+  getState(): WorkspaceState;
+  isOpen(): boolean;
+}
+```
+
+**State Schema** (Zod):
+```typescript
+export const WorkspaceStateSchema = z.object({
+  currentWorkspace: z.string().nullable(),
+  workspaceName: z.string().nullable(),
+  lastOpened: z.string().nullable(),
+});
+```
+
+**Persistence**:
+- State file: `~/.ai-shell/workspace-state.json`
+- Validated on load with Zod schema
+- Corrupted files trigger fresh initialization
+- No secrets stored in state
+
+**Security**:
+- Path validation before opening workspace
+- No relative path traversal allowed
+- Directory existence check required
+- State file stored in user's home directory (secure)
+
+### FsBrokerService
+
+**Location**: `apps/electron-shell/src/main/services/FsBrokerService.ts`
+
+**Responsibilities**:
+- Provide validated file system access
+- Enforce workspace path boundaries
+- Prevent path traversal attacks (e.g., `../../../etc/passwd`)
+- Return structured FileEntry objects
+- Handle trash operations safely
+
+**API**:
+```typescript
+class FsBrokerService {
+  static getInstance(): FsBrokerService;
+  
+  async listDirectory(dirPath: string): Promise<FileEntry[]>;
+  async readFile(filePath: string): Promise<{ content: string }>;
+  async writeFile(filePath: string, content: string): Promise<void>;
+  async createFolder(folderPath: string): Promise<void>;
+  async deleteFileOrFolder(targetPath: string, useTrash: boolean): Promise<void>;
+  async renameFileOrFolder(oldPath: string, newName: string): Promise<void>;
+  async copyFileOrFolder(sourcePath: string, destPath: string): Promise<void>;
+  async pathExists(targetPath: string): Promise<boolean>;
+}
+```
+
+**FileEntry Schema** (Zod):
+```typescript
+export const FileEntrySchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  type: z.enum(['file', 'directory']),
+  size: z.number().optional(),
+  modified: z.string().optional(),
+});
+```
+
+**Security Features**:
+1. **Path Validation**: All paths resolved with `path.resolve()` and checked against workspace bounds
+2. **Traversal Prevention**: Rejects paths containing `..` that escape workspace
+3. **Workspace Enforcement**: All operations require an open workspace
+4. **Safe Deletion**: Uses `trash` package to send files to OS trash (recoverable)
+
+**Example Security Check**:
+```typescript
+private validatePath(targetPath: string): void {
+  const workspace = WorkspaceService.getInstance().getState().currentWorkspace;
+  if (!workspace) {
+    throw new Error('No workspace is currently open');
+  }
+  
+  const resolved = path.resolve(targetPath);
+  const workspaceResolved = path.resolve(workspace);
+  
+  if (!resolved.startsWith(workspaceResolved)) {
+    throw new Error('Path is outside workspace boundaries');
+  }
+}
+```
+
+### IPC Communication Flow
+
+**Example: Opening a Workspace**
+
+1. **User Action**: Clicks "File > Open Folder" or presses Ctrl+K Ctrl+O
+2. **Menu Handler** (main process): Shows native folder picker dialog
+3. **IPC Call**: `window.api.openWorkspace(folderPath)`
+4. **Main Handler**: Calls `WorkspaceService.getInstance().open(folderPath)`
+5. **Validation**: WorkspaceService validates path and checks directory exists
+6. **Persistence**: WorkspaceService saves state to `workspace-state.json`
+7. **Response**: Returns WorkspaceState to renderer
+8. **UI Update**: FileTreeContext updates state and triggers re-render
+
+**Example: Reading a Directory**
+
+1. **User Action**: Expands folder in file tree
+2. **IPC Call**: `window.api.listDirectory(dirPath)`
+3. **Main Handler**: Calls `FsBrokerService.getInstance().listDirectory(dirPath)`
+4. **Validation**: FsBrokerService validates path is within workspace
+5. **File System**: Calls `fs.promises.readdir()` and `fs.promises.stat()` for each entry
+6. **Response**: Returns FileEntry[] array (Zod-validated)
+7. **Caching**: FileTreeContext caches result to avoid redundant reads
+8. **UI Update**: FileTree component renders directory contents
+
+### UI Components
+
+**FileTreeContext** (`apps/electron-shell/src/renderer/contexts/FileTreeContext.tsx`):
+- React Context managing file tree state
+- Caches directory listings to minimize IPC calls
+- Tracks expanded directories and selection
+- Provides actions: expandDirectory, collapseDirectory, selectFile, openFile
+
+**FileTree** (`apps/electron-shell/src/renderer/components/explorer/FileTree.tsx`):
+- Recursive tree renderer with indent levels
+- Keyboard navigation (arrow keys, Enter)
+- File icons based on file extension
+- Expand/collapse with ▶ chevron icons
+
+**ExplorerPanel** (`apps/electron-shell/src/renderer/components/panels/ExplorerPanel.tsx`):
+- Container for file tree in primary sidebar
+- Displays workspace name in header
+- Shows "No Folder Open" state when no workspace
+
+**EditorTabBar** (`apps/electron-shell/src/renderer/components/editor/EditorTabBar.tsx`):
+- Horizontal tabs showing open files (basename only)
+- Active tab highlighting
+- Close buttons (× icon) on each tab
+- Click tab to switch active file
+
+### Menu Integration
+
+**Location**: `apps/electron-shell/src/main/menu.ts`
+
+Application menu with workspace operations:
+
+**File Menu**:
+- **Open Folder** (Ctrl+K Ctrl+O): Opens native folder picker, calls WorkspaceService.open()
+- **Close Folder**: Closes current workspace, calls WorkspaceService.close()
+- **Refresh Explorer** (F5): Refreshes workspace, triggers IPC event to renderer
+
+**Menu Event Flow**:
+1. User clicks menu item or uses accelerator
+2. Menu handler in main process executes
+3. For "Open Folder": dialog.showOpenDialog() → WorkspaceService.open() → send IPC event
+4. For "Refresh Explorer": send IPC event to renderer
+5. Renderer receives event via window.electron.ipcRenderer listener
+6. FileTreeContext reloads workspace state
+
+### Testing Coverage
+
+**Main Process Services** (59 tests total):
+- `WorkspaceService.test.ts`: 19 tests
+  - Singleton pattern
+  - Open/close/refresh operations
+  - State persistence and loading
+  - Corruption handling
+  - Path validation
+  - Error cases (non-existent paths, invalid JSON)
+
+- `FsBrokerService.test.ts`: 40 tests
+  - Singleton pattern
+  - All CRUD operations (list, read, write, create, delete, rename, copy)
+  - Path validation and workspace enforcement
+  - **CRITICAL**: Path traversal attack prevention (e.g., `../../../etc/passwd` rejected)
+  - Trash operations (safe deletion)
+  - Error handling (missing files, permission errors)
+
+**Renderer Components** (52 tests total):
+- `FileTreeContext.test.tsx`: 19 tests
+- `FileTree.test.tsx`: 11 tests
+- `ExplorerPanel.test.tsx`: 9 tests
+- `EditorTabBar.test.tsx`: 13 tests
+
+All tests mock `window.api.*` methods, confirming P1 compliance (no Node.js access in renderer).
+
+### Performance Considerations
+
+1. **Directory Listing**: Cached in FileTreeContext to avoid redundant IPC calls
+2. **Large Directories**: No pagination yet (future optimization if needed)
+3. **File Watching**: Not implemented (future feature: fs.watch for auto-refresh)
+4. **Debouncing**: State changes debounced (300ms) before persisting to disk
+
+### Security Model
+
+**P1 (Process Isolation)**:
+- ✅ All file system access in main process only
+- ✅ Renderer has no Node.js or fs access
+- ✅ All communication via IPC with Zod validation
+
+**P2 (Security Defaults)**:
+- ✅ Path validation on every operation
+- ✅ No relative path traversal allowed
+- ✅ Workspace boundaries strictly enforced
+
+**P3 (Secrets Management)**:
+- ✅ No secrets in workspace state
+- ✅ State file stored securely in user home directory
+- ✅ No sensitive data logged
+
+**P6 (Contracts-First)**:
+- ✅ All IPC channels defined in `packages/api-contracts`
+- ✅ FileEntry and WorkspaceState schemas defined with Zod
+- ✅ Type safety enforced at compile time and runtime
+
 ## References
 
 - [Electron Security](https://www.electronjs.org/docs/latest/tutorial/security)

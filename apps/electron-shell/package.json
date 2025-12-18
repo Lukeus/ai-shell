@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "1.0.1",
+    "monaco-editor": "0.55.1",
     "packages-api-contracts": "workspace:*",
     "packages-ui-kit": "workspace:*"
   },
