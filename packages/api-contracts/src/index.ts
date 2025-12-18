@@ -10,5 +10,9 @@
 
 // Export all types and schemas
 export * from './types/app-info';
+export * from './types/layout-state';
+export * from './types/settings';
+export * from './types/workspace';
+export * from './types/fs-broker';
 export * from './ipc-channels';
 export * from './preload-api';

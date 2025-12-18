@@ -1,12 +1,57 @@
 @import "tailwindcss";
 
+/* Base styles for body and html */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--color-surface-default);
+  color: var(--color-text-primary);
+}
+
 /**
  * P4 (UI design system): Tailwind 4 CSS-first tokens
- * Themes switch via CSS variables (data-theme) only
+ * All theme colors reference CSS variables from themes.css
+ * Themes switch via CSS variables (data-theme attribute) only
+ * 
+ * Task 5: Map CSS variables to Tailwind color tokens
+ * Components use semantic class names (bg-surface-default, text-primary, etc.)
+ * which resolve to theme-specific colors via CSS variables
  */
 
 @theme {
-  --color-background: #030712; /* gray-950 */
-  --color-foreground: #ffffff;
-  --color-gray-400: #9ca3af;
+  /* Surface colors - backgrounds for different UI elements */
+  /* Components use: bg-surface, bg-surface-secondary, bg-surface-elevated */
+  --color-surface: var(--color-surface-default);
+  --color-surface-secondary: var(--color-surface-secondary);
+  --color-surface-elevated: var(--color-surface-elevated);
+  
+  /* Border colors */
+  /* Components use: border-border */
+  --color-border: var(--color-border-default);
+  
+  /* Text colors */
+  /* Components use: text-primary, text-secondary */
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  
+  /* Accent colors - interactive elements */
+  /* Components use: bg-accent, hover:bg-accent-hover */
+  --color-accent: var(--color-accent-primary);
+  --color-accent-hover: var(--color-accent-hover);
+  
+  /* Status colors - feedback and notifications */
+  /* Components use: text-status-info, bg-status-success, etc. */
+  --color-status-info: var(--color-status-info);
+  --color-status-success: var(--color-status-success);
+  --color-status-warning: var(--color-status-warning);
+  --color-status-error: var(--color-status-error);
 }

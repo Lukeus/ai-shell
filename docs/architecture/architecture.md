@@ -420,6 +420,150 @@ test('renderer has no Node.js access', async ({ page }) => {
 - Zod schema validation
 - React components
 
+## Layout System
+
+ai-shell implements a VS Code-inspired layout with 6 resizable regions, all managed renderer-side with persistent state.
+
+### Architecture
+
+The layout system follows a React Context + localStorage pattern for state management:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    App.tsx                              │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │           LayoutProvider                         │  │
+│  │  • Manages layout state (LayoutContext)          │  │
+│  │  • Persists to localStorage (debounced 300ms)    │  │
+│  │  • Validates with LayoutStateSchema (Zod)        │  │
+│  │  • Exposes 8 actions (toggle, resize, setIcon)   │  │
+│  │  • Handles keyboard shortcuts (Ctrl+B, Ctrl+J)   │  │
+│  │  ┌────────────────────────────────────────────┐  │  │
+│  │  │        ShellLayout                         │  │  │
+│  │  │  (ui-kit component)                        │  │  │
+│  │  │  • 6 regions with CSS Grid layout          │  │  │
+│  │  │  • ResizablePanel with requestAnimFrame    │  │  │
+│  │  │  • React.memo for performance              │  │  │
+│  │  └────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │  localStorage        │
+  │  "ai-shell:layout"   │
+  │  (JSON, no secrets)  │
+  └──────────────────────┘
+```
+
+### LayoutContext
+
+**Location**: `apps/electron-shell/src/renderer/contexts/LayoutContext.tsx`
+
+Provides global layout state and actions to all renderer components:
+
+```typescript
+interface LayoutContextValue {
+  state: LayoutState;
+  actions: {
+    togglePrimarySidebar: () => void;
+    toggleSecondarySidebar: () => void;
+    toggleBottomPanel: () => void;
+    setPrimarySidebarWidth: (width: number) => void;
+    setSecondarySidebarWidth: (width: number) => void;
+    setBottomPanelHeight: (height: number) => void;
+    setActiveActivityBarIcon: (icon: ActivityBarIcon) => void;
+    resetLayout: () => void;
+  };
+}
+```
+
+**Key Features**:
+- **Debounced persistence**: State changes saved to localStorage after 300ms delay to avoid excessive writes
+- **Keyboard shortcuts**: Global handlers for Ctrl+B (primary sidebar), Ctrl+J (bottom panel), Ctrl+Shift+E (Explorer focus)
+- **Cleanup**: Event listeners removed on unmount to prevent memory leaks
+
+### useLayoutState Hook
+
+**Location**: `apps/electron-shell/src/renderer/hooks/useLayoutState.ts`
+
+Custom hook that manages localStorage synchronization:
+
+```typescript
+function useLayoutState(): [LayoutState, (state: LayoutState) => void] {
+  // 1. Initialize from localStorage (with Zod validation)
+  // 2. Provide setter that updates localStorage
+  // 3. Falls back to LAYOUT_DEFAULTS on invalid data
+}
+```
+
+**Validation**: Uses `LayoutStateSchema` from `packages/api-contracts` to ensure type safety and data integrity.
+
+### Layout State Schema
+
+**Location**: `packages/api-contracts/src/types/layout-state.ts`
+
+Defined with Zod for runtime validation:
+
+```typescript
+export const LayoutStateSchema = z.object({
+  // Panel dimensions (validated ranges)
+  primarySidebarWidth: z.number().min(200).max(600),
+  secondarySidebarWidth: z.number().min(200).max(600),
+  bottomPanelHeight: z.number().min(100).max(600),
+  
+  // Collapse states
+  primarySidebarCollapsed: z.boolean(),
+  secondarySidebarCollapsed: z.boolean(),
+  bottomPanelCollapsed: z.boolean(),
+  
+  // Active icon in activity bar
+  activeActivityBarIcon: z.enum([
+    'explorer', 'search', 'source-control',
+    'run-debug', 'extensions', 'settings'
+  ]),
+});
+
+export type LayoutState = z.infer<typeof LayoutStateSchema>;
+```
+
+**Defaults**:
+- Primary sidebar: 300px, visible
+- Secondary sidebar: 300px, collapsed
+- Bottom panel: 200px, visible
+- Active icon: `explorer`
+
+### UI Components (ui-kit)
+
+**Package**: `packages/ui-kit`
+
+Reusable layout components with 85.41% test coverage:
+
+1. **ShellLayout**: Top-level container with CSS Grid (6 regions)
+2. **ResizablePanel**: Draggable panel with resize handles (60fps via requestAnimationFrame)
+3. **ActivityBar**: Vertical icon bar with hover states
+4. **StatusBar**: Fixed-height bottom bar
+5. **PanelHeader**: Collapsible panel headers with titles
+
+**Performance optimizations**:
+- `React.memo` on all components to prevent unnecessary re-renders
+- `requestAnimationFrame` for smooth 60fps resizing
+- Debounced localStorage writes (300ms)
+
+### Context Splitting
+
+The layout system uses a single `LayoutContext` for simplicity. Future optimization (if needed) could split into:
+- **LayoutStateContext**: Read-only state (wider consumption)
+- **LayoutActionsContext**: Mutable actions (narrower consumption)
+
+This prevents re-renders in components that only need actions but not state.
+
+### Security Note
+
+**P1 (Process Isolation)**: The layout system is entirely renderer-side. No IPC communication required, no main process involvement. State persists to localStorage only (no secrets, validated with Zod).
+
+**P2 (Security Defaults)**: Layout state never contains sensitive data. The `LayoutStateSchema` enforces this at runtime.
+
 ## Performance Considerations
 
 ### P5: Performance Budgets

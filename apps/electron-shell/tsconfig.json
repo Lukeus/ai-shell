@@ -5,7 +5,11 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "packages-ui-kit": ["../../packages/ui-kit/src/index.ts"],
+      "packages-api-contracts": ["../../packages/api-contracts/src/index.ts"]
+    }
   },
   "include": [
     "src/**/*.ts",

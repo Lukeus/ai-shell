@@ -5,12 +5,49 @@ An enterprise-grade Electron application shell with secure process architecture,
 ## Features
 
 - **Secure Process Architecture**: Sandboxed renderer with contextIsolation, minimal preload API
-- **VS Code-like Layout**: Activity bar, side bars, editor area, bottom panel, status bar
+- **VS Code-like Layout**: 6 resizable regions with keyboard shortcuts and persistent state
 - **Tailwind 4 Design System**: CSS-first tokens for consistent theming
 - **Monaco Editor**: Lazy-loaded via dynamic import (never in initial chunk)
 - **OS Keychain Integration**: Secure secrets via Electron safeStorage (no .env files)
 - **Extension System**: Signed, policy-governed extensions with marketplace
 - **Agent Host**: LangChain Deep Agents with tool-based execution and audit/policy layer
+
+### Shell Layout
+
+The application features a VS Code-like layout with 6 resizable regions:
+
+```
+┌──┬──────────┬───────────────────────────┬──────────────┐
+│  │          │                           │              │
+│ A│  Primary │                           │  Secondary   │
+│ c│  Sidebar │       Editor Area         │   Sidebar    │
+│ t│          │                           │              │
+│ i│ Explorer │     (Monaco Editor)       │ AI Assistant │
+│ v│          │                           │              │
+│ i├──────────┼───────────────────────────┼──────────────┤
+│ t│          │                           │              │
+│ y│  Bottom  │      Terminal Panel       │              │
+│  │  Panel   │                           │              │
+│ B├──────────┴───────────────────────────┴──────────────┤
+│ a│              Status Bar                             │
+│ r│                                                      │
+└──┴──────────────────────────────────────────────────────┘
+```
+
+**6 Regions**:
+1. **Activity Bar** (left, 48px fixed): Explorer, Search, Source Control, Run & Debug, Extensions, Settings
+2. **Primary Sidebar** (left, resizable 200-600px): Context panel (Explorer by default)
+3. **Editor Area** (center, flexible): Main content area for Monaco editor
+4. **Secondary Sidebar** (right, resizable 200-600px): AI Assistant panel
+5. **Bottom Panel** (bottom, resizable 100-600px): Terminal panel
+6. **Status Bar** (bottom, 24px fixed): Status information
+
+**Keyboard Shortcuts**:
+- `Ctrl+B` (macOS: `Cmd+B`): Toggle primary sidebar
+- `Ctrl+J` (macOS: `Cmd+J`): Toggle bottom panel
+- `Ctrl+Shift+E` (macOS: `Cmd+Shift+E`): Focus Explorer icon
+
+**State Persistence**: Layout state (panel sizes, collapsed states, active icon) persists to localStorage and restores on app restart.
 
 ## Prerequisites
 
@@ -129,7 +166,7 @@ ai-shell/
 
 ## Documentation
 
-- [Architecture Details](docs/architecture.md)
+- [Architecture Details](docs/architecture/architecture.md)
 - [Contributing Guide](CONTRIBUTING.md)
 - [Feature Specs](specs/)
 

@@ -2,6 +2,8 @@ import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
+import { buildApplicationMenu } from './menu';
+// SettingsService is initialized lazily when first accessed via IPC handlers
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 try {
@@ -79,6 +81,8 @@ const createWindow = (): void => {
 app.on('ready', () => {
   // Register IPC handlers before creating window
   registerIPCHandlers();
+  // Build application menu
+  buildApplicationMenu();
   createWindow();
 });
 

@@ -1,0 +1,187 @@
+/**
+ * Theme System - CSS Variables
+ * 
+ * Defines 14 CSS variables that serve as the foundation for all theming in the application.
+ * Each theme overrides these variables to create distinct visual experiences.
+ * 
+ * Themes:
+ * - dark (default): Dark theme for low-light environments
+ * - light: Light theme for daytime use
+ * - high-contrast-dark: High contrast dark for accessibility
+ * - high-contrast-light: High contrast light for accessibility
+ * - system: Follows OS preference (dark/light mode)
+ * 
+ * P4 (UI design system): All theme colors via CSS variables (Tailwind 4 token contract)
+ * P1 (Process isolation): CSS variables are renderer-only (no main process involvement)
+ */
+
+/* ===================================================================
+   DEFAULT THEME (Dark)
+   Applied to :root, serves as the fallback for all themes
+   =================================================================== */
+:root {
+  /* Surface colors - backgrounds for different UI elements */
+  --color-surface-default: #1e1e1e;      /* Main background */
+  --color-surface-secondary: #252526;    /* Sidebars, secondary panels */
+  --color-surface-elevated: #2d2d30;     /* Elevated components (modals, dropdowns) */
+  
+  /* Border color */
+  --color-border-default: #3e3e42;       /* Default border color (more visible) */
+  
+  /* Text colors */
+  --color-text-primary: #cccccc;         /* Primary text color */
+  --color-text-secondary: #858585;       /* Muted/secondary text */
+  
+  /* Accent colors - interactive elements */
+  --color-accent-primary: #3b82f6;       /* Primary accent (blue-500) */
+  --color-accent-hover: #2563eb;         /* Accent hover state (blue-600) */
+  
+  /* Status colors - feedback and notifications */
+  --color-status-info: #3b82f6;          /* Info messages (blue-500) */
+  --color-status-success: #10b981;       /* Success messages (green-500) */
+  --color-status-warning: #f59e0b;       /* Warning messages (amber-500) */
+  --color-status-error: #ef4444;         /* Error messages (red-500) */
+}
+
+/* ===================================================================
+   LIGHT THEME
+   Light color scheme for daytime use
+   =================================================================== */
+[data-theme="light"] {
+  /* Surface colors - inverted from dark */
+  --color-surface-default: #ffffff;      /* White background */
+  --color-surface-secondary: #f5f5f5;    /* Light gray (gray-100) */
+  --color-surface-elevated: #e5e5e5;     /* Slightly darker gray (gray-200) */
+  
+  /* Border color */
+  --color-border-default: #d4d4d4;       /* Medium gray border (gray-300) */
+  
+  /* Text colors - inverted from dark */
+  --color-text-primary: #000000;         /* Black text */
+  --color-text-secondary: #737373;       /* Medium gray text (gray-500) */
+  
+  /* Accent colors - same as dark theme for consistency */
+  --color-accent-primary: #3b82f6;       /* Blue-500 */
+  --color-accent-hover: #2563eb;         /* Blue-600 */
+  
+  /* Status colors - same as dark theme for consistency */
+  --color-status-info: #3b82f6;          /* Blue-500 */
+  --color-status-success: #10b981;       /* Green-500 */
+  --color-status-warning: #f59e0b;       /* Amber-500 */
+  --color-status-error: #ef4444;         /* Red-500 */
+}
+
+/* ===================================================================
+   HIGH CONTRAST DARK THEME
+   High contrast dark theme for accessibility
+   =================================================================== */
+[data-theme="high-contrast-dark"] {
+  /* Surface colors - pure black for maximum contrast */
+  --color-surface-default: #000000;      /* Pure black */
+  --color-surface-secondary: #000000;    /* Pure black (no variation) */
+  --color-surface-elevated: #1a1a1a;     /* Slight elevation */
+  
+  /* Border color - white for maximum contrast */
+  --color-border-default: #ffffff;       /* White borders */
+  
+  /* Text colors - pure white for maximum contrast */
+  --color-text-primary: #ffffff;         /* Pure white */
+  --color-text-secondary: #ffffff;       /* Pure white (no muted text) */
+  
+  /* Accent colors - cyan for visibility */
+  --color-accent-primary: #00ffff;       /* Cyan (high visibility) */
+  --color-accent-hover: #00e5e5;         /* Slightly darker cyan */
+  
+  /* Status colors - bright, saturated colors for high contrast */
+  --color-status-info: #00ffff;          /* Cyan */
+  --color-status-success: #00ff00;       /* Bright green */
+  --color-status-warning: #ffff00;       /* Yellow */
+  --color-status-error: #ff0000;         /* Bright red */
+}
+
+/* ===================================================================
+   HIGH CONTRAST LIGHT THEME
+   High contrast light theme for accessibility
+   =================================================================== */
+[data-theme="high-contrast-light"] {
+  /* Surface colors - pure white for maximum contrast */
+  --color-surface-default: #ffffff;      /* Pure white */
+  --color-surface-secondary: #ffffff;    /* Pure white (no variation) */
+  --color-surface-elevated: #f0f0f0;     /* Slight elevation */
+  
+  /* Border color - black for maximum contrast */
+  --color-border-default: #000000;       /* Black borders */
+  
+  /* Text colors - pure black for maximum contrast */
+  --color-text-primary: #000000;         /* Pure black */
+  --color-text-secondary: #000000;       /* Pure black (no muted text) */
+  
+  /* Accent colors - blue for visibility */
+  --color-accent-primary: #0000ff;       /* Pure blue */
+  --color-accent-hover: #0000cc;         /* Slightly darker blue */
+  
+  /* Status colors - bright, saturated colors for high contrast */
+  --color-status-info: #0000ff;          /* Pure blue */
+  --color-status-success: #008000;       /* Dark green */
+  --color-status-warning: #ff8800;       /* Orange */
+  --color-status-error: #cc0000;         /* Dark red */
+}
+
+/* ===================================================================
+   SYSTEM THEME
+   Follows OS preference using prefers-color-scheme media query
+   =================================================================== */
+
+/* System theme in dark mode - use dark theme variables */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    /* Surface colors - dark theme */
+    --color-surface-default: #0a0a0a;
+    --color-surface-secondary: #1a1a1a;
+    --color-surface-elevated: #2a2a2a;
+    
+    /* Border color */
+    --color-border-default: #3a3a3a;
+    
+    /* Text colors */
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #a0a0a0;
+    
+    /* Accent colors */
+    --color-accent-primary: #3b82f6;
+    --color-accent-hover: #2563eb;
+    
+    /* Status colors */
+    --color-status-info: #3b82f6;
+    --color-status-success: #10b981;
+    --color-status-warning: #f59e0b;
+    --color-status-error: #ef4444;
+  }
+}
+
+/* System theme in light mode - use light theme variables */
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    /* Surface colors - light theme */
+    --color-surface-default: #ffffff;
+    --color-surface-secondary: #f5f5f5;
+    --color-surface-elevated: #e5e5e5;
+    
+    /* Border color */
+    --color-border-default: #d4d4d4;
+    
+    /* Text colors */
+    --color-text-primary: #000000;
+    --color-text-secondary: #737373;
+    
+    /* Accent colors */
+    --color-accent-primary: #3b82f6;
+    --color-accent-hover: #2563eb;
+    
+    /* Status colors */
+    --color-status-info: #3b82f6;
+    --color-status-success: #10b981;
+    --color-status-warning: #f59e0b;
+    --color-status-error: #ef4444;
+  }
+}

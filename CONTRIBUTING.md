@@ -236,6 +236,115 @@ test('should verify security', async ({ page }) => {
 });
 ```
 
+## Adding Layout Panels
+
+To add a new panel to the shell layout:
+
+### Step 1: Create the Panel Component
+
+Create your panel component in `apps/electron-shell/src/renderer/components/layout/`:
+
+```typescript
+// MyNewPanel.tsx
+import React from 'react';
+
+export const MyNewPanel: React.FC = () => {
+  return (
+    <div className="flex h-full flex-col bg-surface-default">
+      <div className="border-b border-border-default p-4">
+        <h2 className="text-lg font-semibold">My New Panel</h2>
+      </div>
+      <div className="flex-1 overflow-auto p-4">
+        {/* Panel content */}
+      </div>
+    </div>
+  );
+};
+```
+
+### Step 2: Add Panel to ShellLayout
+
+Update `apps/electron-shell/src/renderer/App.tsx` to include your panel:
+
+```typescript
+import { MyNewPanel } from './components/layout/MyNewPanel';
+
+<ShellLayout
+  activityBar={<ActivityBar ... />}
+  primarySidebar={<ExplorerPanel />}
+  editor={<EditorPlaceholder />}
+  secondarySidebar={<MyNewPanel />}  {/* Replace AIAssistantPanel */}
+  bottomPanel={<TerminalPanel />}
+  statusBar={<StatusBar />}
+  primarySidebarWidth={state.primarySidebarWidth}
+  // ... rest of props
+/>
+```
+
+### Step 3: Access Layout State (Optional)
+
+If your panel needs to interact with layout state:
+
+```typescript
+import { useLayoutContext } from '../../contexts/LayoutContext';
+
+export const MyNewPanel: React.FC = () => {
+  const { state, actions } = useLayoutContext();
+  
+  const handleToggleSidebar = () => {
+    actions.toggleSecondarySidebar();
+  };
+  
+  return (
+    <div>
+      <button onClick={handleToggleSidebar}>Toggle</button>
+      <p>Width: {state.secondarySidebarWidth}px</p>
+    </div>
+  );
+};
+```
+
+### Step 4: Add Tests
+
+Create unit tests for your panel:
+
+```typescript
+// MyNewPanel.test.tsx
+import { render, screen } from '@testing-library/react';
+import { MyNewPanel } from './MyNewPanel';
+
+describe('MyNewPanel', () => {
+  it('renders panel title', () => {
+    render(<MyNewPanel />);
+    expect(screen.getByText('My New Panel')).toBeInTheDocument();
+  });
+});
+```
+
+### Step 5: Update E2E Tests
+
+Add E2E test coverage in `test/e2e/shell-layout.spec.ts`:
+
+```typescript
+test('new panel is visible', async ({ page }) => {
+  const panel = await page.locator('text=My New Panel');
+  await expect(panel).toBeVisible();
+});
+```
+
+### Layout Component API Reference
+
+For detailed component props and usage, see:
+- `packages/ui-kit/src/components/ShellLayout/ShellLayout.tsx`
+- `packages/ui-kit/src/components/ResizablePanel/ResizablePanel.tsx`
+- `packages/api-contracts/src/types/layout-state.ts` (LayoutState schema)
+
+**Key guidelines**:
+- All panels should handle their own scrolling (use `overflow-auto`)
+- Use Tailwind 4 design tokens for colors (`bg-surface-default`, `border-border-default`)
+- Test with both collapsed and expanded states
+- Verify keyboard shortcuts still work after changes
+
 ## Pull Request Guidelines
 
 1. **One feature per PR**: Keep changes focused
