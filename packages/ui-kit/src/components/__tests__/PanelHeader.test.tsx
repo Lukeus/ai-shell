@@ -66,14 +66,14 @@ describe('PanelHeader', () => {
     expect(button).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('renders chevron down icon when collapsed', () => {
+  it('renders chevron icon with rotation when collapsed', () => {
     const { container } = render(<PanelHeader title="Explorer" collapsed={true} onToggleCollapse={mockOnToggleCollapse} />);
     
-    // Check for chevron down path (M19 9l-7 7-7-7)
+    // Check for chevron path (always up, rotated via style)
     const svg = container.querySelector('svg');
     expect(svg).toBeInTheDocument();
-    const path = svg?.querySelector('path[d="M19 9l-7 7-7-7"]');
-    expect(path).toBeInTheDocument();
+    // The chevron is rotated 180deg when collapsed
+    expect(svg).toHaveStyle({ transform: 'rotate(180deg)' });
   });
 
   it('renders chevron up icon when not collapsed', () => {
@@ -84,5 +84,7 @@ describe('PanelHeader', () => {
     expect(svg).toBeInTheDocument();
     const path = svg?.querySelector('path[d="M5 15l7-7 7 7"]');
     expect(path).toBeInTheDocument();
+    // The chevron is not rotated when not collapsed
+    expect(svg).toHaveStyle({ transform: 'rotate(0deg)' });
   });
 });

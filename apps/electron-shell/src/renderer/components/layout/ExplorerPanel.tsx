@@ -119,27 +119,37 @@ export function ExplorerPanel() {
   // Empty state: no workspace
   if (!workspace) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full bg-surface">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--panel-border)]">
-          <h2 className="text-sm font-semibold text-[var(--panel-fg)]">EXPLORER</h2>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-surface-secondary">
+          <h2 className="text-xs font-bold text-primary uppercase tracking-wider">EXPLORER</h2>
         </div>
 
         {/* Empty state */}
-        <div className="flex flex-col items-center justify-center flex-1 px-4 text-center text-[var(--secondary-fg)]">
+        <div className="flex flex-col items-center justify-center flex-1 px-4 text-center text-secondary animate-fade-in">
           <svg
-            width="48"
-            height="48"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className="mb-4 opacity-50"
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="mb-6 opacity-40"
           >
-            <path d="M1 2h5l1 2h8v10H1V2z" />
+            <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z" />
           </svg>
-          <p className="text-sm mb-4">No folder open</p>
+          <p className="text-sm mb-6 text-tertiary">No folder open</p>
           <button
             onClick={openWorkspace}
-            className="px-4 py-2 text-sm rounded bg-[var(--button-bg)] text-[var(--button-fg)] hover:bg-[var(--button-hover-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)]"
+            className="
+              px-5 py-2.5 text-sm font-medium rounded-lg
+              bg-accent text-primary
+              hover:bg-accent-hover hover:scale-105
+              active:scale-95
+              transition-all duration-200
+              shadow-lg
+            "
+            style={{ boxShadow: '0 4px 12px var(--color-glow-accent)' }}
           >
             Open Folder
           </button>
@@ -151,28 +161,38 @@ export function ExplorerPanel() {
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full bg-surface">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--panel-border)]">
-          <h2 className="text-sm font-semibold text-[var(--panel-fg)]">{workspace.name}</h2>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-surface-secondary">
+          <h2 className="text-xs font-bold text-primary uppercase tracking-wider">{workspace.name}</h2>
         </div>
 
         {/* Error state */}
-        <div className="flex flex-col items-center justify-center flex-1 px-4 text-center text-[var(--error-fg)]">
+        <div className="flex flex-col items-center justify-center flex-1 px-4 text-center text-status-error animate-fade-in">
           <svg
-            width="48"
-            height="48"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className="mb-4"
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="mb-6"
           >
-            <path d="M8 1L1 15h14L8 1zm0 3l4.5 10h-9L8 4zm0 3v3h1V7H8zm0 4v1h1v-1H8z" />
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
           <p className="text-sm font-semibold mb-2">Error loading files</p>
-          <p className="text-xs mb-4 text-[var(--secondary-fg)]">{error}</p>
+          <p className="text-xs mb-6 text-secondary">{error}</p>
           <button
             onClick={handleRetry}
-            className="px-4 py-2 text-sm rounded bg-[var(--button-bg)] text-[var(--button-fg)] hover:bg-[var(--button-hover-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)]"
+            className="
+              px-5 py-2.5 text-sm font-medium rounded-lg
+              bg-accent text-primary
+              hover:bg-accent-hover hover:scale-105
+              active:scale-95
+              transition-all duration-200
+            "
           >
             Retry
           </button>
@@ -183,65 +203,123 @@ export function ExplorerPanel() {
 
   // Normal state: workspace open
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-surface">
       {/* Header with actions */}
-      <div className="flex flex-col border-b border-[var(--panel-border)]">
+      <div className="flex flex-col border-b border-border-subtle bg-surface-secondary">
         <div className="flex items-center justify-between px-4 py-2">
-          <h2 className="text-sm font-semibold text-[var(--panel-fg)] truncate">
+          <h2 className="text-xs font-bold text-primary uppercase tracking-wider truncate">
             {workspace.name}
           </h2>
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-1 px-2 pb-2">
+        <div className="flex items-center gap-0.5 px-2 pb-2">
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-1 rounded hover:bg-[var(--button-hover-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)] disabled:opacity-50"
-            title="Refresh"
-            aria-label="Refresh"
+            className="
+              p-1 rounded transition-all duration-200
+              hover:bg-surface-hover
+              active:scale-95 disabled:opacity-50
+              text-secondary hover:text-primary
+            "
+            title="Refresh Explorer"
+            aria-label="Refresh Explorer"
           >
             <svg
               width="16"
               height="16"
               viewBox="0 0 16 16"
-              fill="currentColor"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               className={isRefreshing ? 'animate-spin' : ''}
             >
-              <path d="M13.5 2v4h-4M2.5 14v-4h4M13.5 6A6 6 0 104 2.5M2.5 10A6 6 0 1012 13.5" />
+              <path d="M14 8a6 6 0 1 1-6-6" />
+              <path d="M14 2v4h-4" />
             </svg>
           </button>
 
           <button
             onClick={handleNewFile}
-            className="p-1 rounded hover:bg-[var(--button-hover-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)]"
-            title="New File"
+            className="
+              p-1 rounded transition-all duration-200
+              hover:bg-surface-hover
+              active:scale-95
+              text-secondary hover:text-primary
+            "
+            title="New File..."
             aria-label="New File"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M10 1H3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V5l-4-4zM9 2l3 3H9V2zm0 6h2v1H9v2H8V9H6V8h2V6h1v2z" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6L9 2z" />
+              <path d="M9 2v4h4" />
+              <path d="M8 8v4" />
+              <path d="M6 10h4" />
             </svg>
           </button>
 
           <button
             onClick={handleNewFolder}
-            className="p-1 rounded hover:bg-[var(--button-hover-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)]"
-            title="New Folder"
+            className="
+              p-1 rounded transition-all duration-200
+              hover:bg-surface-hover
+              active:scale-95
+              text-secondary hover:text-primary
+            "
+            title="New Folder..."
             aria-label="New Folder"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M14 4h-4l-1-1H3a1 1 0 00-1 1v8a1 1 0 001 1h11a1 1 0 001-1V5a1 1 0 00-1-1zm-3 5h-1v1H9v-1H8V8h1V7h1v1h1v1z" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 4v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H8L7 3H3a1 1 0 0 0-1 1z" />
+              <path d="M8 7v4" />
+              <path d="M6 9h4" />
             </svg>
           </button>
 
           <button
             onClick={handleCollapseAll}
-            className="p-1 rounded hover:bg-[var(--button-hover-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)]"
-            title="Collapse All"
+            className="
+              p-1 rounded transition-all duration-200
+              hover:bg-surface-hover
+              active:scale-95
+              text-secondary hover:text-primary
+            "
+            title="Collapse Folders in Explorer"
             aria-label="Collapse All"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M9 9H4v1h5v3l4-4-4-4v3zM2 4h12v1H2zM2 11h2v1H2z" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 6l5 5 5-5" />
+              <path d="M3 2l5 5 5-5" />
             </svg>
           </button>
         </div>

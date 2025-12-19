@@ -1,20 +1,26 @@
 @import "tailwindcss";
 
+/* VS Code Dark+ Design Tokens - Single source of truth */
+@import "./vscode-tokens.css";
+
 /* Base styles for body and html */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-
 html,
 body,
 #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--color-surface-default);
-  color: var(--color-text-primary);
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size-ui);
+  line-height: var(--vscode-line-height-ui);
+  font-weight: var(--vscode-font-weight-normal);
 }
 
 /**
@@ -28,30 +34,232 @@ body,
  */
 
 @theme {
-  /* Surface colors - backgrounds for different UI elements */
-  /* Components use: bg-surface, bg-surface-secondary, bg-surface-elevated */
-  --color-surface: var(--color-surface-default);
-  --color-surface-secondary: var(--color-surface-secondary);
-  --color-surface-elevated: var(--color-surface-elevated);
+  /* ===================================================================
+     VS CODE DARK+ TOKENS MAPPED TO TAILWIND
+     All colors, spacing, and sizing now reference vscode-tokens.css
+     =================================================================== */
   
-  /* Border colors */
-  /* Components use: border-border */
-  --color-border: var(--color-border-default);
+  /* Surface colors - mapped from VS Code backgrounds */
+  --color-surface: var(--vscode-editor-background);
+  --color-surface-secondary: var(--vscode-sidebar-background);
+  --color-surface-elevated: var(--vscode-activityBar-background);
+  --color-surface-hover: var(--vscode-hover-background);
   
-  /* Text colors */
-  /* Components use: text-primary, text-secondary */
-  --color-text-primary: var(--color-text-primary);
-  --color-text-secondary: var(--color-text-secondary);
+  /* Border colors - mapped from VS Code borders */
+  --color-border: var(--vscode-border);
+  --color-border-subtle: var(--vscode-border-subtle);
+  --color-border-focus: var(--vscode-focus-border);
   
-  /* Accent colors - interactive elements */
-  /* Components use: bg-accent, hover:bg-accent-hover */
-  --color-accent: var(--color-accent-primary);
-  --color-accent-hover: var(--color-accent-hover);
+  /* Text colors - mapped from VS Code foreground */
+  --color-text-primary: var(--vscode-foreground);
+  --color-text-secondary: var(--vscode-foreground-secondary);
+  --color-text-tertiary: var(--vscode-foreground-muted);
+  --color-text-link: var(--vscode-accent);
   
-  /* Status colors - feedback and notifications */
-  /* Components use: text-status-info, bg-status-success, etc. */
-  --color-status-info: var(--color-status-info);
-  --color-status-success: var(--color-status-success);
-  --color-status-warning: var(--color-status-warning);
-  --color-status-error: var(--color-status-error);
+  /* Accent colors - mapped from VS Code accent */
+  --color-accent: var(--vscode-accent);
+  --color-accent-hover: var(--vscode-focus-border);
+  
+  /* Selection colors - mapped from VS Code selection */
+  --color-selection: var(--vscode-selection-background);
+  --color-selection-text: var(--vscode-foreground);
+  
+  /* Status colors - keep for semantic usage */
+  --color-status-info: var(--vscode-statusBar-background);
+  --color-status-success: #4ec9b0;
+  --color-status-warning: #d7ba7d;
+  --color-status-error: #f48771;
+  
+  /* Border radius - VS Code uses sharp corners */
+  --radius-sm: var(--vscode-border-radius);
+  --radius-DEFAULT: var(--vscode-border-radius);
+  --radius-md: var(--vscode-border-radius);
+  --radius-lg: var(--vscode-border-radius-small);
+  --radius-xl: var(--vscode-border-radius-small);
+  
+  /* Transitions - VS Code standard timings */
+  --duration-fast: var(--vscode-transition-duration-fast);
+  --duration-normal: var(--vscode-transition-duration-normal);
+  --duration-slow: var(--vscode-transition-duration-normal);
+  
+  /* Spacing - VS Code 4px scale */
+  --spacing-1: var(--vscode-space-1);
+  --spacing-2: var(--vscode-space-2);
+  --spacing-3: var(--vscode-space-3);
+  --spacing-4: var(--vscode-space-4);
+  --spacing-5: var(--vscode-space-5);
+  --spacing-6: var(--vscode-space-6);
+  
+  /* Component sizing - VS Code exact measurements */
+  --size-activityBar-width: var(--vscode-activityBar-width);
+  --size-tab-height: var(--vscode-tab-height);
+  --size-statusBar-height: var(--vscode-statusBar-height);
+  --size-list-row: var(--vscode-list-rowHeight);
+}
+
+/* ===================================================================
+   CUSTOM SCROLLBARS - VS Code style
+   Thin scrollbars with sharp corners, minimal styling
+   =================================================================== */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+  border-radius: 0;
+  border: none;
+  transition: background var(--vscode-transition-duration-fast) var(--vscode-transition-timing);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.7);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(191, 191, 191, 0.4);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(121, 121, 121, 0.4) transparent;
+}
+
+/* ===================================================================
+   TEXT SELECTION
+   Custom selection colors that match the theme
+   =================================================================== */
+::selection {
+  background: var(--color-selection);
+  color: var(--color-selection-text);
+}
+
+::-moz-selection {
+  background: var(--color-selection);
+  color: var(--color-selection-text);
+}
+
+/* ===================================================================
+   ANIMATIONS
+   Reusable keyframe animations for UI elements
+   =================================================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 8px var(--color-glow-accent);
+  }
+  50% {
+    box-shadow: 0 0 16px var(--color-glow-accent);
+  }
+}
+
+/* Animation utility classes */
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal) ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp var(--duration-normal) ease-out;
+}
+
+.animate-slide-in-down {
+  animation: slideInDown var(--duration-normal) ease-out;
+}
+
+.animate-scale-up {
+  animation: scaleUp var(--duration-normal) ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* ===================================================================
+   FOCUS STYLES
+   Consistent focus indicators for accessibility
+   =================================================================== */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
 }

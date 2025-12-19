@@ -1,0 +1,122 @@
+/**
+ * VS Code Dark+ Design Tokens
+ * 
+ * Single source of truth for all design values matching VS Code Dark+ theme exactly.
+ * All values extracted from official VS Code Dark+ theme.
+ * 
+ * Usage: Import this FIRST in globals.css, then map to Tailwind tokens.
+ */
+
+:root {
+  /* ===================================================================
+     COLOR TOKENS - Exact VS Code Dark+ values
+     =================================================================== */
+  
+  /* Background colors */
+  --vscode-editor-background: #1e1e1e;
+  --vscode-sidebar-background: #252526;
+  --vscode-activityBar-background: #333333;
+  --vscode-statusBar-background: #007acc;
+  --vscode-titleBar-activeBackground: #3c3c3c;
+  
+  /* Tab colors */
+  --vscode-tab-activeBackground: #1e1e1e;
+  --vscode-tab-inactiveBackground: #2d2d2d;
+  --vscode-tab-border: #252526;
+  --vscode-tab-activeBorderTop: #007acc;
+  
+  /* Border colors */
+  --vscode-border: #252526;
+  --vscode-border-subtle: #1e1e1e;
+  --vscode-panel-border: #252526;
+  
+  /* Text colors */
+  --vscode-foreground: #cccccc;
+  --vscode-foreground-secondary: #969696;
+  --vscode-foreground-muted: #6a6a6a;
+  
+  /* Interactive colors */
+  --vscode-hover-background: #2a2d2e;
+  --vscode-selection-background: #264f78;
+  --vscode-focus-border: #007acc;
+  --vscode-accent: #007acc;
+  
+  /* List/Tree colors */
+  --vscode-list-hoverBackground: #2a2d2e;
+  --vscode-list-activeSelectionBackground: #094771;
+  --vscode-list-inactiveSelectionBackground: #37373d;
+  --vscode-list-focusOutline: #007acc;
+  
+  /* Input colors */
+  --vscode-input-background: #3c3c3c;
+  --vscode-input-border: #3c3c3c;
+  
+  /* ===================================================================
+     SPACING TOKENS - 4px base scale
+     =================================================================== */
+  --vscode-space-1: 4px;   /* 4px */
+  --vscode-space-2: 8px;   /* 8px */
+  --vscode-space-3: 12px;  /* 12px */
+  --vscode-space-4: 16px;  /* 16px */
+  --vscode-space-5: 20px;  /* 20px */
+  --vscode-space-6: 24px;  /* 24px */
+  
+  /* ===================================================================
+     TYPOGRAPHY TOKENS
+     =================================================================== */
+  
+  /* Font families */
+  --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --vscode-editor-font-family: Consolas, "Courier New", monospace;
+  
+  /* Font sizes */
+  --vscode-font-size-ui: 13px;
+  --vscode-font-size-small: 12px;
+  --vscode-font-size-large: 14px;
+  
+  /* Font weights */
+  --vscode-font-weight-normal: 400;
+  --vscode-font-weight-semibold: 600;
+  
+  /* Line heights */
+  --vscode-line-height-ui: 1.4;
+  --vscode-line-height-compact: 1.2;
+  
+  /* ===================================================================
+     SIZING TOKENS - Exact VS Code measurements
+     =================================================================== */
+  --vscode-activityBar-width: 48px;
+  --vscode-activityBar-iconSize: 24px;
+  --vscode-tab-height: 35px;
+  --vscode-statusBar-height: 22px;
+  --vscode-titleBar-height: 35px;
+  --vscode-list-rowHeight: 22px;
+  --vscode-panelHeader-height: 35px;
+  
+  /* ===================================================================
+     BORDER TOKENS
+     =================================================================== */
+  --vscode-border-width: 1px;
+  --vscode-border-radius: 0px;        /* VS Code uses sharp corners */
+  --vscode-border-radius-small: 2px;  /* Rare cases like buttons */
+  
+  /* ===================================================================
+     TRANSITION TOKENS
+     =================================================================== */
+  --vscode-transition-duration-fast: 120ms;
+  --vscode-transition-duration-normal: 160ms;
+  --vscode-transition-timing: ease;
+  
+  /* ===================================================================
+     SHADOW TOKENS - VS Code uses minimal shadows
+     =================================================================== */
+  --vscode-shadow-none: none;
+  --vscode-shadow-focus: 0 0 0 1px var(--vscode-focus-border);
+  
+  /* ===================================================================
+     Z-INDEX TOKENS
+     =================================================================== */
+  --vscode-z-base: 0;
+  --vscode-z-dropdown: 1000;
+  --vscode-z-modal: 2000;
+}

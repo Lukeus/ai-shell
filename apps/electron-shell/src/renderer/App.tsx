@@ -159,12 +159,12 @@ function AppContent() {
         statusBar={
           <StatusBar
             leftContent={
-              <span className="text-xs">
+              <span className="text-xs text-primary font-medium">
                 {workspace ? workspace.name : 'No Folder Open'}
               </span>
             }
             rightContent={
-              <span className="text-xs text-gray-400">ai-shell v0.0.1</span>
+              <span className="text-xs text-secondary">ai-shell v0.0.1</span>
             }
           />
         }

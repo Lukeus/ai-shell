@@ -79,12 +79,14 @@ describe('ResizablePanel', () => {
   it('applies correct cursor for horizontal panels', () => {
     const { container } = render(<ResizablePanel {...defaultProps} direction="horizontal" />);
     const separator = container.querySelector('[role="separator"]');
-    expect(separator).toHaveClass('cursor-ew-resize');
+    // VS Code uses cursor-col-resize for horizontal resizing
+    expect(separator).toHaveClass('cursor-col-resize');
   });
 
   it('applies correct cursor for vertical panels', () => {
     const { container } = render(<ResizablePanel {...defaultProps} direction="vertical" />);
     const separator = container.querySelector('[role="separator"]');
-    expect(separator).toHaveClass('cursor-ns-resize');
+    // VS Code uses cursor-row-resize for vertical resizing
+    expect(separator).toHaveClass('cursor-row-resize');
   });
 });

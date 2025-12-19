@@ -49,11 +49,10 @@ export function EditorTabBar() {
 
   return (
     <div
-      className="flex items-center border-b overflow-x-auto"
+      className="flex items-center bg-surface-secondary border-b border-border-subtle overflow-x-auto scrollbar-thin"
       style={{
-        backgroundColor: 'var(--panel-bg)',
-        borderColor: 'var(--panel-border)',
-        height: '40px',
+        height: '35px',
+        scrollbarWidth: 'thin',
       }}
     >
       {openTabs.map((filePath, index) => {
@@ -64,49 +63,83 @@ export function EditorTabBar() {
           <div
             key={filePath}
             onClick={() => handleTabClick(index)}
-            className="flex items-center gap-2 px-4 py-2 cursor-pointer select-none border-b-2 hover:bg-opacity-80"
+            className={`
+              relative flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none
+              border-r border-border-subtle
+              transition-all duration-150
+              group
+              ${
+                isActive
+                  ? 'bg-surface text-primary border-t-2 border-t-accent'
+                  : 'bg-surface-secondary text-secondary hover:bg-surface-hover hover:text-primary'
+              }
+            `}
             style={{
-              backgroundColor: isActive ? 'var(--panel-bg)' : 'transparent',
-              color: isActive ? 'var(--editor-fg)' : 'var(--secondary-fg)',
-              borderBottomColor: isActive ? 'var(--accent-color, #007acc)' : 'transparent',
-              minWidth: '100px',
-              maxWidth: '200px',
+              minWidth: '120px',
+              maxWidth: '180px',
+              marginTop: isActive ? '-2px' : '0',
             }}
             title={filePath}
           >
-            {/* File basename */}
-            <span
-              className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-              style={{ fontSize: '13px' }}
+            {/* File icon */}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="flex-shrink-0 opacity-70"
             >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+
+            {/* File basename */}
+            <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium">
               {basename}
             </span>
 
             {/* Close button */}
             <button
               onClick={(e) => handleCloseClick(e, index)}
-              className="flex items-center justify-center hover:bg-opacity-20 rounded"
+              className="
+                flex items-center justify-center rounded
+                opacity-0 group-hover:opacity-100
+                hover:bg-surface-elevated
+                transition-all duration-150
+                flex-shrink-0
+              "
               style={{
                 width: '20px',
                 height: '20px',
-                backgroundColor: 'transparent',
-                color: 'inherit',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
               }}
               aria-label={`Close ${basename}`}
             >
               <svg
-                width="12"
-                height="12"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <path d="M8 8.707l3.646 3.647.708-.707L8.707 8l3.647-3.646-.707-.708L8 7.293 4.354 3.646l-.707.708L7.293 8l-3.646 3.646.707.707L8 8.707z" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
+
+            {/* Active indicator line at top */}
+            {isActive && (
+              <div
+                className="absolute top-0 left-0 right-0 h-0.5 bg-accent"
+                style={{ marginTop: '-2px' }}
+              />
+            )}
           </div>
         );
       })}

@@ -35,32 +35,38 @@ export interface PanelHeaderProps {
  */
 export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-      {/* Panel title */}
-      <h2 className="text-sm font-semibold text-primary uppercase tracking-wide">
-        {title}
-      </h2>
+    <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle bg-surface-secondary">
+      {/* Panel title with icon */}
+      <div className="flex items-center gap-2">
+        <div className="w-1 h-5 bg-gradient-to-b from-accent-gradient-from to-accent-gradient-to rounded-full" />
+        <h2 className="text-xs font-bold text-primary uppercase tracking-wider">
+          {title}
+        </h2>
+      </div>
       
       {/* Collapse/expand button */}
       <button
         onClick={onToggleCollapse}
-        className="p-1 hover:bg-surface-secondary rounded transition-colors"
+        className="
+          p-1.5 rounded-md transition-all duration-200
+          hover:bg-surface-hover hover:scale-110
+          active:scale-95
+          group
+        "
         aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
         aria-expanded={!collapsed}
       >
         <svg
-          className="w-4 h-4 text-secondary"
+          className="w-4 h-4 text-secondary transition-transform duration-200 group-hover:text-primary"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          style={{
+            transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
         >
-          {collapsed ? (
-            // Chevron down for collapsed panels
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          ) : (
-            // Chevron up for expanded panels
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          )}
+          {/* Chevron up - rotates 180deg when collapsed */}
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
         </svg>
       </button>
     </div>

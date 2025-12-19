@@ -21,26 +21,52 @@
    =================================================================== */
 :root {
   /* Surface colors - backgrounds for different UI elements */
-  --color-surface-default: #1e1e1e;      /* Main background */
-  --color-surface-secondary: #252526;    /* Sidebars, secondary panels */
-  --color-surface-elevated: #2d2d30;     /* Elevated components (modals, dropdowns) */
+  --color-surface-default: #0d1117;      /* Main background - deeper, richer dark */
+  --color-surface-secondary: #161b22;    /* Sidebars, secondary panels */
+  --color-surface-elevated: #1f2937;     /* Elevated components (modals, dropdowns) */
+  --color-surface-hover: #21262d;        /* Hover state for surfaces */
   
-  /* Border color */
-  --color-border-default: #3e3e42;       /* Default border color (more visible) */
+  /* Border colors */
+  --color-border-default: #30363d;       /* Default border color */
+  --color-border-subtle: #21262d;        /* Subtle borders */
+  --color-border-focus: #58a6ff;         /* Focus borders */
   
   /* Text colors */
-  --color-text-primary: #cccccc;         /* Primary text color */
-  --color-text-secondary: #858585;       /* Muted/secondary text */
+  --color-text-primary: #e6edf3;         /* Primary text color - brighter */
+  --color-text-secondary: #7d8590;       /* Muted/secondary text */
+  --color-text-tertiary: #6e7681;        /* Tertiary text (hints) */
+  --color-text-link: #58a6ff;            /* Links */
   
-  /* Accent colors - interactive elements */
+  /* Accent colors - interactive elements with gradients */
   --color-accent-primary: #3b82f6;       /* Primary accent (blue-500) */
+  --color-accent-secondary: #1d4ed8;     /* Secondary accent (blue-700) */
   --color-accent-hover: #2563eb;         /* Accent hover state (blue-600) */
+  --color-accent-gradient-from: #3b82f6; /* Gradient start */
+  --color-accent-gradient-to: #8b5cf6;   /* Gradient end (purple-500) */
   
   /* Status colors - feedback and notifications */
-  --color-status-info: #3b82f6;          /* Info messages (blue-500) */
-  --color-status-success: #10b981;       /* Success messages (green-500) */
-  --color-status-warning: #f59e0b;       /* Warning messages (amber-500) */
-  --color-status-error: #ef4444;         /* Error messages (red-500) */
+  --color-status-info: #58a6ff;          /* Info messages */
+  --color-status-success: #3fb950;       /* Success messages */
+  --color-status-warning: #d29922;       /* Warning messages */
+  --color-status-error: #f85149;         /* Error messages */
+  
+  /* Shadow colors for depth */
+  --color-shadow-small: rgba(0, 0, 0, 0.2);
+  --color-shadow-medium: rgba(0, 0, 0, 0.3);
+  --color-shadow-large: rgba(0, 0, 0, 0.4);
+  
+  /* Overlay/backdrop colors */
+  --color-overlay: rgba(13, 17, 23, 0.8);
+  --color-backdrop-blur: rgba(13, 17, 23, 0.6);
+  
+  /* Selection colors */
+  --color-selection-bg: rgba(58, 130, 246, 0.3);
+  --color-selection-text: #e6edf3;
+  
+  /* Glow effects */
+  --color-glow-accent: rgba(58, 130, 246, 0.4);
+  --color-glow-success: rgba(63, 185, 80, 0.3);
+  --color-glow-error: rgba(248, 81, 73, 0.3);
 }
 
 /* ===================================================================
@@ -50,25 +76,51 @@
 [data-theme="light"] {
   /* Surface colors - inverted from dark */
   --color-surface-default: #ffffff;      /* White background */
-  --color-surface-secondary: #f5f5f5;    /* Light gray (gray-100) */
-  --color-surface-elevated: #e5e5e5;     /* Slightly darker gray (gray-200) */
+  --color-surface-secondary: #f6f8fa;    /* Light gray */
+  --color-surface-elevated: #ffffff;     /* Elevated (white with shadow) */
+  --color-surface-hover: #f3f4f6;        /* Hover state */
   
-  /* Border color */
-  --color-border-default: #d4d4d4;       /* Medium gray border (gray-300) */
+  /* Border colors */
+  --color-border-default: #d0d7de;       /* Default border */
+  --color-border-subtle: #e5e7eb;        /* Subtle borders */
+  --color-border-focus: #0969da;         /* Focus borders */
   
-  /* Text colors - inverted from dark */
-  --color-text-primary: #000000;         /* Black text */
-  --color-text-secondary: #737373;       /* Medium gray text (gray-500) */
+  /* Text colors */
+  --color-text-primary: #1f2937;         /* Dark gray text */
+  --color-text-secondary: #57606a;       /* Medium gray text */
+  --color-text-tertiary: #6b7280;        /* Tertiary text */
+  --color-text-link: #0969da;            /* Links */
   
-  /* Accent colors - same as dark theme for consistency */
-  --color-accent-primary: #3b82f6;       /* Blue-500 */
-  --color-accent-hover: #2563eb;         /* Blue-600 */
+  /* Accent colors with gradients */
+  --color-accent-primary: #2563eb;       /* Blue-600 */
+  --color-accent-secondary: #1d4ed8;     /* Blue-700 */
+  --color-accent-hover: #1e40af;         /* Blue-800 */
+  --color-accent-gradient-from: #2563eb; /* Gradient start */
+  --color-accent-gradient-to: #7c3aed;   /* Gradient end (purple-600) */
   
-  /* Status colors - same as dark theme for consistency */
-  --color-status-info: #3b82f6;          /* Blue-500 */
-  --color-status-success: #10b981;       /* Green-500 */
-  --color-status-warning: #f59e0b;       /* Amber-500 */
-  --color-status-error: #ef4444;         /* Red-500 */
+  /* Status colors */
+  --color-status-info: #0969da;          /* Info messages */
+  --color-status-success: #1a7f37;       /* Success messages */
+  --color-status-warning: #bf8700;       /* Warning messages */
+  --color-status-error: #cf222e;         /* Error messages */
+  
+  /* Shadow colors for depth */
+  --color-shadow-small: rgba(31, 41, 55, 0.1);
+  --color-shadow-medium: rgba(31, 41, 55, 0.15);
+  --color-shadow-large: rgba(31, 41, 55, 0.2);
+  
+  /* Overlay/backdrop colors */
+  --color-overlay: rgba(255, 255, 255, 0.8);
+  --color-backdrop-blur: rgba(255, 255, 255, 0.6);
+  
+  /* Selection colors */
+  --color-selection-bg: rgba(37, 99, 235, 0.2);
+  --color-selection-text: #1f2937;
+  
+  /* Glow effects */
+  --color-glow-accent: rgba(37, 99, 235, 0.3);
+  --color-glow-success: rgba(26, 127, 55, 0.2);
+  --color-glow-error: rgba(207, 34, 46, 0.2);
 }
 
 /* ===================================================================
@@ -80,23 +132,49 @@
   --color-surface-default: #000000;      /* Pure black */
   --color-surface-secondary: #000000;    /* Pure black (no variation) */
   --color-surface-elevated: #1a1a1a;     /* Slight elevation */
+  --color-surface-hover: #0a0a0a;        /* Hover state */
   
-  /* Border color - white for maximum contrast */
+  /* Border colors */
   --color-border-default: #ffffff;       /* White borders */
+  --color-border-subtle: #cccccc;        /* Subtle borders */
+  --color-border-focus: #00ffff;         /* Focus borders */
   
-  /* Text colors - pure white for maximum contrast */
+  /* Text colors */
   --color-text-primary: #ffffff;         /* Pure white */
   --color-text-secondary: #ffffff;       /* Pure white (no muted text) */
+  --color-text-tertiary: #ffffff;        /* Pure white */
+  --color-text-link: #00ffff;            /* Cyan links */
   
-  /* Accent colors - cyan for visibility */
+  /* Accent colors */
   --color-accent-primary: #00ffff;       /* Cyan (high visibility) */
-  --color-accent-hover: #00e5e5;         /* Slightly darker cyan */
+  --color-accent-secondary: #00cccc;     /* Darker cyan */
+  --color-accent-hover: #00e5e5;         /* Hover cyan */
+  --color-accent-gradient-from: #00ffff; /* Gradient start */
+  --color-accent-gradient-to: #00ffff;   /* Gradient end (same for HC) */
   
-  /* Status colors - bright, saturated colors for high contrast */
+  /* Status colors */
   --color-status-info: #00ffff;          /* Cyan */
   --color-status-success: #00ff00;       /* Bright green */
   --color-status-warning: #ffff00;       /* Yellow */
   --color-status-error: #ff0000;         /* Bright red */
+  
+  /* Shadow colors */
+  --color-shadow-small: rgba(255, 255, 255, 0.2);
+  --color-shadow-medium: rgba(255, 255, 255, 0.3);
+  --color-shadow-large: rgba(255, 255, 255, 0.4);
+  
+  /* Overlay/backdrop colors */
+  --color-overlay: rgba(0, 0, 0, 0.9);
+  --color-backdrop-blur: rgba(0, 0, 0, 0.8);
+  
+  /* Selection colors */
+  --color-selection-bg: rgba(0, 255, 255, 0.5);
+  --color-selection-text: #000000;
+  
+  /* Glow effects */
+  --color-glow-accent: rgba(0, 255, 255, 0.6);
+  --color-glow-success: rgba(0, 255, 0, 0.5);
+  --color-glow-error: rgba(255, 0, 0, 0.5);
 }
 
 /* ===================================================================
@@ -108,23 +186,49 @@
   --color-surface-default: #ffffff;      /* Pure white */
   --color-surface-secondary: #ffffff;    /* Pure white (no variation) */
   --color-surface-elevated: #f0f0f0;     /* Slight elevation */
+  --color-surface-hover: #f5f5f5;        /* Hover state */
   
-  /* Border color - black for maximum contrast */
+  /* Border colors */
   --color-border-default: #000000;       /* Black borders */
+  --color-border-subtle: #333333;        /* Subtle borders */
+  --color-border-focus: #0000ff;         /* Focus borders */
   
-  /* Text colors - pure black for maximum contrast */
+  /* Text colors */
   --color-text-primary: #000000;         /* Pure black */
   --color-text-secondary: #000000;       /* Pure black (no muted text) */
+  --color-text-tertiary: #000000;        /* Pure black */
+  --color-text-link: #0000ff;            /* Blue links */
   
-  /* Accent colors - blue for visibility */
+  /* Accent colors */
   --color-accent-primary: #0000ff;       /* Pure blue */
-  --color-accent-hover: #0000cc;         /* Slightly darker blue */
+  --color-accent-secondary: #0000cc;     /* Darker blue */
+  --color-accent-hover: #0000aa;         /* Hover blue */
+  --color-accent-gradient-from: #0000ff; /* Gradient start */
+  --color-accent-gradient-to: #0000ff;   /* Gradient end (same for HC) */
   
-  /* Status colors - bright, saturated colors for high contrast */
+  /* Status colors */
   --color-status-info: #0000ff;          /* Pure blue */
   --color-status-success: #008000;       /* Dark green */
   --color-status-warning: #ff8800;       /* Orange */
   --color-status-error: #cc0000;         /* Dark red */
+  
+  /* Shadow colors */
+  --color-shadow-small: rgba(0, 0, 0, 0.3);
+  --color-shadow-medium: rgba(0, 0, 0, 0.4);
+  --color-shadow-large: rgba(0, 0, 0, 0.5);
+  
+  /* Overlay/backdrop colors */
+  --color-overlay: rgba(255, 255, 255, 0.9);
+  --color-backdrop-blur: rgba(255, 255, 255, 0.8);
+  
+  /* Selection colors */
+  --color-selection-bg: rgba(0, 0, 255, 0.4);
+  --color-selection-text: #ffffff;
+  
+  /* Glow effects */
+  --color-glow-accent: rgba(0, 0, 255, 0.5);
+  --color-glow-success: rgba(0, 128, 0, 0.4);
+  --color-glow-error: rgba(204, 0, 0, 0.4);
 }
 
 /* ===================================================================
@@ -136,26 +240,52 @@
 @media (prefers-color-scheme: dark) {
   [data-theme="system"] {
     /* Surface colors - dark theme */
-    --color-surface-default: #0a0a0a;
-    --color-surface-secondary: #1a1a1a;
-    --color-surface-elevated: #2a2a2a;
+    --color-surface-default: #0d1117;
+    --color-surface-secondary: #161b22;
+    --color-surface-elevated: #1f2937;
+    --color-surface-hover: #21262d;
     
-    /* Border color */
-    --color-border-default: #3a3a3a;
+    /* Border colors */
+    --color-border-default: #30363d;
+    --color-border-subtle: #21262d;
+    --color-border-focus: #58a6ff;
     
     /* Text colors */
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #a0a0a0;
+    --color-text-primary: #e6edf3;
+    --color-text-secondary: #7d8590;
+    --color-text-tertiary: #6e7681;
+    --color-text-link: #58a6ff;
     
     /* Accent colors */
     --color-accent-primary: #3b82f6;
+    --color-accent-secondary: #1d4ed8;
     --color-accent-hover: #2563eb;
+    --color-accent-gradient-from: #3b82f6;
+    --color-accent-gradient-to: #8b5cf6;
     
     /* Status colors */
-    --color-status-info: #3b82f6;
-    --color-status-success: #10b981;
-    --color-status-warning: #f59e0b;
-    --color-status-error: #ef4444;
+    --color-status-info: #58a6ff;
+    --color-status-success: #3fb950;
+    --color-status-warning: #d29922;
+    --color-status-error: #f85149;
+    
+    /* Shadow colors */
+    --color-shadow-small: rgba(0, 0, 0, 0.2);
+    --color-shadow-medium: rgba(0, 0, 0, 0.3);
+    --color-shadow-large: rgba(0, 0, 0, 0.4);
+    
+    /* Overlay/backdrop colors */
+    --color-overlay: rgba(13, 17, 23, 0.8);
+    --color-backdrop-blur: rgba(13, 17, 23, 0.6);
+    
+    /* Selection colors */
+    --color-selection-bg: rgba(58, 130, 246, 0.3);
+    --color-selection-text: #e6edf3;
+    
+    /* Glow effects */
+    --color-glow-accent: rgba(58, 130, 246, 0.4);
+    --color-glow-success: rgba(63, 185, 80, 0.3);
+    --color-glow-error: rgba(248, 81, 73, 0.3);
   }
 }
 
@@ -164,24 +294,50 @@
   [data-theme="system"] {
     /* Surface colors - light theme */
     --color-surface-default: #ffffff;
-    --color-surface-secondary: #f5f5f5;
-    --color-surface-elevated: #e5e5e5;
+    --color-surface-secondary: #f6f8fa;
+    --color-surface-elevated: #ffffff;
+    --color-surface-hover: #f3f4f6;
     
-    /* Border color */
-    --color-border-default: #d4d4d4;
+    /* Border colors */
+    --color-border-default: #d0d7de;
+    --color-border-subtle: #e5e7eb;
+    --color-border-focus: #0969da;
     
     /* Text colors */
-    --color-text-primary: #000000;
-    --color-text-secondary: #737373;
+    --color-text-primary: #1f2937;
+    --color-text-secondary: #57606a;
+    --color-text-tertiary: #6b7280;
+    --color-text-link: #0969da;
     
     /* Accent colors */
-    --color-accent-primary: #3b82f6;
-    --color-accent-hover: #2563eb;
+    --color-accent-primary: #2563eb;
+    --color-accent-secondary: #1d4ed8;
+    --color-accent-hover: #1e40af;
+    --color-accent-gradient-from: #2563eb;
+    --color-accent-gradient-to: #7c3aed;
     
     /* Status colors */
-    --color-status-info: #3b82f6;
-    --color-status-success: #10b981;
-    --color-status-warning: #f59e0b;
-    --color-status-error: #ef4444;
+    --color-status-info: #0969da;
+    --color-status-success: #1a7f37;
+    --color-status-warning: #bf8700;
+    --color-status-error: #cf222e;
+    
+    /* Shadow colors */
+    --color-shadow-small: rgba(31, 41, 55, 0.1);
+    --color-shadow-medium: rgba(31, 41, 55, 0.15);
+    --color-shadow-large: rgba(31, 41, 55, 0.2);
+    
+    /* Overlay/backdrop colors */
+    --color-overlay: rgba(255, 255, 255, 0.8);
+    --color-backdrop-blur: rgba(255, 255, 255, 0.6);
+    
+    /* Selection colors */
+    --color-selection-bg: rgba(37, 99, 235, 0.2);
+    --color-selection-text: #1f2937;
+    
+    /* Glow effects */
+    --color-glow-accent: rgba(37, 99, 235, 0.3);
+    --color-glow-success: rgba(26, 127, 55, 0.2);
+    --color-glow-error: rgba(207, 34, 46, 0.2);
   }
 }

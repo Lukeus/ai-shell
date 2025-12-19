@@ -1,36 +1,187 @@
-import React from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useFileTree } from '../explorer/FileTreeContext';
 import { EditorTabBar } from './EditorTabBar';
 import { EditorPlaceholder } from './EditorPlaceholder';
+import { EditorLoader } from './EditorLoader';
 
 /**
- * EditorArea - Main editor container component.
+ * EditorArea - Main editor container component with Monaco Editor integration.
  *
- * P1 (Process isolation): Uses FileTreeContext for tab state management.
+ * P1 (Process isolation): File I/O via IPC only, renderer sandboxed.
  * P4 (Tailwind 4): All styles use CSS variables.
- * P5 (Monaco): Monaco integration deferred to spec 040 - displays placeholder only.
+ * P5 (Performance budgets): Monaco lazy-loaded via EditorLoader, not loaded when no file open.
+ * P6 (Contracts-first): Uses existing api-contracts for file reading (no new contracts needed).
  *
  * @remarks
- * - Combines EditorTabBar (top) and EditorPlaceholder (content)
- * - Shows placeholder with active file path or empty state
- * - Monaco editor will be integrated in spec 040
+ * - Combines EditorTabBar (top) and editor content area (bottom)
+ * - Shows EditorPlaceholder when no file is open
+ * - Loads Monaco Editor via EditorLoader when file is open
+ * - Fetches file content from main process via IPC (FS_READ_FILE)
+ * - Infers language from file extension for syntax highlighting
  */
 
 export function EditorArea() {
   const { openTabs, activeTabIndex } = useFileTree();
+  const [fileContent, setFileContent] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Determine active file path
   const activeFilePath =
     activeTabIndex >= 0 && activeTabIndex < openTabs.length ? openTabs[activeTabIndex] : null;
 
+  // P1 (Process isolation): Fetch file content via IPC when active file changes
+  useEffect(() => {
+    if (!activeFilePath) {
+      // Reset states when no file is open
+      // Use setTimeout to avoid synchronous setState in effect
+      const timer = setTimeout(() => {
+        setFileContent('');
+        setError(null);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    let isMounted = true;
+
+    const fetchFileContent = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // P6 (Contracts-first): Use existing fs.readFile API from preload
+        const response = await window.api.fs.readFile({ path: activeFilePath });
+
+        if (!isMounted) return;
+
+        setFileContent(response.content || '');
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Failed to read file:', err);
+        if (isMounted) {
+          setError(`Failed to read file: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchFileContent();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeFilePath]);
+
+  // Infer Monaco language from file extension
+  const getLanguageFromPath = (filePath: string): string => {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    
+    switch (ext) {
+      case 'ts':
+      case 'tsx':
+        return 'typescript';
+      case 'js':
+      case 'jsx':
+      case 'mjs':
+      case 'cjs':
+        return 'javascript';
+      case 'json':
+        return 'json';
+      case 'md':
+      case 'markdown':
+        return 'markdown';
+      case 'html':
+      case 'htm':
+        return 'html';
+      case 'css':
+        return 'css';
+      case 'scss':
+      case 'sass':
+        return 'scss';
+      case 'yaml':
+      case 'yml':
+        return 'yaml';
+      case 'xml':
+        return 'xml';
+      case 'py':
+        return 'python';
+      case 'sh':
+      case 'bash':
+        return 'shell';
+      default:
+        return 'plaintext';
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--editor-bg)' }}>
+    <div className="flex flex-col h-full bg-surface">
       {/* Tab bar */}
       <EditorTabBar />
 
-      {/* Editor content area (placeholder for now) */}
-      <div className="flex-1 overflow-hidden">
-        <EditorPlaceholder filePath={activeFilePath} />
+      {/* Editor content area - NO extra padding/margin */}
+      <div className="flex-1 overflow-hidden bg-surface">
+        {!activeFilePath ? (
+          // Empty state: no file open
+          <EditorPlaceholder filePath={null} />
+        ) : error ? (
+          // Error state: failed to load file
+          <div 
+            className="flex items-center justify-center h-full"
+            style={{ 
+              backgroundColor: 'var(--editor-bg)',
+              color: 'var(--error-fg)',
+            }}
+          >
+            <div className="text-center p-4">
+              <p>{error}</p>
+            </div>
+          </div>
+        ) : isLoading ? (
+          // Loading state: fetching file content
+          <div 
+            className="flex items-center justify-center h-full"
+            style={{ 
+              backgroundColor: 'var(--editor-bg)',
+              color: 'var(--secondary-fg)',
+            }}
+          >
+            <div className="text-center">
+              <div 
+                className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" 
+                style={{ borderColor: 'var(--primary-fg)' }}
+              />
+              <p className="text-sm">Loading file...</p>
+            </div>
+          </div>
+        ) : (
+          // P5 (Performance budgets): Monaco loaded only when file is open
+          // Suspense boundary for lazy-loading Monaco Editor
+          <Suspense
+            fallback={
+              <div 
+                className="flex items-center justify-center h-full"
+                style={{ 
+                  backgroundColor: 'var(--editor-bg)',
+                  color: 'var(--secondary-fg)',
+                }}
+              >
+                <div className="text-center">
+                  <div 
+                    className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" 
+                    style={{ borderColor: 'var(--primary-fg)' }}
+                  />
+                  <p className="text-sm">Loading Editor...</p>
+                </div>
+              </div>
+            }
+          >
+            <EditorLoader
+              filePath={activeFilePath}
+              content={fileContent}
+              language={getLanguageFromPath(activeFilePath)}
+            />
+          </Suspense>
+        )}
       </div>
     </div>
   );

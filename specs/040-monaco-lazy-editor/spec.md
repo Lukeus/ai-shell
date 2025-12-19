@@ -55,18 +55,18 @@ Monaco Editor is a large dependency (~3MB minified) that significantly impacts i
 - Memory footprint: Monaco should not exceed 50MB heap after initialization
 
 ## Acceptance criteria
-- [ ] Monaco is loaded via dynamic import() and not present in initial renderer bundle
-- [ ] Build output shows Monaco in separate chunk (e.g., `monaco-editor-<hash>.js`)
-- [ ] Monaco workers are correctly configured and functional in built application
-- [ ] Loading state UI is displayed while Monaco initializes
-- [ ] Error handling is implemented for Monaco load failures with retry mechanism
-- [ ] TypeScript syntax highlighting and IntelliSense work correctly in loaded editor
-- [ ] pnpm -r typecheck passes
-- [ ] pnpm -r lint passes
-- [ ] pnpm -r test passes (if tests exist for editor component)
-- [ ] pnpm -r build produces correct chunks without Monaco in initial bundle
-- [ ] Manual verification: application starts without loading Monaco assets
-- [ ] Manual verification: editor component triggers Monaco load and renders correctly
+- [x] Monaco is loaded via dynamic import() and not present in initial renderer bundle
+- [x] Build output shows Monaco in separate chunk (e.g., `monaco-editor-<hash>.js`)
+- [x] Monaco workers are correctly configured and functional in built application
+- [x] Loading state UI is displayed while Monaco initializes
+- [x] Error handling is implemented for Monaco load failures with retry mechanism
+- [x] TypeScript syntax highlighting and IntelliSense work correctly in loaded editor
+- [x] pnpm -r typecheck passes
+- [x] pnpm -r lint passes
+- [x] pnpm -r test passes (if tests exist for editor component)
+- [x] pnpm -r build produces correct chunks without Monaco in initial bundle
+- [x] Manual verification: application starts without loading Monaco assets
+- [x] Manual verification: editor component triggers Monaco load and renders correctly
 
 ## Out of scope / Future work
 - Integration with Tailwind 4 theming system (theme switching)

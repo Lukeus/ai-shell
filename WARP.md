@@ -19,6 +19,10 @@ Before coding or changing configs:
 - Encryption/decryption happens ONLY in main process (Electron safeStorage).
 - Monaco must be lazy-loaded; never bundled into initial renderer chunk.
 - Contracts-first: update `packages/api-contracts` before adding/changing IPC/tool/extension interfaces.
+- “Do not introduce a UI library migration (no ‘let’s add MUI’ or ‘switch to Tailwind’) unless we already use it.”
+- “Prefer CSS variables + small component CSS modules over global overrides.”
+- “Every change must include a screenshot so we can visually diff.”
+- “If you touch Monaco styling, it must be limited to theme integration, not feature disabling.”
 
 ## Operating Style
 - Implement tasks in strict order from `tasks.md`.

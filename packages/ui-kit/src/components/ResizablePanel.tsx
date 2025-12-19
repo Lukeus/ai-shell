@@ -172,18 +172,18 @@ export const ResizablePanel = memo(function ResizablePanel({
 
   return (
     <div className={`relative flex ${direction === 'horizontal' ? 'flex-row' : 'flex-col'} ${className}`}>
-      {/* Panel content */}
-      <div className="flex-1 overflow-auto">
+      {/* Panel content - NO scrollbar on container, children handle their own overflow */}
+      <div className="flex-1 overflow-hidden">
         {children}
       </div>
 
-      {/* Drag handle */}
+      {/* Drag handle - VS Code style with better visibility */}
       <div
         className={`
-          group flex items-center justify-center
-          ${direction === 'horizontal' ? 'w-1 cursor-ew-resize hover:w-1.5' : 'h-1 cursor-ns-resize hover:h-1.5'}
-          ${isDragging ? 'bg-accent' : 'bg-border hover:bg-accent/50'}
-          transition-all duration-150
+          group relative flex items-center justify-center z-10
+          ${direction === 'horizontal' ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize'}
+          ${isDragging ? 'bg-accent' : 'bg-border hover:bg-accent'}
+          transition-colors duration-150
         `}
         onMouseDown={handleMouseDown}
         role="separator"
@@ -191,31 +191,48 @@ export const ResizablePanel = memo(function ResizablePanel({
         aria-valuenow={size}
         aria-valuemin={minSize}
         aria-valuemax={maxSize}
+        style={{
+          backgroundColor: isDragging ? 'var(--color-accent)' : undefined,
+        }}
       >
+        {/* Visual feedback area - wider hit target (5px for easier grabbing) */}
+        <div
+          className={`
+            absolute
+            ${direction === 'horizontal' ? 'inset-y-0 -left-2 w-5' : 'inset-x-0 -top-2 h-5'}
+            ${isDragging ? 'bg-accent/20' : 'hover:bg-accent/10'}
+            transition-colors duration-150
+          `}
+        />
+        
         {/* Collapse button overlaid on drag handle */}
         <button
           onClick={onToggleCollapse}
           className="
-            absolute p-1 rounded
-            bg-surface-secondary border border-border
-            hover:bg-surface-secondary hover:border-accent
+            absolute z-10 p-1 rounded
+            bg-surface-elevated border border-border
+            hover:bg-surface-hover hover:border-accent
             opacity-0 group-hover:opacity-100
-            transition-opacity duration-150
+            transition-all duration-200
+            shadow-md
           "
           aria-label="Collapse panel"
+          style={{
+            boxShadow: '0 2px 8px var(--color-shadow-sm)',
+          }}
         >
           <svg
-            className="w-3 h-3 text-secondary"
+            className="w-3 h-3 text-secondary group-hover:text-primary transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
             {direction === 'horizontal' ? (
               // Chevron left for horizontal panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             ) : (
               // Chevron up for vertical panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
             )}
           </svg>
         </button>

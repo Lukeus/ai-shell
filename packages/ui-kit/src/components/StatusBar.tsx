@@ -31,15 +31,20 @@ export interface StatusBarProps {
  */
 export function StatusBar({ leftContent, rightContent }: StatusBarProps) {
   return (
-    <div className="h-6 flex items-center justify-between px-3 text-xs text-primary">
+    <div className="h-7 flex items-center justify-between px-4 text-xs bg-surface-elevated border-t border-border-subtle">
       {/* Left section - workspace name or status */}
-      <div className="flex items-center gap-2">
-        {leftContent}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 px-2 py-0.5 rounded hover:bg-surface-hover transition-colors duration-200">
+          {leftContent}
+        </div>
       </div>
       
       {/* Right section - status items */}
-      <div className="flex items-center gap-3">
-        {rightContent}
+      <div className="flex items-center gap-0">
+        {/* Add separators between items */}
+        <div className="flex items-center gap-2 px-2 py-0.5 rounded hover:bg-surface-hover transition-colors duration-200">
+          {rightContent}
+        </div>
       </div>
     </div>
   );
