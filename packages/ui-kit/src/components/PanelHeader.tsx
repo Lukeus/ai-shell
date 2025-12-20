@@ -35,11 +35,13 @@ export interface PanelHeaderProps {
  */
 export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle bg-surface-secondary">
+    <div
+      className="flex items-center justify-between px-3 border-b border-border-subtle bg-surface-secondary"
+      style={{ height: 'var(--vscode-panelHeader-height)' }}
+    >
       {/* Panel title with icon */}
       <div className="flex items-center gap-2">
-        <div className="w-1 h-5 bg-gradient-to-b from-accent-gradient-from to-accent-gradient-to rounded-full" />
-        <h2 className="text-xs font-bold text-primary uppercase tracking-wider">
+        <h2 className="text-[11px] font-semibold text-secondary uppercase tracking-wide">
           {title}
         </h2>
       </div>
@@ -48,10 +50,9 @@ export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderP
       <button
         onClick={onToggleCollapse}
         className="
-          p-1.5 rounded-md transition-all duration-200
-          hover:bg-surface-hover hover:scale-110
-          active:scale-95
-          group
+          p-1 rounded-sm transition-colors duration-150
+          hover:bg-surface-hover
+          group focus:outline-none focus:ring-1 focus:ring-accent
         "
         aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
         aria-expanded={!collapsed}

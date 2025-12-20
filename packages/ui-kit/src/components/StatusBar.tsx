@@ -1,50 +1,86 @@
+import React from 'react';
+
+export interface StatusBarItem {
+  /** Unique identifier */
+  id: string;
+
+  /** Textual label */
+  label: React.ReactNode;
+
+  /** Optional icon (codicon class or React node) */
+  icon?: string | React.ReactNode;
+
+  /** Whether the item is emphasized/active */
+  active?: boolean;
+
+  /** Tooltip text */
+  tooltip?: string;
+
+  /** Click handler */
+  onClick?: () => void;
+}
+
 /**
  * Props for the StatusBar component.
  */
 export interface StatusBarProps {
-  /** Content for the left section (e.g., workspace name) */
-  leftContent: React.ReactNode;
-  
-  /** Content for the right section (e.g., line/col, language, notifications) */
-  rightContent: React.ReactNode;
+  /** Left-aligned items */
+  leftItems?: StatusBarItem[];
+
+  /** Right-aligned items */
+  rightItems?: StatusBarItem[];
+}
+
+function renderIcon(icon?: string | React.ReactNode) {
+  if (!icon) return null;
+  if (typeof icon === 'string') {
+    return <span className={`codicon ${icon}`} aria-hidden="true" />;
+  }
+  return icon;
 }
 
 /**
- * StatusBar component - Bottom fixed-height bar for status information.
- * 
- * Features:
- * - Fixed height (24px)
- * - Two-section layout: left (workspace name) and right (status items)
- * - Background: bg-blue-900
- * - Spans full width at bottom of layout
- * 
- * Uses Tailwind 4 tokens for styling (P4: UI design system).
- * Pure React component with no Electron/Node.js dependencies (P1: Process isolation).
- * 
- * @example
- * ```tsx
- * <StatusBar
- *   leftContent={<span>No Folder Open</span>}
- *   rightContent={<span>UTF-8 | TypeScript</span>}
- * />
- * ```
+ * StatusBar component - VS Code style segmented bar.
  */
-export function StatusBar({ leftContent, rightContent }: StatusBarProps) {
+export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
+  const renderItems = (items: StatusBarItem[]) => (
+    <div className="flex items-center h-full">
+      {items.map((item, index) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={item.onClick}
+          title={item.tooltip}
+          className={`
+            h-full inline-flex items-center gap-1.5 px-2.5
+            text-xs ${item.active ? 'text-primary' : 'text-secondary'}
+            hover:bg-surface-hover hover:text-primary
+            focus:outline-none focus:ring-1 focus:ring-accent
+          `}
+          style={{
+            borderLeft: index === 0 ? 'none' : '1px solid var(--color-border-subtle)',
+          }}
+        >
+          {renderIcon(item.icon)}
+          <span className="whitespace-nowrap">{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="h-7 flex items-center justify-between px-4 text-xs bg-surface-elevated border-t border-border-subtle">
-      {/* Left section - workspace name or status */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-2 py-0.5 rounded hover:bg-surface-hover transition-colors duration-200">
-          {leftContent}
-        </div>
+    <div
+      className="flex items-center justify-between border-t border-border-subtle"
+      style={{
+        height: 'var(--vscode-statusBar-height)',
+        backgroundColor: 'var(--vscode-statusBar-background)',
+      }}
+    >
+      <div className="flex items-center h-full">
+        {renderItems(leftItems)}
       </div>
-      
-      {/* Right section - status items */}
-      <div className="flex items-center gap-0">
-        {/* Add separators between items */}
-        <div className="flex items-center gap-2 px-2 py-0.5 rounded hover:bg-surface-hover transition-colors duration-200">
-          {rightContent}
-        </div>
+      <div className="flex items-center h-full">
+        {renderItems(rightItems)}
       </div>
     </div>
   );

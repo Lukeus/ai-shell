@@ -43,6 +43,63 @@ export const IPC_CHANNELS = {
   
   /** Delete file or directory (moves to OS trash) */
   FS_DELETE: 'fs:delete',
+  
+  // Terminal management (PTY)
+  /** Create a new terminal session */
+  TERMINAL_CREATE: 'terminal:create',
+  
+  /** Write data to terminal session */
+  TERMINAL_WRITE: 'terminal:write',
+  
+  /** Resize terminal session */
+  TERMINAL_RESIZE: 'terminal:resize',
+  
+  /** Close terminal session */
+  TERMINAL_CLOSE: 'terminal:close',
+  
+  /** List all active terminal sessions */
+  TERMINAL_LIST: 'terminal:list',
+  
+  /** Terminal data event (main → renderer) */
+  TERMINAL_DATA: 'terminal:data',
+  
+  /** Terminal exit event (main → renderer) */
+  TERMINAL_EXIT: 'terminal:exit',
+  
+  // Output channels
+  /** Append lines to output channel */
+  OUTPUT_APPEND: 'output:append',
+  
+  /** Clear output channel */
+  OUTPUT_CLEAR: 'output:clear',
+  
+  /** List all output channels */
+  OUTPUT_LIST_CHANNELS: 'output:list-channels',
+  
+  /** Read lines from output channel */
+  OUTPUT_READ: 'output:read',
+  
+  /** Output append event (main → renderer) */
+  OUTPUT_ON_APPEND: 'output:on-append',
+  
+  /** Output clear event (main → renderer) */
+  OUTPUT_ON_CLEAR: 'output:on-clear',
+  
+  // Diagnostics (problems panel)
+  /** Publish diagnostics for a file */
+  DIAGNOSTICS_PUBLISH: 'diagnostics:publish',
+  
+  /** Clear diagnostics */
+  DIAGNOSTICS_CLEAR: 'diagnostics:clear',
+  
+  /** List all diagnostics */
+  DIAGNOSTICS_LIST: 'diagnostics:list',
+  
+  /** Diagnostics update event (main → renderer) */
+  DIAGNOSTICS_ON_UPDATE: 'diagnostics:on-update',
+  
+  /** Diagnostics summary event (main → renderer) */
+  DIAGNOSTICS_ON_SUMMARY: 'diagnostics:on-summary',
 } as const;
 
 /**

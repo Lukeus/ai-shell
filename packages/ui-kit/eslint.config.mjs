@@ -37,6 +37,7 @@ export default [
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
         MouseEvent: 'readonly',
+        HTMLDivElement: 'readonly',
         // TypeScript/React types (available globally with JSX transform)
         React: 'readonly',
         JSX: 'readonly',
@@ -108,6 +109,7 @@ export default [
         test: 'readonly',
         // Browser/test globals
         HTMLElement: 'readonly',
+        Element: 'readonly',
       },
     },
   },

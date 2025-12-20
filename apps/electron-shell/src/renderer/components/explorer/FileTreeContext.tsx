@@ -51,6 +51,8 @@ export interface FileTreeContextValue {
   // File operations
   openFile: (path: string) => void;
   closeTab: (index: number) => void;
+  closeOtherTabs: (index: number) => void;
+  closeTabsToRight: (index: number) => void;
   setActiveTab: (index: number) => void;
   createFile: (parentPath: string, filename: string, content?: string) => Promise<void>;
   createFolder: (parentPath: string, folderName: string) => Promise<void>;
@@ -349,6 +351,30 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
   }, []);
 
   /**
+   * Close all tabs except the specified index.
+   */
+  const closeOtherTabs = useCallback((index: number) => {
+    setOpenTabs((prev) => {
+      const target = prev[index];
+      if (!target) return prev;
+      setActiveTabIndex(0);
+      return [target];
+    });
+  }, []);
+
+  /**
+   * Close tabs to the right of the specified index.
+   */
+  const closeTabsToRight = useCallback((index: number) => {
+    setOpenTabs((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
+      const next = prev.slice(0, index + 1);
+      setActiveTabIndex((prevActive) => Math.min(prevActive, next.length - 1));
+      return next;
+    });
+  }, []);
+
+  /**
    * Set active tab by index.
    */
   const setActiveTab = useCallback((index: number) => {
@@ -477,6 +503,8 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     refresh,
     openFile,
     closeTab,
+    closeOtherTabs,
+    closeTabsToRight,
     setActiveTab,
     createFile,
     createFolder,

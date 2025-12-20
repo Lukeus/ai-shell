@@ -8,7 +8,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['electron', 'electron-squirrel-startup'],
+      // Externalize native addons - they cannot be bundled
+      external: [
+        'electron',
+        'electron-squirrel-startup',
+        'node-pty', // Native addon - must be loaded at runtime from node_modules
+      ],
     },
   },
 });

@@ -4,6 +4,7 @@ import { IPC_CHANNELS } from 'packages-api-contracts';
 import { registerIPCHandlers } from './ipc-handlers';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
+import { terminalService } from './services/TerminalService';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -21,6 +22,16 @@ vi.mock('./services/WorkspaceService', () => ({
     openWorkspace: vi.fn(),
     getWorkspace: vi.fn(),
     clearWorkspace: vi.fn(),
+  },
+}));
+
+vi.mock('./services/TerminalService', () => ({
+  terminalService: {
+    createSession: vi.fn(),
+    write: vi.fn(),
+    resize: vi.fn(),
+    close: vi.fn(),
+    listSessions: vi.fn(),
   },
 }));
 
@@ -288,8 +299,148 @@ describe('IPC Handlers', () => {
     });
   });
 
+  describe('Terminal handlers', () => {
+    describe('TERMINAL_CREATE', () => {
+      it('should register TERMINAL_CREATE handler', () => {
+        expect(handlers.has(IPC_CHANNELS.TERMINAL_CREATE)).toBe(true);
+      });
+
+      it('should validate request with Zod schema and call terminalService.createSession', async () => {
+        const mockWorkspace = { path: 'C:\\workspace', name: 'workspace' };
+        vi.mocked(workspaceService.getWorkspace).mockReturnValue(mockWorkspace);
+        
+        const mockSession = {
+          sessionId: '123e4567-e89b-12d3-a456-426614174000',
+          title: 'Terminal 1',
+          cwd: 'C:\\workspace\\project',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          status: 'running' as const,
+        };
+        vi.mocked(terminalService.createSession).mockReturnValue(mockSession);
+
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_CREATE);
+        const result = await handler(null, { cwd: 'C:\\workspace\\project', cols: 80, rows: 24 });
+
+        expect(terminalService.createSession).toHaveBeenCalledWith(
+          { cwd: 'C:\\workspace\\project', cols: 80, rows: 24 },
+          'C:\\workspace'
+        );
+        expect(result).toEqual({ session: mockSession });
+      });
+
+      it('should pass null workspace if no workspace open', async () => {
+        vi.mocked(workspaceService.getWorkspace).mockReturnValue(null);
+        vi.mocked(terminalService.createSession).mockImplementation(() => {
+          throw new Error('Cannot create terminal: no workspace open');
+        });
+
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_CREATE);
+        
+        await expect(handler(null, { cwd: 'C:\\workspace', cols: 80, rows: 24 }))
+          .rejects.toThrow('Cannot create terminal: no workspace open');
+      });
+
+      it('should reject invalid request', async () => {
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_CREATE);
+        await expect(handler(null, { invalidField: 'test' })).rejects.toThrow();
+      });
+    });
+
+    describe('TERMINAL_WRITE', () => {
+      it('should register TERMINAL_WRITE handler', () => {
+        expect(handlers.has(IPC_CHANNELS.TERMINAL_WRITE)).toBe(true);
+      });
+
+      it('should validate request and call terminalService.write', async () => {
+        vi.mocked(terminalService.write).mockReturnValue(undefined);
+
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_WRITE);
+        await handler(null, { sessionId: '123e4567-e89b-12d3-a456-426614174000', data: 'echo test\n' });
+
+        expect(terminalService.write).toHaveBeenCalledWith(
+          '123e4567-e89b-12d3-a456-426614174000',
+          'echo test\n'
+        );
+      });
+
+      it('should reject invalid request', async () => {
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_WRITE);
+        await expect(handler(null, { sessionId: 'invalid-uuid' })).rejects.toThrow();
+      });
+    });
+
+    describe('TERMINAL_RESIZE', () => {
+      it('should register TERMINAL_RESIZE handler', () => {
+        expect(handlers.has(IPC_CHANNELS.TERMINAL_RESIZE)).toBe(true);
+      });
+
+      it('should validate request and call terminalService.resize', async () => {
+        vi.mocked(terminalService.resize).mockReturnValue(undefined);
+
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_RESIZE);
+        await handler(null, { sessionId: '123e4567-e89b-12d3-a456-426614174000', cols: 100, rows: 30 });
+
+        expect(terminalService.resize).toHaveBeenCalledWith(
+          '123e4567-e89b-12d3-a456-426614174000',
+          100,
+          30
+        );
+      });
+
+      it('should reject invalid request', async () => {
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_RESIZE);
+        await expect(handler(null, { sessionId: '123', cols: -1 })).rejects.toThrow();
+      });
+    });
+
+    describe('TERMINAL_CLOSE', () => {
+      it('should register TERMINAL_CLOSE handler', () => {
+        expect(handlers.has(IPC_CHANNELS.TERMINAL_CLOSE)).toBe(true);
+      });
+
+      it('should validate request and call terminalService.close', async () => {
+        vi.mocked(terminalService.close).mockReturnValue(undefined);
+
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_CLOSE);
+        await handler(null, { sessionId: '123e4567-e89b-12d3-a456-426614174000' });
+
+        expect(terminalService.close).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000');
+      });
+
+      it('should reject invalid request', async () => {
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_CLOSE);
+        await expect(handler(null, {})).rejects.toThrow();
+      });
+    });
+
+    describe('TERMINAL_LIST', () => {
+      it('should register TERMINAL_LIST handler', () => {
+        expect(handlers.has(IPC_CHANNELS.TERMINAL_LIST)).toBe(true);
+      });
+
+      it('should call terminalService.listSessions and return sessions', async () => {
+        const mockSessions = [
+          {
+            sessionId: '123e4567-e89b-12d3-a456-426614174000',
+            title: 'Terminal 1',
+            cwd: 'C:\\workspace',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            status: 'running' as const,
+          },
+        ];
+        vi.mocked(terminalService.listSessions).mockReturnValue(mockSessions);
+
+        const handler = getHandler(IPC_CHANNELS.TERMINAL_LIST);
+        const result = await handler();
+
+        expect(terminalService.listSessions).toHaveBeenCalled();
+        expect(result).toEqual({ sessions: mockSessions });
+      });
+    });
+  });
+
   describe('All handlers registered', () => {
-    it('should register all 13 expected IPC handlers', () => {
+    it('should register all 18 expected IPC handlers', () => {
       // Existing handlers (4)
       expect(handlers.has(IPC_CHANNELS.GET_VERSION)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.GET_SETTINGS)).toBe(true);
@@ -309,8 +460,15 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.FS_RENAME)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.FS_DELETE)).toBe(true);
 
-      // Total: 13 handlers
-      expect(handlers.size).toBe(13);
+      // Terminal handlers (5)
+      expect(handlers.has(IPC_CHANNELS.TERMINAL_CREATE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.TERMINAL_WRITE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.TERMINAL_RESIZE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.TERMINAL_CLOSE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.TERMINAL_LIST)).toBe(true);
+
+      // Total: 18 handlers
+      expect(handlers.size).toBe(18);
     });
   });
 });

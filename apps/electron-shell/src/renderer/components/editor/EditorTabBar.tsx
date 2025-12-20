@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { TabBar, type Tab } from 'packages-ui-kit';
 import { useFileTree } from '../explorer/FileTreeContext';
 
 /**
@@ -16,12 +17,21 @@ import { useFileTree } from '../explorer/FileTreeContext';
  */
 
 export function EditorTabBar() {
-  const { openTabs, activeTabIndex, closeTab, setActiveTab } = useFileTree();
+  const {
+    openTabs,
+    activeTabIndex,
+    closeTab,
+    closeOtherTabs,
+    closeTabsToRight,
+    setActiveTab,
+  } = useFileTree();
+  const [contextMenu, setContextMenu] = useState<{
+    tabId: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
-  // Empty state: no tabs open
-  if (openTabs.length === 0) {
-    return null;
-  }
+  const hasTabs = openTabs.length > 0;
 
   /**
    * Extract basename from file path.
@@ -31,118 +41,128 @@ export function EditorTabBar() {
     return lastSlash === -1 ? path : path.substring(lastSlash + 1);
   };
 
-  /**
-   * Handle tab click: set active tab.
-   */
-  const handleTabClick = (index: number) => {
-    setActiveTab(index);
+  const activeTabId = hasTabs
+    ? (activeTabIndex >= 0 ? openTabs[activeTabIndex] : openTabs[0])
+    : '';
+
+  const tabs: Tab[] = useMemo(() => {
+    return openTabs.map((path) => ({
+      id: path,
+      label: getBasename(path),
+      icon: <span className="codicon codicon-file" aria-hidden="true" />,
+      dirty: false,
+    }));
+  }, [openTabs]);
+
+  const handleChange = (tabId: string) => {
+    const index = openTabs.indexOf(tabId);
+    if (index >= 0) {
+      setActiveTab(index);
+    }
   };
 
-  /**
-   * Handle close button click: close tab.
-   * Prevents event propagation to tab click handler.
-   */
-  const handleCloseClick = (e: React.MouseEvent, index: number) => {
-    e.stopPropagation();
-    closeTab(index);
+  const handleClose = (tabId: string) => {
+    const index = openTabs.indexOf(tabId);
+    if (index >= 0) {
+      closeTab(index);
+    }
+  };
+
+  const handleContextMenu = (tabId: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    const index = openTabs.indexOf(tabId);
+    if (index >= 0) {
+      setActiveTab(index);
+    }
+    setContextMenu({
+      tabId,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
+  // Close context menu on escape / click elsewhere
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setContextMenu(null);
+      }
+    };
+
+    const handleClickAway = () => setContextMenu(null);
+
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('click', handleClickAway);
+
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('click', handleClickAway);
+    };
+  }, [contextMenu]);
+
+  // Empty state: no tabs open (return after hooks are registered)
+  if (!hasTabs) {
+    return null;
+  }
+
+  const runMenuAction = (action: 'close' | 'close-others' | 'close-right') => {
+    if (!contextMenu) return;
+    const index = openTabs.indexOf(contextMenu.tabId);
+    if (index === -1) return;
+
+    if (action === 'close') {
+      closeTab(index);
+    } else if (action === 'close-others') {
+      closeOtherTabs(index);
+    } else if (action === 'close-right') {
+      closeTabsToRight(index);
+    }
+    setContextMenu(null);
   };
 
   return (
-    <div
-      className="flex items-center bg-surface-secondary border-b border-border-subtle overflow-x-auto scrollbar-thin"
-      style={{
-        height: '35px',
-        scrollbarWidth: 'thin',
-      }}
-    >
-      {openTabs.map((filePath, index) => {
-        const isActive = index === activeTabIndex;
-        const basename = getBasename(filePath);
-
-        return (
-          <div
-            key={filePath}
-            onClick={() => handleTabClick(index)}
-            className={`
-              relative flex items-center gap-2 px-3 py-1.5 cursor-pointer select-none
-              border-r border-border-subtle
-              transition-all duration-150
-              group
-              ${
-                isActive
-                  ? 'bg-surface text-primary border-t-2 border-t-accent'
-                  : 'bg-surface-secondary text-secondary hover:bg-surface-hover hover:text-primary'
-              }
-            `}
-            style={{
-              minWidth: '120px',
-              maxWidth: '180px',
-              marginTop: isActive ? '-2px' : '0',
-            }}
-            title={filePath}
-          >
-            {/* File icon */}
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="flex-shrink-0 opacity-70"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-
-            {/* File basename */}
-            <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium">
-              {basename}
-            </span>
-
-            {/* Close button */}
+    <>
+      <TabBar
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onTabChange={handleChange}
+        onTabClose={handleClose}
+        onTabContextMenu={handleContextMenu}
+      />
+      {contextMenu && (
+        <ul
+          className="fixed z-50 bg-surface-elevated border border-border rounded-sm shadow-lg text-sm"
+          style={{ top: contextMenu.y, left: contextMenu.x, minWidth: '180px' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <li>
             <button
-              onClick={(e) => handleCloseClick(e, index)}
-              className="
-                flex items-center justify-center rounded
-                opacity-0 group-hover:opacity-100
-                hover:bg-surface-elevated
-                transition-all duration-150
-                flex-shrink-0
-              "
-              style={{
-                width: '20px',
-                height: '20px',
-              }}
-              aria-label={`Close ${basename}`}
+              className="w-full text-left px-3 py-2 hover:bg-surface-hover"
+              onClick={() => runMenuAction('close')}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              Close
             </button>
-
-            {/* Active indicator line at top */}
-            {isActive && (
-              <div
-                className="absolute top-0 left-0 right-0 h-0.5 bg-accent"
-                style={{ marginTop: '-2px' }}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
+          </li>
+          <li>
+            <button
+              className="w-full text-left px-3 py-2 hover:bg-surface-hover"
+              onClick={() => runMenuAction('close-others')}
+            >
+              Close Others
+            </button>
+          </li>
+          <li>
+            <button
+              className="w-full text-left px-3 py-2 hover:bg-surface-hover"
+              onClick={() => runMenuAction('close-right')}
+            >
+              Close Tabs to the Right
+            </button>
+          </li>
+        </ul>
+      )}
+    </>
   );
 }

@@ -126,20 +126,20 @@ export function SettingItem({
   };
 
   return (
-    <div className="py-4 border-b border-border last:border-b-0">
-      <div className="flex items-start justify-between gap-4">
+    <div className="px-4 py-3 border-b border-border-subtle last:border-b-0">
+      <div className="flex items-start justify-between gap-6">
         {/* Label and description */}
         <div className="flex-1 min-w-0">
-          <label className="block text-sm font-medium text-primary mb-1">
+          <label className="block text-[13px] font-medium text-primary mb-1">
             {label}
           </label>
-          <p className="text-xs text-secondary">
+          <p className="text-xs text-secondary leading-snug">
             {description}
           </p>
         </div>
         
         {/* Control */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 min-w-[160px] flex justify-end">
           {renderControl()}
         </div>
       </div>

@@ -75,14 +75,14 @@ export function ShellLayout({
   
   const gridTemplateColumns = [
     '48px', // Activity Bar (fixed)
-    layoutState.primarySidebarCollapsed ? '0px' : `${layoutState.primarySidebarWidth}px`,
+    layoutState.primarySidebarCollapsed ? '4px' : `${layoutState.primarySidebarWidth}px`,
     '1fr', // Editor Area (flexible, takes remaining space)
-    layoutState.secondarySidebarCollapsed ? '0px' : `${layoutState.secondarySidebarWidth}px`,
+    layoutState.secondarySidebarCollapsed ? '4px' : `${layoutState.secondarySidebarWidth}px`,
   ].join(' ');
 
   const gridTemplateRows = [
     '1fr', // Top row (Activity Bar + sidebars + editor)
-    layoutState.bottomPanelCollapsed ? '0px' : `${layoutState.bottomPanelHeight}px`,
+    layoutState.bottomPanelCollapsed ? '4px' : `${layoutState.bottomPanelHeight}px`,
     '24px', // Status Bar (fixed height)
   ].join(' ');
 

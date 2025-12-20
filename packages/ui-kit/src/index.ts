@@ -21,5 +21,9 @@ export * from './components/ToggleSwitch';
 export * from './components/Select';
 export * from './components/Input';
 
+// Export navigation and list components
+export * from './components/TabBar';
+export * from './components/VirtualizedList';
+
 // Package version
 export const UI_KIT_VERSION = '0.0.1';

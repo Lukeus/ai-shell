@@ -15,6 +15,9 @@ export interface ResizablePanelProps {
   
   /** Maximum allowed size in pixels */
   maxSize: number;
+
+  /** Default size used when double-clicking the splitter to reset */
+  defaultSize?: number;
   
   /** Whether the panel is currently collapsed */
   collapsed: boolean;
@@ -67,6 +70,7 @@ export const ResizablePanel = memo(function ResizablePanel({
   size,
   minSize,
   maxSize,
+  defaultSize,
   collapsed,
   onResize,
   onToggleCollapse,
@@ -77,6 +81,7 @@ export const ResizablePanel = memo(function ResizablePanel({
   const rafRef = useRef<number | null>(null);
   const startPosRef = useRef<number>(0);
   const startSizeRef = useRef<number>(0);
+  const resetSize = defaultSize ?? Math.max(minSize, Math.min(maxSize, 250));
 
   /**
    * Clamps a size value to min/max bounds.
@@ -142,66 +147,52 @@ export const ResizablePanel = memo(function ResizablePanel({
     };
   }, [isDragging, direction, size, clampSize, onResize]);
 
-  if (collapsed) {
-    // When collapsed, render only the expand button
-    return (
-      <div className={`flex items-center justify-center ${className}`}>
-        <button
-          onClick={onToggleCollapse}
-          className="p-2 hover:bg-surface-secondary rounded transition-colors"
-          aria-label="Expand panel"
-        >
-          <svg
-            className="w-4 h-4 text-secondary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {direction === 'horizontal' ? (
-              // Chevron right for horizontal collapsed panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            ) : (
-              // Chevron down for vertical collapsed panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            )}
-          </svg>
-        </button>
-      </div>
-    );
-  }
+  const handleDoubleClick = useCallback(() => {
+    const clamped = clampSize(resetSize);
+    onResize(clamped);
+    if (collapsed) {
+      onToggleCollapse();
+    }
+  }, [clampSize, resetSize, onResize, collapsed, onToggleCollapse]);
 
   return (
     <div className={`relative flex ${direction === 'horizontal' ? 'flex-row' : 'flex-col'} ${className}`}>
-      {/* Panel content - NO scrollbar on container, children handle their own overflow */}
-      <div className="flex-1 overflow-hidden">
+      {/* Panel content - hidden when collapsed, children handle their own overflow */}
+      <div className={`flex-1 overflow-hidden ${collapsed ? 'hidden' : 'block'}`}>
         {children}
       </div>
 
-      {/* Drag handle - VS Code style with better visibility */}
+      {/* Drag handle / collapse gutter - VS Code style with better visibility */}
       <div
         className={`
-          group relative flex items-center justify-center z-10
-          ${direction === 'horizontal' ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize'}
-          ${isDragging ? 'bg-accent' : 'bg-border hover:bg-accent'}
+          group absolute z-10 flex items-center justify-center
+          ${direction === 'horizontal' ? 'right-0 top-0 bottom-0 w-2 cursor-col-resize' : 'bottom-0 left-0 right-0 h-2 cursor-row-resize'}
           transition-colors duration-150
         `}
         onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
         role="separator"
         aria-orientation={direction}
         aria-valuenow={size}
         aria-valuemin={minSize}
         aria-valuemax={maxSize}
-        style={{
-          backgroundColor: isDragging ? 'var(--color-accent)' : undefined,
-        }}
       >
         {/* Visual feedback area - wider hit target (5px for easier grabbing) */}
         <div
           className={`
             absolute
-            ${direction === 'horizontal' ? 'inset-y-0 -left-2 w-5' : 'inset-x-0 -top-2 h-5'}
-            ${isDragging ? 'bg-accent/20' : 'hover:bg-accent/10'}
+            ${direction === 'horizontal' ? 'inset-y-0 -left-2 w-6' : 'inset-x-0 -top-2 h-6'}
+            ${isDragging ? 'bg-accent/15' : 'hover:bg-surface-hover'}
             transition-colors duration-150
+          `}
+        />
+
+        {/* Divider line */}
+        <div
+          className={`
+            absolute
+            ${direction === 'horizontal' ? 'inset-y-0 left-1/2 w-px' : 'inset-x-0 top-1/2 h-px'}
+            ${isDragging ? 'bg-accent' : 'bg-border-subtle group-hover:bg-border'}
           `}
         />
         
@@ -209,12 +200,12 @@ export const ResizablePanel = memo(function ResizablePanel({
         <button
           onClick={onToggleCollapse}
           className="
-            absolute z-10 p-1 rounded
+            absolute z-10 p-1 rounded-sm
             bg-surface-elevated border border-border
             hover:bg-surface-hover hover:border-accent
             opacity-0 group-hover:opacity-100
-            transition-all duration-200
-            shadow-md
+            transition-colors duration-150
+            left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
           "
           aria-label="Collapse panel"
           style={{
@@ -228,11 +219,11 @@ export const ResizablePanel = memo(function ResizablePanel({
             viewBox="0 0 24 24"
           >
             {direction === 'horizontal' ? (
-              // Chevron left for horizontal panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              // Chevron indicates collapse/expand for horizontal panels
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={collapsed ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7'} />
             ) : (
-              // Chevron up for vertical panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+              // Chevron for vertical panels
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={collapsed ? 'M19 9l-7 7-7-7' : 'M5 15l7-7 7 7'} />
             )}
           </svg>
         </button>

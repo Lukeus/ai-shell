@@ -13,10 +13,17 @@ import {
   CreateDirectoryRequestSchema,
   RenameRequestSchema,
   DeleteRequestSchema,
+  CreateTerminalRequestSchema,
+  CreateTerminalResponse,
+  TerminalWriteRequestSchema,
+  TerminalResizeRequestSchema,
+  TerminalCloseRequestSchema,
+  ListTerminalsResponse,
 } from 'packages-api-contracts';
 import { settingsService } from './services/SettingsService';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
+import { terminalService } from './services/TerminalService';
 
 /**
  * Register all IPC handlers for main process.
@@ -191,6 +198,100 @@ export function registerIPCHandlers(): void {
       await fsBrokerService.delete(validated.path);
       // Note: recursive flag in schema but delete() doesn't use it
       // (shell.trashItem handles both files and directories)
+    }
+  );
+
+  // ========================================
+  // Terminal IPC Handlers
+  // P6 (Contracts-first): Validate all requests with Zod before processing
+  // P1 (Process isolation): All PTY operations via main process only
+  // P3 (Secrets): Terminal I/O never logged
+  // ========================================
+
+  /**
+   * Handler for TERMINAL_CREATE channel.
+   * Creates a new terminal session (PTY).
+   * 
+   * @param request - CreateTerminalRequest with cwd, env, shell, cols, rows
+   * @returns CreateTerminalResponse with session metadata
+   * @throws Error if max sessions exceeded or cwd outside workspace
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_CREATE,
+    async (_event, request: unknown): Promise<CreateTerminalResponse> => {
+      // P6 (Contracts-first): Validate request with Zod schema
+      const validated = CreateTerminalRequestSchema.parse(request);
+      
+      // Get current workspace for security validation
+      const workspace = workspaceService.getWorkspace();
+      const workspaceRoot = workspace?.path || null;
+      
+      // Create terminal session via TerminalService
+      const session = terminalService.createSession(validated, workspaceRoot);
+      
+      return { session };
+    }
+  );
+
+  /**
+   * Handler for TERMINAL_WRITE channel.
+   * Writes data to a terminal session.
+   * 
+   * @param request - TerminalWriteRequest with sessionId and data
+   * @throws Error if session not found
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_WRITE,
+    async (_event, request: unknown): Promise<void> => {
+      // P6 (Contracts-first): Validate request with Zod schema
+      const validated = TerminalWriteRequestSchema.parse(request);
+      terminalService.write(validated.sessionId, validated.data);
+    }
+  );
+
+  /**
+   * Handler for TERMINAL_RESIZE channel.
+   * Resizes a terminal session.
+   * 
+   * @param request - TerminalResizeRequest with sessionId, cols, rows
+   * @throws Error if session not found
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_RESIZE,
+    async (_event, request: unknown): Promise<void> => {
+      // P6 (Contracts-first): Validate request with Zod schema
+      const validated = TerminalResizeRequestSchema.parse(request);
+      terminalService.resize(validated.sessionId, validated.cols, validated.rows);
+    }
+  );
+
+  /**
+   * Handler for TERMINAL_CLOSE channel.
+   * Closes a terminal session.
+   * 
+   * @param request - TerminalCloseRequest with sessionId
+   * @throws Error if session not found
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_CLOSE,
+    async (_event, request: unknown): Promise<void> => {
+      // P6 (Contracts-first): Validate request with Zod schema
+      const validated = TerminalCloseRequestSchema.parse(request);
+      terminalService.close(validated.sessionId);
+    }
+  );
+
+  /**
+   * Handler for TERMINAL_LIST channel.
+   * Lists all active terminal sessions.
+   * 
+   * @returns ListTerminalsResponse with sessions array
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_LIST,
+    async (): Promise<ListTerminalsResponse> => {
+      const sessions = terminalService.listSessions();
+      return { sessions };
     }
   );
 }

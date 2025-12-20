@@ -74,8 +74,13 @@ export function EditorArea() {
 
   // Infer Monaco language from file extension
   const getLanguageFromPath = (filePath: string): string => {
+    const fileName = filePath.split(/[\\/]/).pop()?.toLowerCase();
     const ext = filePath.split('.').pop()?.toLowerCase();
     
+    if (fileName === 'dockerfile') {
+      return 'dockerfile';
+    }
+
     switch (ext) {
       case 'ts':
       case 'tsx':
@@ -86,9 +91,11 @@ export function EditorArea() {
       case 'cjs':
         return 'javascript';
       case 'json':
+      case 'jsonc':
         return 'json';
       case 'md':
       case 'markdown':
+      case 'mdx':
         return 'markdown';
       case 'html':
       case 'htm':
@@ -98,16 +105,54 @@ export function EditorArea() {
       case 'scss':
       case 'sass':
         return 'scss';
+      case 'less':
+        return 'less';
       case 'yaml':
       case 'yml':
         return 'yaml';
       case 'xml':
+      case 'svg':
         return 'xml';
       case 'py':
         return 'python';
       case 'sh':
       case 'bash':
         return 'shell';
+      case 'ps1':
+      case 'psm1':
+      case 'psd1':
+        return 'powershell';
+      case 'bat':
+      case 'cmd':
+        return 'bat';
+      case 'ini':
+      case 'properties':
+      case 'editorconfig':
+        return 'ini';
+      case 'c':
+      case 'h':
+        return 'c';
+      case 'cpp':
+      case 'cc':
+      case 'cxx':
+      case 'hpp':
+      case 'hh':
+      case 'hxx':
+        return 'cpp';
+      case 'cs':
+        return 'csharp';
+      case 'java':
+        return 'java';
+      case 'go':
+        return 'go';
+      case 'rs':
+        return 'rust';
+      case 'rb':
+        return 'ruby';
+      case 'php':
+        return 'php';
+      case 'sql':
+        return 'sql';
       default:
         return 'plaintext';
     }

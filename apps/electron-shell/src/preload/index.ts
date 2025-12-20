@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC_CHANNELS, PreloadAPI } from 'packages-api-contracts';
 
 /**
@@ -31,6 +31,107 @@ const api: PreloadAPI = {
     createDirectory: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_CREATE_DIRECTORY, request),
     rename: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_RENAME, request),
     delete: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_DELETE, request),
+  },
+  
+  // Terminal management methods (PTY sessions)
+  // P1 (Process isolation): All PTY operations via main process
+  // P3 (Secrets): Terminal I/O never logged
+  terminal: {
+    create: (request) => ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_CREATE, request),
+    write: (request) => ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_WRITE, request),
+    resize: (request) => ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_RESIZE, request),
+    close: (request) => ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_CLOSE, request),
+    list: () => ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_LIST),
+    
+    // P2 (Security defaults): Event subscriptions with proper cleanup
+    onData: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.TERMINAL_DATA, listener);
+      // Return unsubscribe function
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_DATA, listener);
+      };
+    },
+    
+    onExit: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.TERMINAL_EXIT, listener);
+      // Return unsubscribe function
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_EXIT, listener);
+      };
+    },
+  },
+  
+  // Output channel methods
+  output: {
+    append: (request) => ipcRenderer.invoke(IPC_CHANNELS.OUTPUT_APPEND, request),
+    clear: (request) => ipcRenderer.invoke(IPC_CHANNELS.OUTPUT_CLEAR, request),
+    listChannels: () => ipcRenderer.invoke(IPC_CHANNELS.OUTPUT_LIST_CHANNELS),
+    read: (request) => ipcRenderer.invoke(IPC_CHANNELS.OUTPUT_READ, request),
+    
+    // P2 (Security defaults): Event subscriptions with proper cleanup
+    onAppend: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.OUTPUT_ON_APPEND, listener);
+      // Return unsubscribe function
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.OUTPUT_ON_APPEND, listener);
+      };
+    },
+    
+    onClear: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.OUTPUT_ON_CLEAR, listener);
+      // Return unsubscribe function
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.OUTPUT_ON_CLEAR, listener);
+      };
+    },
+  },
+  
+  // Diagnostics methods (problems panel)
+  diagnostics: {
+    publish: (request) => ipcRenderer.invoke(IPC_CHANNELS.DIAGNOSTICS_PUBLISH, request),
+    clear: (request) => ipcRenderer.invoke(IPC_CHANNELS.DIAGNOSTICS_CLEAR, request),
+    list: (request) => ipcRenderer.invoke(IPC_CHANNELS.DIAGNOSTICS_LIST, request),
+    
+    // P2 (Security defaults): Event subscriptions with proper cleanup
+    onUpdate: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.DIAGNOSTICS_ON_UPDATE, listener);
+      // Return unsubscribe function
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.DIAGNOSTICS_ON_UPDATE, listener);
+      };
+    },
+    
+    onSummary: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.DIAGNOSTICS_ON_SUMMARY, listener);
+      // Return unsubscribe function
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.DIAGNOSTICS_ON_SUMMARY, listener);
+      };
+    },
   },
 };
 

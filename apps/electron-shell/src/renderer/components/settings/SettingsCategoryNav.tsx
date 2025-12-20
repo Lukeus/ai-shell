@@ -55,7 +55,7 @@ export function SettingsCategoryNav({
 }: SettingsCategoryNavProps) {
   return (
     <nav className="w-full">
-      <ul className="space-y-1">
+      <ul className="space-y-0">
         {categories.map((category) => {
           const isActive = category.id === activeCategory;
           
@@ -64,16 +64,17 @@ export function SettingsCategoryNav({
               <button
                 onClick={() => onCategoryClick(category.id)}
                 className={`
-                  w-full px-4 py-2 text-left rounded-md
-                  text-sm font-medium
-                  transition-colors duration-200
+                  w-full text-left
+                  text-xs font-medium
+                  transition-colors duration-150
                   ${isActive
-                    ? 'bg-accent text-primary'
-                    : 'text-secondary hover:bg-surface-secondary hover:text-primary'
+                    ? 'bg-selection text-primary'
+                    : 'text-secondary hover:bg-surface-hover hover:text-primary'
                   }
                 `}
+                style={{ height: 'var(--size-list-row)' }}
               >
-                {category.label}
+                <span className="pl-3 pr-2 block truncate">{category.label}</span>
               </button>
             </li>
           );

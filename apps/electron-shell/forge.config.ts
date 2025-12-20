@@ -6,8 +6,14 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    asarUnpack: [
+      '**/node-pty/**',
+      '**/@homebridge/node-pty-prebuilt-multiarch/**',
+    ],
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    onlyModules: ['node-pty', '@homebridge/node-pty-prebuilt-multiarch'],
+  },
   makers: [
     new MakerSquirrel({
       name: 'ai-shell',

@@ -3,6 +3,8 @@ import path from 'path';
 import fs from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { buildApplicationMenu } from './menu';
+import { terminalService } from './services/TerminalService';
+import { IPC_CHANNELS } from 'packages-api-contracts';
 // SettingsService is initialized lazily when first accessed via IPC handlers
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -81,6 +83,21 @@ const createWindow = (): void => {
 app.on('ready', () => {
   // Register IPC handlers before creating window
   registerIPCHandlers();
+  
+  // Wire up terminal service events to send to renderer
+  // P3 (Secrets): Terminal I/O forwarded via IPC, never logged
+  terminalService.on('data', (event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.TERMINAL_DATA, event);
+    }
+  });
+  
+  terminalService.on('exit', (event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.TERMINAL_EXIT, event);
+    }
+  });
+  
   // Build application menu
   buildApplicationMenu();
   createWindow();
@@ -88,6 +105,9 @@ app.on('ready', () => {
 
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
+  // Clean up terminal sessions before quitting
+  terminalService.cleanup();
+  
   if (process.platform !== 'darwin') {
     app.quit();
   }

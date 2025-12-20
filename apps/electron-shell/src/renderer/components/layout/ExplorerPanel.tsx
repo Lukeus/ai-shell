@@ -205,122 +205,67 @@ export function ExplorerPanel() {
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Header with actions */}
-      <div className="flex flex-col border-b border-border-subtle bg-surface-secondary">
-        <div className="flex items-center justify-between px-4 py-2">
-          <h2 className="text-xs font-bold text-primary uppercase tracking-wider truncate">
-            {workspace.name}
-          </h2>
-        </div>
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border-subtle bg-surface-secondary">
+        <h2 className="flex-1 text-xs font-bold text-primary uppercase tracking-wider truncate">
+          {workspace.name}
+        </h2>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-0.5 px-2 pb-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="
-              p-1 rounded transition-all duration-200
+              w-6 h-6 flex items-center justify-center rounded
               hover:bg-surface-hover
               active:scale-95 disabled:opacity-50
               text-secondary hover:text-primary
             "
-            title="Refresh Explorer"
-            aria-label="Refresh Explorer"
+            title="Refresh"
+            aria-label="Refresh"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={isRefreshing ? 'animate-spin' : ''}
-            >
-              <path d="M14 8a6 6 0 1 1-6-6" />
-              <path d="M14 2v4h-4" />
-            </svg>
+            <span className={`codicon codicon-refresh ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>
 
           <button
             onClick={handleNewFile}
             className="
-              p-1 rounded transition-all duration-200
+              w-6 h-6 flex items-center justify-center rounded
               hover:bg-surface-hover
               active:scale-95
               text-secondary hover:text-primary
             "
-            title="New File..."
+            title="New File"
             aria-label="New File"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6L9 2z" />
-              <path d="M9 2v4h4" />
-              <path d="M8 8v4" />
-              <path d="M6 10h4" />
-            </svg>
+            <span className="codicon codicon-new-file" aria-hidden="true" />
           </button>
 
           <button
             onClick={handleNewFolder}
             className="
-              p-1 rounded transition-all duration-200
+              w-6 h-6 flex items-center justify-center rounded
               hover:bg-surface-hover
               active:scale-95
               text-secondary hover:text-primary
             "
-            title="New Folder..."
+            title="New Folder"
             aria-label="New Folder"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M2 4v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H8L7 3H3a1 1 0 0 0-1 1z" />
-              <path d="M8 7v4" />
-              <path d="M6 9h4" />
-            </svg>
+            <span className="codicon codicon-new-folder" aria-hidden="true" />
           </button>
 
           <button
             onClick={handleCollapseAll}
             className="
-              p-1 rounded transition-all duration-200
+              w-6 h-6 flex items-center justify-center rounded
               hover:bg-surface-hover
               active:scale-95
               text-secondary hover:text-primary
             "
-            title="Collapse Folders in Explorer"
+            title="Collapse All"
             aria-label="Collapse All"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 6l5 5 5-5" />
-              <path d="M3 2l5 5 5-5" />
-            </svg>
+            <span className="codicon codicon-collapse-all" aria-hidden="true" />
           </button>
         </div>
       </div>

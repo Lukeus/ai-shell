@@ -81,6 +81,9 @@ The Workspace Explorer provides secure file system navigation and management:
 - **Node.js**: 22.x LTS (minimum 20.x)
 - **pnpm**: 9.15.4 (specified in package.json)
 - **Windows, macOS, or Linux**
+- **Windows only**: Visual Studio Build Tools (for node-pty native compilation)
+  - Install via: `npm install --global windows-build-tools` OR
+  - Visual Studio 2022/2019 with "Desktop development with C++" workload
 
 ## Setup
 

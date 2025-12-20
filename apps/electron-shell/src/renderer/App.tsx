@@ -8,6 +8,7 @@ import { EditorArea } from './components/editor/EditorArea';
 import { TerminalPanel } from './components/layout/TerminalPanel';
 import { AIAssistantPanel } from './components/layout/AIAssistantPanel';
 import { SettingsPanel } from './components/settings/SettingsPanel';
+import { TerminalContextProvider } from './contexts/TerminalContext';
 
 /**
  * Main application component for ai-shell.
@@ -32,7 +33,9 @@ export function App() {
     <ThemeProvider>
       <LayoutProvider>
         <FileTreeContextProvider>
-          <AppContent />
+          <TerminalContextProvider>
+            <AppContent />
+          </TerminalContextProvider>
         </FileTreeContextProvider>
       </LayoutProvider>
     </ThemeProvider>
@@ -54,8 +57,9 @@ function AppContent() {
     toggleBottomPanel,
     setActiveActivityBarIcon,
   } = useLayoutContext();
-  
-  const { workspace, openWorkspace, closeWorkspace, refresh } = useFileTree();
+
+  const { workspace, openWorkspace, closeWorkspace, refresh, openTabs, activeTabIndex } = useFileTree();
+  const isSettingsView = state.activeActivityBarIcon === 'settings';
   
   // P1 (Process isolation): Listen for menu events from main process
   useEffect(() => {
@@ -105,24 +109,21 @@ function AppContent() {
             minSize={200}
             maxSize={600}
             collapsed={state.primarySidebarCollapsed}
+            defaultSize={300}
             onResize={updatePrimarySidebarWidth}
             onToggleCollapse={togglePrimarySidebar}
           >
             <div className="flex flex-col h-full">
               <PanelHeader
-                title={state.activeActivityBarIcon === 'settings' ? 'Settings' : 'Explorer'}
+                title="Explorer"
                 collapsed={state.primarySidebarCollapsed}
                 onToggleCollapse={togglePrimarySidebar}
               />
-              {state.activeActivityBarIcon === 'settings' ? (
-                <SettingsPanel />
-              ) : (
-                <ExplorerPanel />
-              )}
+              <ExplorerPanel />
             </div>
           </ResizablePanel>
         }
-        editorArea={<EditorArea />}
+        editorArea={isSettingsView ? <SettingsPanel /> : <EditorArea />}
         secondarySidebar={
           <ResizablePanel
             direction="horizontal"
@@ -130,6 +131,7 @@ function AppContent() {
             minSize={200}
             maxSize={600}
             collapsed={state.secondarySidebarCollapsed}
+            defaultSize={300}
             onResize={updateSecondarySidebarWidth}
             onToggleCollapse={toggleSecondarySidebar}
           >
@@ -150,6 +152,7 @@ function AppContent() {
             minSize={100}
             maxSize={600}
             collapsed={state.bottomPanelCollapsed}
+            defaultSize={200}
             onResize={updateBottomPanelHeight}
             onToggleCollapse={toggleBottomPanel}
           >
@@ -158,14 +161,58 @@ function AppContent() {
         }
         statusBar={
           <StatusBar
-            leftContent={
-              <span className="text-xs text-primary font-medium">
-                {workspace ? workspace.name : 'No Folder Open'}
-              </span>
-            }
-            rightContent={
-              <span className="text-xs text-secondary">ai-shell v0.0.1</span>
-            }
+            leftItems={[
+              {
+                id: 'workspace',
+                icon: workspace ? 'codicon-root-folder' : 'codicon-folder-opened',
+                label: workspace ? workspace.name : 'No Folder Open',
+                tooltip: workspace?.path,
+              },
+              {
+                id: 'git',
+                icon: 'codicon-source-control',
+                label: 'master',
+                tooltip: 'Git branch (placeholder)',
+              },
+            ]}
+            rightItems={[
+              {
+                id: 'position',
+                icon: 'codicon-whole-word',
+                label: 'Ln 1, Col 1',
+                tooltip: 'Cursor position',
+              },
+              {
+                id: 'indent',
+                icon: 'codicon-layout',
+                label: 'Spaces: 2',
+                tooltip: 'Indentation',
+              },
+              {
+                id: 'encoding',
+                icon: 'codicon-code',
+                label: 'UTF-8',
+                tooltip: 'File encoding',
+              },
+              {
+                id: 'eol',
+                icon: 'codicon-arrow-both',
+                label: 'LF',
+                tooltip: 'End of line sequence',
+              },
+              {
+                id: 'lang',
+                icon: 'codicon-file-code',
+                label: activeTabIndex >= 0 ? openTabs[activeTabIndex].split('.').pop()?.toUpperCase() ?? 'Text' : 'Plain Text',
+                tooltip: 'Language',
+              },
+              {
+                id: 'notifications',
+                icon: 'codicon-bell',
+                label: '',
+                tooltip: 'Notifications',
+              },
+            ]}
           />
         }
       />

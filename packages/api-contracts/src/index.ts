@@ -14,5 +14,8 @@ export * from './types/layout-state';
 export * from './types/settings';
 export * from './types/workspace';
 export * from './types/fs-broker';
+export * from './types/terminal';
+export * from './types/output';
+export * from './types/diagnostics';
 export * from './ipc-channels';
 export * from './preload-api';

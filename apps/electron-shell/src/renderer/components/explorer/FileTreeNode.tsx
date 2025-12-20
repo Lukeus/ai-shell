@@ -55,6 +55,21 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
     }
   };
 
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (isDirectory) {
+        await toggleFolder(entry.path);
+      } else {
+        openFile(entry.path);
+      }
+    } else if (e.key === 'F2') {
+      e.preventDefault();
+      setIsRenaming(true);
+      onRenameStart?.(entry.path);
+    }
+  };
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isDirectory) {
@@ -90,6 +105,7 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
   // Calculate indentation based on depth
   const indentStyle = {
     paddingLeft: `${depth * 16 + 8}px`,
+    height: 'var(--size-list-row)',
   };
 
   if (isRenaming) {
@@ -109,35 +125,32 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
     <>
       <div
         className={`
-          flex items-center h-6 px-2 cursor-pointer
-          hover:bg-[var(--list-hover-bg)]
-          text-[var(--list-fg)]
+          flex items-center px-2 cursor-pointer select-none
+          hover:bg-[var(--vscode-list-hoverBackground)]
+          text-[var(--vscode-foreground)]
           text-sm
         `}
         style={indentStyle}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         role="treeitem"
         aria-expanded={isDirectory ? isExpanded : undefined}
         aria-label={`${isDirectory ? 'Folder' : 'File'}: ${entry.name}`}
+        tabIndex={0}
       >
         {/* Chevron (folders only) */}
         {isDirectory && (
           <button
-            className="flex items-center justify-center w-4 h-4 mr-1 hover:bg-[var(--button-hover-bg)] rounded"
+            className="flex items-center justify-center w-4 h-4 mr-1.5 hover:bg-[var(--vscode-list-hoverBackground)]"
             onClick={handleToggle}
             aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-            >
-              <path d="M6 4l4 4-4 4z" />
-            </svg>
+            <span
+              className={`codicon ${isExpanded ? 'codicon-chevron-down' : 'codicon-chevron-right'}`}
+              aria-hidden="true"
+            />
           </button>
         )}
 
@@ -145,15 +158,11 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
         {!isDirectory && <div className="w-5" />}
 
         {/* Icon */}
-        <div className="flex items-center justify-center w-4 h-4 mr-2">
+        <div className="flex items-center justify-center w-4 h-4 mr-2 text-secondary">
           {isDirectory ? (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M1 2h5l1 2h8v10H1V2z" />
-            </svg>
+            <span className={`codicon ${isExpanded ? 'codicon-folder-opened' : 'codicon-folder'}`} aria-hidden="true" />
           ) : (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M3 1h7l3 3v10a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" />
-            </svg>
+            <span className="codicon codicon-file" aria-hidden="true" />
           )}
         </div>
 
@@ -187,26 +196,22 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
           <div className="flex items-center gap-1 ml-2">
             {/* Rename button */}
             <button
-              className="flex items-center justify-center w-4 h-4 hover:bg-[var(--button-hover-bg)] rounded"
+              className="flex items-center justify-center w-4 h-4 hover:bg-[var(--vscode-list-hoverBackground)]"
               onClick={handleRename}
               aria-label="Rename"
               title="Rename"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M13.5 1l1.5 1.5L5 12.5 3.5 14H1v-2.5L10.5 2l1.5-1h1.5zM2 13h1l9-9-1-1-9 9v1z" />
-              </svg>
+              <span className="codicon codicon-edit" aria-hidden="true" />
             </button>
 
             {/* Delete button */}
             <button
-              className="flex items-center justify-center w-4 h-4 hover:bg-[var(--button-hover-bg)] rounded text-[var(--error-fg)]"
+              className="flex items-center justify-center w-4 h-4 hover:bg-[var(--vscode-list-hoverBackground)] text-status-error"
               onClick={handleDelete}
               aria-label="Delete"
               title="Delete"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M5 1h6v1H5V1zm-.5 2h7l-.5 11H5.5L5 3zm1 1l.4 9h1l-.4-9h-1zm3 0l-.4 9h1l.4-9h-1z" />
-              </svg>
+              <span className="codicon codicon-trash" aria-hidden="true" />
             </button>
           </div>
         )}

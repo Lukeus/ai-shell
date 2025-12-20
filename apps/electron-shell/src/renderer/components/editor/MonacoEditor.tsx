@@ -31,6 +31,27 @@ export function MonacoEditor({ filePath, content, language, onChange }: MonacoEd
   const [monaco, setMonaco] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason as { name?: string; message?: string; stack?: string } | null;
+      if (!reason || typeof reason !== 'object') return;
+
+      const isCanceled = reason.name === 'Canceled' || reason.message?.includes('Canceled');
+      const fromMonaco =
+        typeof reason.stack === 'string' && reason.stack.includes('monaco-editor');
+
+      if (isCanceled && fromMonaco) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   // P5 (Performance budgets): Dynamic import of Monaco Editor
   useEffect(() => {
     let isMounted = true;
@@ -39,6 +60,31 @@ export function MonacoEditor({ filePath, content, language, onChange }: MonacoEd
       try {
         // Dynamic import to keep Monaco out of initial bundle
         const monacoModule = await import('monaco-editor');
+        await Promise.allSettled([
+          import('monaco-editor/esm/vs/basic-languages/bat/bat.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/go/go.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/ini/ini.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/java/java.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/less/less.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/php/php.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/powershell/powershell.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/python/python.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/ruby/ruby.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/rust/rust.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/scss/scss.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/shell/shell.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/sql/sql.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/xml/xml.contribution'),
+          import('monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution'),
+          import('monaco-editor/esm/vs/language/css/monaco.contribution'),
+          import('monaco-editor/esm/vs/language/html/monaco.contribution'),
+          import('monaco-editor/esm/vs/language/json/monaco.contribution'),
+          import('monaco-editor/esm/vs/language/typescript/monaco.contribution'),
+        ]);
         
         if (!isMounted) return;
         
@@ -72,6 +118,7 @@ export function MonacoEditor({ filePath, content, language, onChange }: MonacoEd
       readOnly: true, // Read-only for now (save functionality deferred)
       minimap: { enabled: true },
       scrollBeyondLastLine: false,
+      fontFamily: 'var(--vscode-editor-font-family)',
       fontSize: 14,
       lineNumbers: 'on',
       renderWhitespace: 'selection',

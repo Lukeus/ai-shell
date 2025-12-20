@@ -11,6 +11,33 @@ import type {
   RenameRequest,
   DeleteRequest,
 } from './types/fs-broker';
+import type {
+  CreateTerminalRequest,
+  CreateTerminalResponse,
+  TerminalWriteRequest,
+  TerminalResizeRequest,
+  TerminalCloseRequest,
+  ListTerminalsResponse,
+  TerminalDataEvent,
+  TerminalExitEvent,
+} from './types/terminal';
+import type {
+  AppendOutputRequest,
+  ClearOutputRequest,
+  ListOutputChannelsResponse,
+  ReadOutputRequest,
+  ReadOutputResponse,
+  OutputAppendEvent,
+  OutputClearEvent,
+} from './types/output';
+import type {
+  PublishDiagnosticsRequest,
+  ClearDiagnosticsRequest,
+  ListDiagnosticsRequest,
+  ListDiagnosticsResponse,
+  DiagnosticsUpdateEvent,
+  DiagnosticsSummaryEvent,
+} from './types/diagnostics';
 
 /**
  * Preload API surface exposed to the renderer process via contextBridge.
@@ -175,6 +202,218 @@ export interface PreloadAPI {
      * @throws FsError if path is outside workspace, not found, or trash fails
      */
     delete(request: DeleteRequest): Promise<void>;
+  };
+  
+  /**
+   * Terminal management APIs (PTY sessions).
+   * 
+   * Security: PTY operations run ONLY in main process.
+   * Terminal I/O is NEVER logged to prevent secrets exposure (P3: Secrets).
+   */
+  terminal: {
+    /**
+     * Creates a new terminal session (PTY).
+     * 
+     * Main process spawns PTY using node-pty with validated cwd within workspace.
+     * Environment variables are sanitized to prevent secrets exposure.
+     * 
+     * @param request - Terminal creation parameters (cwd, env, shell, size)
+     * @returns Promise resolving to CreateTerminalResponse with session metadata
+     * @throws Error if cwd is outside workspace or max sessions (10) exceeded
+     */
+    create(request: CreateTerminalRequest): Promise<CreateTerminalResponse>;
+    
+    /**
+     * Writes data to a terminal session.
+     * 
+     * Sends user input to PTY stdin (e.g., typed characters, control sequences).
+     * 
+     * @param request - Session ID and data to write
+     * @returns Promise resolving when data is written
+     * @throws Error if session ID is invalid or session is closed
+     */
+    write(request: TerminalWriteRequest): Promise<void>;
+    
+    /**
+     * Resizes a terminal session.
+     * 
+     * Forwards resize to PTY (updates cols/rows).
+     * 
+     * @param request - Session ID and new dimensions
+     * @returns Promise resolving when resize completes
+     * @throws Error if session ID is invalid
+     */
+    resize(request: TerminalResizeRequest): Promise<void>;
+    
+    /**
+     * Closes a terminal session.
+     * 
+     * Kills PTY process and removes session from active sessions.
+     * 
+     * @param request - Session ID to close
+     * @returns Promise resolving when session is closed
+     * @throws Error if session ID is invalid
+     */
+    close(request: TerminalCloseRequest): Promise<void>;
+    
+    /**
+     * Lists all active terminal sessions.
+     * 
+     * @returns Promise resolving to ListTerminalsResponse with session metadata
+     */
+    list(): Promise<ListTerminalsResponse>;
+    
+    /**
+     * Subscribes to terminal data events.
+     * 
+     * Callback is invoked when PTY outputs data (stdout/stderr).
+     * Returns unsubscribe function to clean up listener.
+     * 
+     * @param callback - Function to call when data event occurs
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onData(callback: (event: TerminalDataEvent) => void): () => void;
+    
+    /**
+     * Subscribes to terminal exit events.
+     * 
+     * Callback is invoked when PTY process exits.
+     * Returns unsubscribe function to clean up listener.
+     * 
+     * @param callback - Function to call when exit event occurs
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onExit(callback: (event: TerminalExitEvent) => void): () => void;
+  };
+  
+  /**
+   * Output channel APIs.
+   * 
+   * Manages named output channels for build logs, extension logs, etc.
+   * Supports 10K+ lines with pagination.
+   */
+  output: {
+    /**
+     * Appends lines to an output channel.
+     * 
+     * Creates channel if it doesn't exist. Lines are appended atomically.
+     * 
+     * @param request - Channel ID, lines to append, optional severity
+     * @returns Promise resolving when lines are appended
+     */
+    append(request: AppendOutputRequest): Promise<void>;
+    
+    /**
+     * Clears an output channel.
+     * 
+     * Removes all lines from the channel; channel metadata is preserved.
+     * 
+     * @param request - Channel ID to clear
+     * @returns Promise resolving when channel is cleared
+     * @throws Error if channel ID is invalid
+     */
+    clear(request: ClearOutputRequest): Promise<void>;
+    
+    /**
+     * Lists all output channels.
+     * 
+     * @returns Promise resolving to ListOutputChannelsResponse with channel metadata
+     */
+    listChannels(): Promise<ListOutputChannelsResponse>;
+    
+    /**
+     * Reads lines from an output channel.
+     * 
+     * Supports pagination for large channels (10K+ lines).
+     * 
+     * @param request - Channel ID, start line, max lines
+     * @returns Promise resolving to ReadOutputResponse with lines and pagination info
+     * @throws Error if channel ID is invalid
+     */
+    read(request: ReadOutputRequest): Promise<ReadOutputResponse>;
+    
+    /**
+     * Subscribes to output append events.
+     * 
+     * Callback is invoked when lines are appended to any channel.
+     * Returns unsubscribe function to clean up listener.
+     * 
+     * @param callback - Function to call when append event occurs
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onAppend(callback: (event: OutputAppendEvent) => void): () => void;
+    
+    /**
+     * Subscribes to output clear events.
+     * 
+     * Callback is invoked when a channel is cleared.
+     * Returns unsubscribe function to clean up listener.
+     * 
+     * @param callback - Function to call when clear event occurs
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onClear(callback: (event: OutputClearEvent) => void): () => void;
+  };
+  
+  /**
+   * Diagnostics APIs (problems panel).
+   * 
+   * Manages diagnostics (errors, warnings, info, hints) from TypeScript, ESLint, etc.
+   * Supports 1000+ diagnostics with filtering.
+   */
+  diagnostics: {
+    /**
+     * Publishes diagnostics for a file.
+     * 
+     * Replaces all diagnostics for the file from the given source.
+     * If diagnostics array is empty, clears all diagnostics for that file+source.
+     * 
+     * @param request - File path, source, diagnostics array
+     * @returns Promise resolving when diagnostics are published
+     */
+    publish(request: PublishDiagnosticsRequest): Promise<void>;
+    
+    /**
+     * Clears diagnostics.
+     * 
+     * Clears diagnostics by file path and/or source.
+     * 
+     * @param request - Optional file path and/or source filter
+     * @returns Promise resolving when diagnostics are cleared
+     */
+    clear(request: ClearDiagnosticsRequest): Promise<void>;
+    
+    /**
+     * Lists all diagnostics.
+     * 
+     * Supports filtering by severity and source.
+     * 
+     * @param request - Optional severity and/or source filter
+     * @returns Promise resolving to ListDiagnosticsResponse with diagnostics and summary
+     */
+    list(request: ListDiagnosticsRequest): Promise<ListDiagnosticsResponse>;
+    
+    /**
+     * Subscribes to diagnostics update events.
+     * 
+     * Callback is invoked when diagnostics are added, updated, or removed for a file.
+     * Returns unsubscribe function to clean up listener.
+     * 
+     * @param callback - Function to call when update event occurs
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onUpdate(callback: (event: DiagnosticsUpdateEvent) => void): () => void;
+    
+    /**
+     * Subscribes to diagnostics summary events.
+     * 
+     * Callback is invoked when overall diagnostics counts change.
+     * Returns unsubscribe function to clean up listener.
+     * 
+     * @param callback - Function to call when summary event occurs
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onSummary(callback: (event: DiagnosticsSummaryEvent) => void): () => void;
   };
   
   // Future expansion:

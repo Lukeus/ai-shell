@@ -27,6 +27,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.10.8",
     "packages-api-contracts": "workspace:*"
   },
   "devDependencies": {

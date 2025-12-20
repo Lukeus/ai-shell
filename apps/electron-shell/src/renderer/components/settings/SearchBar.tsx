@@ -41,19 +41,19 @@ export function SearchBar({ value, onChange, placeholder = 'Search settings...' 
   };
 
   return (
-    <div className="w-full mb-4">
+    <div className="w-full">
       <input
         type="text"
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
         className="
-          w-full px-4 py-2 rounded-md
-          bg-surface border border-border
-          text-primary text-sm
+          w-full px-3 py-1.5 rounded-sm
+          bg-surface-elevated border border-border
+          text-primary text-xs
           placeholder:text-secondary
-          focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent
-          transition-colors duration-200
+          focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent
+          transition-colors duration-150
         "
       />
     </div>
