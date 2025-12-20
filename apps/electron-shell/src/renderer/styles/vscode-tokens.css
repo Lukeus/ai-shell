@@ -92,6 +92,7 @@
   --vscode-tab-height: 35px;
   --vscode-statusBar-height: 22px;
   --vscode-titleBar-height: 35px;
+  --vscode-menuBar-height: var(--vscode-titleBar-height);
   --vscode-list-rowHeight: 22px;
   --vscode-panelHeader-height: 35px;
   

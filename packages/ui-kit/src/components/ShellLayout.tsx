@@ -74,23 +74,23 @@ export function ShellLayout({
   //         [Status Bar spans entire width]
   
   const activityBarWidth = 'var(--size-activityBar-width, var(--vscode-activityBar-width))';
-  const statusBarHeight = 'var(--size-statusBar-height)';
+  const statusBarHeight = 'var(--size-statusBar-height, var(--vscode-statusBar-height))';
   const gridTemplateColumns = [
     activityBarWidth, // Activity Bar (fixed)
     layoutState.primarySidebarCollapsed ? '4px' : `${layoutState.primarySidebarWidth}px`,
-    '1fr', // Editor Area (flexible, takes remaining space)
+    'minmax(0, 1fr)', // Editor Area (flexible, prevents overflow)
     layoutState.secondarySidebarCollapsed ? '4px' : `${layoutState.secondarySidebarWidth}px`,
   ].join(' ');
 
   const gridTemplateRows = [
-    '1fr', // Top row (Activity Bar + sidebars + editor)
+    'minmax(0, 1fr)', // Top row (Activity Bar + sidebars + editor)
     layoutState.bottomPanelCollapsed ? '4px' : `${layoutState.bottomPanelHeight}px`,
     statusBarHeight, // Status Bar (fixed height)
   ].join(' ');
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden bg-surface"
+      className="h-full w-full min-h-0 min-w-0 overflow-hidden bg-surface"
       style={{
         display: 'grid',
         gridTemplateColumns,
@@ -104,7 +104,7 @@ export function ShellLayout({
     >
       {/* Activity Bar - Leftmost vertical icon bar */}
       <div
-        className="bg-surface-secondary border-r border-border overflow-hidden"
+        className="bg-surface-secondary border-r border-border overflow-hidden min-h-0 min-w-0"
         style={{ gridArea: 'activity-bar' }}
       >
         {activityBar}
@@ -113,7 +113,7 @@ export function ShellLayout({
       {/* Primary Sidebar - Left collapsible/resizable panel */}
       {!layoutState.primarySidebarCollapsed && (
         <div
-          className="bg-surface-secondary border-r border-border overflow-hidden"
+          className="bg-surface-secondary border-r border-border overflow-visible min-h-0 min-w-0"
           style={{ gridArea: 'primary-sidebar' }}
         >
           {primarySidebar}
@@ -122,7 +122,7 @@ export function ShellLayout({
 
       {/* Editor Area - Center main content area */}
       <div
-        className="bg-surface overflow-auto"
+        className="bg-surface overflow-auto min-h-0 min-w-0"
         style={{ gridArea: 'editor-area' }}
       >
         {editorArea}
@@ -131,7 +131,7 @@ export function ShellLayout({
       {/* Secondary Sidebar - Right collapsible/resizable panel */}
       {!layoutState.secondarySidebarCollapsed && (
         <div
-          className="bg-surface-secondary border-l border-border overflow-hidden"
+          className="bg-surface-secondary border-l border-border overflow-visible min-h-0 min-w-0"
           style={{ gridArea: 'secondary-sidebar' }}
         >
           {secondarySidebar}
@@ -141,7 +141,7 @@ export function ShellLayout({
       {/* Bottom Panel - Bottom horizontal collapsible/resizable panel */}
       {!layoutState.bottomPanelCollapsed && (
         <div
-          className="bg-surface-secondary border-t border-border overflow-hidden"
+          className="bg-surface-secondary border-t border-border overflow-visible min-h-0 min-w-0"
           style={{ gridArea: 'bottom-panel' }}
         >
           {bottomPanel}
@@ -150,7 +150,7 @@ export function ShellLayout({
 
       {/* Status Bar - Bottom fixed-height bar */}
       <div
-        className="bg-transparent"
+        className="bg-transparent min-h-0 min-w-0"
         style={{ gridArea: 'status-bar' }}
       >
         {statusBar}

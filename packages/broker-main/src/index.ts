@@ -139,3 +139,48 @@ export class BrokerMain {
 
 export const brokerMain = new BrokerMain();
 export { PolicyService };
+
+/**
+ * VFS tool handler factory.
+ * Returns tool handlers that operate on a VirtualFS instance.
+ */
+export function createVfsToolHandlers(vfs: {
+  ls: (vfsPath: string) => string[];
+  read: (vfsPath: string) => string;
+  write: (vfsPath: string, content: string) => void;
+  edit: (vfsPath: string, replacements: Array<{ search: string; replace: string }>) => void;
+  glob: (pattern: string, mountPath: string) => string[];
+  grep: (pattern: string, mountPath: string) => Array<{ file: string; line: number; text: string }>;
+}): Record<string, ToolHandler> {
+  return {
+    'vfs.ls': (input: JsonValue) => {
+      const { path } = input as { path: string };
+      return vfs.ls(path);
+    },
+    'vfs.read': (input: JsonValue) => {
+      const { path } = input as { path: string };
+      return { content: vfs.read(path) };
+    },
+    'vfs.write': (input: JsonValue) => {
+      const { path, content } = input as { path: string; content: string };
+      vfs.write(path, content);
+      return { success: true };
+    },
+    'vfs.edit': (input: JsonValue) => {
+      const { path, replacements } = input as {
+        path: string;
+        replacements: Array<{ search: string; replace: string }>;
+      };
+      vfs.edit(path, replacements);
+      return { success: true };
+    },
+    'vfs.glob': (input: JsonValue) => {
+      const { pattern, mountPath } = input as { pattern: string; mountPath: string };
+      return vfs.glob(pattern, mountPath);
+    },
+    'vfs.grep': (input: JsonValue) => {
+      const { pattern, mountPath } = input as { pattern: string; mountPath: string };
+      return vfs.grep(pattern, mountPath);
+    },
+  };
+}

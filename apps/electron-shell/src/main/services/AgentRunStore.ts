@@ -96,7 +96,9 @@ export class AgentRunStore {
   }
 
   public appendEvent(event: AgentEvent): void {
-    const validated = AgentEventSchema.parse(event);
+    // Redact sensitive fields before persisting (P2: Security defaults)
+    const redacted = this.redactEvent(event);
+    const validated = AgentEventSchema.parse(redacted);
     const store = this.loadStore();
     if (!store.runs[validated.runId]) {
       throw new Error(`Agent run not found: ${validated.runId}`);
@@ -139,6 +141,65 @@ export class AgentRunStore {
     } catch {
       return { ...EMPTY_STORE };
     }
+  }
+
+  private redactEvent(event: AgentEvent): AgentEvent {
+    // Redact sensitive fields from tool calls and results
+    if (event.type === 'tool-call') {
+      return {
+        ...event,
+        toolCall: {
+          ...event.toolCall,
+          input: this.redactSensitiveData(event.toolCall.input) as typeof event.toolCall.input,
+        },
+      };
+    }
+
+    if (event.type === 'tool-result') {
+      return {
+        ...event,
+        result: {
+          ...event.result,
+          output: event.result.output
+            ? (this.redactSensitiveData(event.result.output) as typeof event.result.output)
+            : undefined,
+        },
+      };
+    }
+
+    return event;
+  }
+
+  private redactSensitiveData(data: unknown): unknown {
+    // Basic redaction for sensitive fields (P2: Security defaults)
+    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>;
+      const redacted: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(obj)) {
+        const lowerKey = key.toLowerCase();
+        if (
+          lowerKey.includes('secret') ||
+          lowerKey.includes('token') ||
+          lowerKey.includes('password') ||
+          lowerKey.includes('key') && !lowerKey.includes('keyname')
+        ) {
+          redacted[key] = '[REDACTED]';
+        } else if (typeof value === 'object' && value !== null) {
+          redacted[key] = this.redactSensitiveData(value);
+        } else {
+          redacted[key] = value;
+        }
+      }
+
+      return redacted;
+    }
+
+    if (Array.isArray(data)) {
+      return data.map((item) => this.redactSensitiveData(item));
+    }
+
+    return data;
   }
 
   private saveStore(store: AgentRunStoreData): void {

@@ -8,6 +8,9 @@ This feature introduces lazy-loaded Monaco Editor to the renderer process while 
 - Add `EditorLoader` component to handle loading/error/success states
 - Keep editor state (content, language, cursor position) in FileTreeContext for now
 - Monaco loads only when `EditorArea` mounts with an active file
+- Add `BreadcrumbsBar` component below the editor tab strip (file path + symbol path)
+- Add `MenuBar` component at the top of the renderer to mirror VS Code menus
+- Wire Settings toggles to show/hide breadcrumbs and menu bar
 
 ### Build configuration changes
 - Add Monaco worker configuration to `vite.renderer.config.ts`
@@ -24,13 +27,16 @@ This feature introduces lazy-loaded Monaco Editor to the renderer process while 
 - File I/O remains main-process only via existing fs-broker contracts
 
 ## Contracts (api-contracts updates)
-**No contract changes required** for this feature.
+Update Settings schema to add UI toggles for breadcrumbs and menu bar (contracts-first).
+
+Required schema updates:
+- `appearance.menuBarVisible: boolean` (default: true)
+- `editor.breadcrumbsEnabled: boolean` (default: true)
 
 Rationale:
-- Monaco operates purely client-side in renderer (no IPC)
-- File content is already fetched via existing `IPC_CHANNELS.FS_READ_FILE`
-- File writes will use existing `IPC_CHANNELS.FS_WRITE_FILE` (to be added in future spec)
-- No new main ↔ renderer communication needed for basic editor functionality
+- Settings are already fetched via existing IPC channels (`GET_SETTINGS`, `UPDATE_SETTINGS`, `RESET_SETTINGS`)
+- No new IPC channels required for breadcrumbs or menu bar
+- Monaco remains client-side; file content still uses `IPC_CHANNELS.FS_READ_FILE`
 
 Future considerations (out of scope):
 - When adding file save functionality, add `FS_WRITE_FILE` channel to `ipc-channels.ts`
@@ -43,6 +49,7 @@ Existing IPC flows remain unchanged:
 - Main process: owns file system via fs-broker (already implemented)
 - Renderer: receives file content via `FS_READ_FILE`, passes to Monaco
 - Preload: exposes existing contextBridge API (no changes)
+- Renderer menu bar actions call existing menu IPC events (no new OS access)
 
 Security boundaries:
 - Monaco executes in sandboxed renderer (no eval allowed by CSP)
@@ -67,12 +74,28 @@ Security boundaries:
 - Success state: renders MonacoEditor component
 - Uses React.lazy() and Suspense boundary
 
+**`src/renderer/components/editor/BreadcrumbsBar.tsx`**
+- Props: `{ filePath: string | null, symbols: BreadcrumbSymbol[], onNavigateFile: (path: string) => void, onNavigateSymbol: (symbol: BreadcrumbSymbol) => void }`
+- Renders file path segments + symbol segments with VS Code spacing and separators
+- Handles overflow (scroll or "..." overflow indicator)
+- Uses Tailwind tokens for colors and hover states
+
+**`src/renderer/components/layout/MenuBar.tsx`**
+- Renders VS Code-style menu labels: File, Edit, Selection, View, Go, Run, Terminal, Help
+- Supports keyboard focus and arrow navigation
+- Dispatches existing menu IPC events for core actions
+
 ### Modified components
 **`src/renderer/components/editor/EditorArea.tsx`**
 - Replace `<EditorPlaceholder />` with `<EditorLoader />`
 - Add Suspense boundary with loading fallback
 - Fetch file content via `window.electron.ipcRenderer.invoke('fs:read-file', filePath)`
 - Pass content + language (inferred from file extension) to MonacoEditor
+- Render `BreadcrumbsBar` below the tab strip when enabled in settings
+- Use Monaco symbol providers to compute symbol breadcrumbs (debounced)
+
+**`src/renderer/App.tsx`**
+- Render `MenuBar` above `<ShellLayout>` when enabled in settings
 
 **`src/renderer/components/editor/EditorPlaceholder.tsx`**
 - Keep for empty state (no file open)
@@ -83,11 +106,14 @@ Security boundaries:
 - No new routes or navigation required
 
 ## Data model changes
-**No schema changes in api-contracts.**
+**Settings schema updates (api-contracts):**
+- `appearance.menuBarVisible: boolean` (default true)
+- `editor.breadcrumbsEnabled: boolean` (default true)
 
 In-memory state changes (FileTreeContext):
 - Add optional `fileContents: Map<string, string>` to cache loaded file contents
 - Add `editorState: Map<string, { cursorPosition, scrollPosition }>` for future persistence (optional, can defer)
+- Add `breadcrumbSymbols: Map<string, BreadcrumbSymbol[]>` cache for symbol results per file
 
 No persistence layer changes:
 - Monaco configuration is ephemeral (per-session only)
@@ -112,6 +138,12 @@ No persistence layer changes:
 - **Recovery**: Monaco degraded mode (no IntelliSense, basic syntax highlighting)
 - **Testing**: Verify `worker-src 'self'` in CSP, test in built app (not just dev)
 
+### Breadcrumb symbol provider failure
+- **Cause**: Language does not provide symbols, provider throws, or model not ready
+- **Detection**: Symbol query returns empty or throws error
+- **Recovery**: Show file-path breadcrumbs only and retry on next cursor change
+- **Logging**: Console warning (no telemetry)
+
 ### Performance degradation
 - **Cause**: Large file (>1MB), too many models loaded
 - **Detection**: Editor becomes unresponsive, UI thread blocked
@@ -122,6 +154,8 @@ No persistence layer changes:
 ### Unit tests (Vitest)
 - `MonacoEditor.test.tsx`: Test dynamic import, editor initialization, dispose
 - `EditorLoader.test.tsx`: Test loading/error/success states, retry logic
+- `BreadcrumbsBar.test.tsx`: Test file + symbol segments, overflow handling, click callbacks
+- `MenuBar.test.tsx`: Test focus/keyboard navigation and visibility toggle
 - Mock `monaco-editor` module to avoid loading real Monaco in tests
 
 ### Integration tests (Vitest + jsdom)
@@ -232,11 +266,31 @@ If Monaco integration causes issues:
   - Verify Monaco NOT in initial bundle via build analysis
   - Add performance test: app start → time to first paint (<500ms unchanged)
 
+### Risk 6: Breadcrumb symbol extraction is slow on large files
+- **Impact**: Breadcrumbs lag or UI stutters while typing
+- **Likelihood**: Medium (symbol providers can be expensive)
+- **Mitigation**:
+  - Debounce symbol queries (e.g., 150-250ms)
+  - Cache symbol results per model version
+  - Fall back to file-path breadcrumbs when symbol query exceeds time budget
+
+### Risk 7: Menu bar focus conflicts with editor shortcuts
+- **Impact**: Alt key or arrow keys interfere with Monaco navigation
+- **Likelihood**: Medium (depends on platform)
+- **Mitigation**:
+  - Scope menu keyboard handling to focused menubar
+  - Use Alt to focus menu bar only when no modal or input is focused
+  - Add regression tests for key handling
+
 ## Done definition
 ### Code complete
 - [ ] `MonacoEditor.tsx` component implemented with dynamic import
 - [ ] `EditorLoader.tsx` component implemented with loading/error/success states
 - [ ] `EditorArea.tsx` updated to use EditorLoader + fetch file content
+- [ ] `BreadcrumbsBar.tsx` component implemented (file + symbol breadcrumbs)
+- [ ] `MenuBar.tsx` component implemented (VS Code-style top menu)
+- [ ] Settings toggles added for breadcrumbs and menu bar (schema + UI)
+- [ ] App layout updated to render menu bar above ShellLayout
 - [ ] `vite.renderer.config.ts` updated with Monaco worker configuration
 - [ ] Unit tests written and passing for new components
 - [ ] E2E test written for Monaco load + syntax highlighting
@@ -252,6 +306,10 @@ If Monaco integration causes issues:
 - [ ] Manual testing: opening TypeScript file loads Monaco + IntelliSense works
 - [ ] Manual testing: loading state shows spinner while Monaco initializes
 - [ ] Manual testing: error handling works (simulate load failure)
+- [ ] Manual testing: breadcrumbs render and navigate correctly
+- [ ] Manual testing: menu bar renders and responds to keyboard focus
+- [ ] Manual testing: settings toggles show/hide breadcrumbs and menu bar
+- [ ] Screenshot captured for visual diff per WARP.md
 
 ### Documentation complete
 - [ ] Update `EditorArea.tsx` component docstring to reflect Monaco integration

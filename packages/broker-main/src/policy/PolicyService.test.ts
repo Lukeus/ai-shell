@@ -44,4 +44,21 @@ describe('PolicyService', () => {
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toBe('blocked');
   });
+
+  it('allows vfs tools by default', () => {
+    const service = new PolicyService();
+    const vfsTools = ['vfs.ls', 'vfs.read', 'vfs.write', 'vfs.edit', 'vfs.glob', 'vfs.grep'];
+
+    for (const tool of vfsTools) {
+      const decision = service.evaluateToolCall(buildEnvelope(tool));
+      expect(decision.allowed).toBe(true);
+    }
+  });
+
+  it('denies vfs tools when on denylist', () => {
+    const service = new PolicyService({ denylist: ['vfs.write'] });
+    
+    expect(service.evaluateToolCall(buildEnvelope('vfs.read')).allowed).toBe(true);
+    expect(service.evaluateToolCall(buildEnvelope('vfs.write')).allowed).toBe(false);
+  });
 });

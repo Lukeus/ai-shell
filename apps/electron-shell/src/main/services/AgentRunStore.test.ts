@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AgentRunStore } from './AgentRunStore';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
@@ -11,20 +10,22 @@ let savedContent = '';
 
 vi.mock('electron', () => ({
   app: {
-    getPath: vi.fn(() => mockUserDataPath),
+    getPath: vi.fn(() => 'C:\\mock\\userdata'),
   },
 }));
 
 vi.mock('fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn((file: string, data: string) => {
-    if (file === mockStorePath) {
+    if (file === 'C:\\mock\\userdata\\agent-runs.json') {
       savedContent = data;
     }
   }),
   existsSync: vi.fn(),
   mkdirSync: vi.fn(),
 }));
+
+import { AgentRunStore } from './AgentRunStore';
 
 describe('AgentRunStore', () => {
   let store: AgentRunStore;
@@ -126,5 +127,38 @@ describe('AgentRunStore', () => {
     const events = store.listEvents({ runId: run.id }).events;
     expect(events.length).toBe(200);
     expect(events[0].id).not.toBe(firstId);
+  });
+
+  it('redacts sensitive fields in tool calls', () => {
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const run = store.createRun('user');
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+
+    store.appendEvent({
+      id: randomUUID(),
+      runId: run.id,
+      timestamp: new Date().toISOString(),
+      type: 'tool-call',
+      toolCall: {
+        callId: randomUUID(),
+        toolId: 'test-tool',
+        requesterId: 'agent',
+        runId: run.id,
+        input: { apiKey: 'secret-123', normalField: 'visible' },
+      },
+    });
+
+    const events = store.listEvents({ runId: run.id }).events;
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe('tool-call');
+    if (events[0].type === 'tool-call') {
+      const input = events[0].toolCall.input as Record<string, unknown>;
+      expect(input.apiKey).toBe('[REDACTED]');
+      expect(input.normalField).toBe('visible');
+    }
   });
 });

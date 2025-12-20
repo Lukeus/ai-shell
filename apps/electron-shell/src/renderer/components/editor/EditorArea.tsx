@@ -159,12 +159,12 @@ export function EditorArea() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div className="flex flex-col h-full min-h-0 bg-surface">
       {/* Tab bar */}
       <EditorTabBar />
 
       {/* Editor content area - NO extra padding/margin */}
-      <div className="flex-1 overflow-hidden bg-surface">
+      <div className="flex-1 overflow-hidden min-h-0 bg-surface">
         {!activeFilePath ? (
           // Empty state: no file open
           <EditorPlaceholder filePath={null} />

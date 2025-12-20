@@ -4,6 +4,7 @@ import { SearchBar } from './SearchBar';
 import { SettingsCategoryNav, type SettingsCategory } from './SettingsCategoryNav';
 import { SettingItem, type SettingType } from './SettingItem';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
+import { useTheme } from '../ThemeProvider';
 
 /**
  * Setting definition for rendering.
@@ -91,6 +92,20 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
       { value: 'minimal', label: 'Minimal' },
     ],
   },
+  {
+    key: 'appearance.menuBarVisible',
+    category: 'appearance',
+    label: 'Show Menu Bar',
+    description: 'Display the top menu bar',
+    type: 'boolean',
+    getValue: (settings) => settings.appearance.menuBarVisible,
+    setValue: (settings, value) => ({
+      appearance: {
+        ...settings.appearance,
+        menuBarVisible: Boolean(value),
+      },
+    }),
+  },
   
   // Editor settings
   {
@@ -132,6 +147,20 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
       editor: {
         ...settings.editor,
         minimap: Boolean(value),
+      },
+    }),
+  },
+  {
+    key: 'editor.breadcrumbsEnabled',
+    category: 'editor',
+    label: 'Show Breadcrumbs',
+    description: 'Display file and symbol breadcrumbs below tabs',
+    type: 'boolean',
+    getValue: (settings) => settings.editor.breadcrumbsEnabled,
+    setValue: (settings, value) => ({
+      editor: {
+        ...settings.editor,
+        breadcrumbsEnabled: Boolean(value),
       },
     }),
   },
@@ -186,6 +215,7 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
  * ```
  */
 export function SettingsPanel() {
+  const { setTheme } = useTheme();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [activeCategory, setActiveCategory] = useState('appearance');
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,10 +265,17 @@ export function SettingsPanel() {
       extensions: { ...settings.extensions, ...updates.extensions },
     };
     setSettings(newSettings);
+    // Notify other UI consumers (menu bar, breadcrumbs) of setting updates.
+    window.dispatchEvent(new window.CustomEvent('ai-shell:settings-updated', { detail: newSettings }));
 
     // Clear previous timeout
     if (updateTimeoutId) {
       clearTimeout(updateTimeoutId);
+    }
+
+    if (key === 'appearance.theme') {
+      void setTheme(value as Theme);
+      return;
     }
 
     // Debounce API call
@@ -251,7 +288,7 @@ export function SettingsPanel() {
     }, 300);
 
     setUpdateTimeoutId(timeoutId);
-  }, [settings, updateTimeoutId]);
+  }, [settings, updateTimeoutId, setTheme]);
 
   /**
    * Filter settings by category and search query (memoized for performance)
@@ -276,7 +313,7 @@ export function SettingsPanel() {
     }
 
     return filtered;
-  }, [settings, activeCategory, searchQuery]);
+  }, [settings, activeCategory, searchQuery, isConnectionsCategory]);
 
   if (!settings) {
     return (

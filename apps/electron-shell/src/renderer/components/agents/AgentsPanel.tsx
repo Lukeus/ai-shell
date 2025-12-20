@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AgentEvent, AgentRunMetadata } from 'packages-api-contracts';
 import { AgentRunList } from './AgentRunList';
+import { AgentPlanTodos } from './AgentPlanTodos';
 import { AgentEventStream } from './AgentEventStream';
 
 const sortRunsByUpdatedAt = (runs: AgentRunMetadata[]) =>
@@ -212,6 +213,8 @@ export function AgentsPanel() {
         selectedRunId={activeRunId}
         onSelect={setSelectedRunId}
       />
+
+      <AgentPlanTodos events={events} />
 
       <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
         <div className="text-[11px] uppercase tracking-wide text-secondary">Events</div>

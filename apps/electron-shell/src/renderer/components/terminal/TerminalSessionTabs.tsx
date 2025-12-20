@@ -58,7 +58,7 @@ export function TerminalSessionTabs({ className = '' }: TerminalSessionTabsProps
   return (
     <div className={`flex items-center gap-2 border-b border-border bg-surface-elevated ${className}`}>
       {/* Session tabs */}
-      <div className="flex items-center gap-1 flex-1 overflow-x-auto">
+      <div className="flex items-center gap-1 flex-1 overflow-x-auto overflow-y-hidden hide-scrollbar">
       {sessions.map((session) => {
           const isActive = session.sessionId === activeSessionId;
           const isRunning = session.status === 'running';

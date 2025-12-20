@@ -19,7 +19,13 @@ type AgentRunnerOptions = {
   onEvent: (event: AgentEvent) => void;
 };
 
-export class AgentRunner {
+/**
+ * DeepAgentRunner - orchestrates agent runs with tool execution.
+ * 
+ * Note: This is a stub implementation prepared for future deepagentsjs integration.
+ * Currently handles basic tool call orchestration and event emission.
+ */
+export class DeepAgentRunner {
   private readonly toolExecutor: ToolExecutor;
   private readonly onEvent: (event: AgentEvent) => void;
 

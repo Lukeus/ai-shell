@@ -387,7 +387,146 @@ pnpm test:e2e --grep "monaco"
 
 ---
 
-## Task 14 — Update spec.md acceptance criteria
+
+## Task 14 - Add settings schema for breadcrumbs and menu bar
+**Objective**: Extend settings schema with visibility toggles (contracts-first).
+
+**Files to modify**:
+- `packages/api-contracts/src/types/settings.ts`
+- `packages/api-contracts/src/index.ts` (if new exports are needed)
+
+**Changes**:
+- Add `appearance.menuBarVisible: boolean` (default true)
+- Add `editor.breadcrumbsEnabled: boolean` (default true)
+- Update `SETTINGS_DEFAULTS` to include new fields
+
+**Commands**:
+```bash
+pnpm --filter packages-api-contracts typecheck
+pnpm --filter packages-api-contracts lint
+pnpm --filter packages-api-contracts build
+```
+
+**Verify**:
+- Settings schema validates new fields
+- Defaults include menu bar + breadcrumbs toggles
+
+**Invariants (Constitution)**:
+- P6 (Contracts-first): Update api-contracts before renderer changes
+- P3 (Secrets): No secrets stored in settings
+
+---
+
+## Task 15 - Add Settings toggles for breadcrumbs and menu bar
+**Objective**: Surface breadcrumbs/menu bar toggles in Settings UI.
+
+**Files to modify**:
+- `apps/electron-shell/src/renderer/components/settings/SettingsPanel.tsx`
+- `apps/electron-shell/src/renderer/components/settings/SettingItem.tsx` (if needed)
+
+**Changes**:
+- Add "Show Menu Bar" toggle under Appearance
+- Add "Show Breadcrumbs" toggle under Editor
+- Wire toggles to `window.api.updateSettings()`
+
+**Commands**:
+```bash
+pnpm --filter apps-electron-shell typecheck
+pnpm --filter apps-electron-shell lint
+```
+
+**Verify**:
+- Toggling settings updates persisted settings
+- UI reflects current values on load
+
+**Invariants (Constitution)**:
+- P1 (Process isolation): Settings use IPC only (no direct file access)
+- P4 (UI design): Use Tailwind token classes only
+
+---
+
+## Task 16 - Implement VS Code-style menu bar
+**Objective**: Add a renderer menu bar that mirrors VS Code layout.
+
+**Files to create/modify**:
+- `apps/electron-shell/src/renderer/components/layout/MenuBar.tsx` (create)
+- `apps/electron-shell/src/renderer/App.tsx`
+- `apps/electron-shell/src/renderer/styles/vscode-tokens.css` (add menu bar height token if needed)
+
+**Changes**:
+- Render menu bar above `<ShellLayout>` when `appearance.menuBarVisible` is true
+- Add keyboard focus handling (Alt to focus, arrow key navigation)
+- Dispatch existing menu IPC actions for core items (Open Folder, Close Folder, Toggle Panels)
+
+**Commands**:
+```bash
+pnpm --filter apps-electron-shell typecheck
+pnpm --filter apps-electron-shell lint
+```
+
+**Verify**:
+- Menu bar renders with VS Code labels
+- Keyboard navigation works
+- Core actions invoke existing IPC/menu events
+
+**Invariants (Constitution)**:
+- P1 (Process isolation): No renderer OS access
+- P4 (UI design): Uses CSS variables and Tailwind tokens
+
+---
+
+## Task 17 - Implement editor breadcrumbs (file + symbols)
+**Objective**: Add breadcrumbs below the editor tabs with file + symbol segments.
+
+**Files to create/modify**:
+- `apps/electron-shell/src/renderer/components/editor/BreadcrumbsBar.tsx` (create)
+- `apps/electron-shell/src/renderer/components/editor/EditorArea.tsx`
+- `apps/electron-shell/src/renderer/components/editor/MonacoEditor.tsx` (if symbol hooks needed)
+
+**Changes**:
+- Build file-path segments from active tab path
+- Query Monaco symbols to build symbol breadcrumbs (debounced)
+- Navigate on click (file segments focus tab, symbol segments reveal symbol)
+- Hide breadcrumbs when `editor.breadcrumbsEnabled` is false
+
+**Commands**:
+```bash
+pnpm --filter apps-electron-shell typecheck
+pnpm --filter apps-electron-shell lint
+```
+
+**Verify**:
+- Breadcrumbs render below tabs and update on cursor move
+- Clicking a breadcrumb navigates correctly
+
+**Invariants (Constitution)**:
+- P5 (Performance budgets): Breadcrumbs must not force Monaco into initial chunk
+- P1 (Process isolation): Renderer-only logic
+
+---
+
+## Task 18 - Add tests for menu bar and breadcrumbs
+**Objective**: Cover new UI with unit/integration tests.
+
+**Files to create/modify**:
+- `apps/electron-shell/src/renderer/components/layout/MenuBar.test.tsx` (create)
+- `apps/electron-shell/src/renderer/components/editor/BreadcrumbsBar.test.tsx` (create)
+- `apps/electron-shell/src/renderer/components/editor/EditorArea.test.tsx` (update as needed)
+
+**Commands**:
+```bash
+pnpm -r test
+```
+
+**Verify**:
+- Tests pass for menu bar focus/navigation and breadcrumbs rendering
+
+**Invariants (Constitution)**:
+- P5 (Performance budgets): Tests verify lazy-loading remains intact
+
+---
+
+## Task 19 — Update spec.md acceptance criteria
 **Objective**: Mark completed acceptance criteria in spec.
 
 **Files to modify**:
@@ -406,7 +545,7 @@ pnpm test:e2e --grep "monaco"
 
 ---
 
-## Task 15 — Final verification and documentation
+## Task 20 — Final verification and documentation
 **Objective**: Run complete verification suite and ensure documentation complete.
 
 **Commands**:
@@ -437,5 +576,5 @@ pnpm test:e2e --grep "monaco"
 - P2 (Security): contextIsolation ON, minimal preload API
 - P4 (UI design): Tailwind 4 tokens used throughout
 - P5 (Performance budgets): Monaco lazy-loaded, budgets met
-- P6 (Contracts-first): No new contracts needed, existing contracts used
+- P6 (Contracts-first): Contracts updated before renderer changes
 - P7 (Spec-Driven Development): Spec/plan/tasks complete and updated

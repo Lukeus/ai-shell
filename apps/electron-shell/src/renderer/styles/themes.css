@@ -62,6 +62,12 @@
   /* Selection colors */
   --color-selection-bg: var(--vscode-selection-background);
   --color-selection-text: var(--vscode-foreground);
+
+  /* Tailwind token aliases (used by @theme) */
+  --color-surface: var(--color-surface-default);
+  --color-border: var(--color-border-default);
+  --color-accent: var(--color-accent-primary);
+  --color-selection: var(--color-selection-bg);
   
   /* Glow effects */
   --color-glow-accent: rgba(0, 122, 204, 0.35);

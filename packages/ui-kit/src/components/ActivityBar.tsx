@@ -121,9 +121,6 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                   fontSize: iconSize,
                 }}
               />
-              <div className="absolute opacity-0 group-hover:opacity-100 group-focus:opacity-100 bg-surface-elevated text-xs text-primary px-2 py-1 rounded-none border border-border shadow z-20 left-full ml-2 pointer-events-none">
-                {icon.label}
-              </div>
             </button>
           );
         })}
@@ -162,9 +159,6 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                   fontSize: iconSize,
                 }}
               />
-              <div className="absolute opacity-0 group-hover:opacity-100 group-focus:opacity-100 bg-surface-elevated text-xs text-primary px-2 py-1 rounded-none border border-border shadow z-20 left-full ml-2 pointer-events-none">
-                {icon.label}
-              </div>
             </button>
           );
         })}

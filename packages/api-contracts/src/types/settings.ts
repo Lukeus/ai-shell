@@ -57,6 +57,9 @@ export const AppearanceSettingsSchema = z.object({
   
   /** Icon theme style (default: 'default') */
   iconTheme: IconThemeSchema.default('default'),
+
+  /** Show the top menu bar (default: true) */
+  menuBarVisible: z.boolean().default(true),
 });
 
 /**
@@ -80,6 +83,9 @@ export const EditorSettingsSchema = z.object({
   
   /** Show minimap on right side of editor (default: true) */
   minimap: z.boolean().default(true),
+
+  /** Show editor breadcrumbs (default: true) */
+  breadcrumbsEnabled: z.boolean().default(true),
 });
 
 /**
@@ -151,7 +157,8 @@ export type Settings = z.infer<typeof SettingsSchema>;
  * - Theme: dark
  * - Font size: 14px
  * - Icon theme: default
- * - Editor: no word wrap, line numbers on, minimap on
+ * - Menu bar visible: true
+ * - Editor: no word wrap, line numbers on, minimap on, breadcrumbs on
  * - Extensions: auto-update on, telemetry off
  */
 export const SETTINGS_DEFAULTS: Settings = SettingsSchema.parse({

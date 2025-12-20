@@ -2,7 +2,6 @@
 
 /* VS Code Dark+ Design Tokens - Single source of truth */
 @import "./vscode-tokens.css";
-@import "./codicon.css";
 
 /* Base styles for body and html */
 * {
@@ -128,6 +127,16 @@ body,
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Hide scrollbars where needed (used for tab strips). */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Firefox scrollbar styling */

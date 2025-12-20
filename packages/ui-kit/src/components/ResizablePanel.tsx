@@ -162,83 +162,78 @@ export const ResizablePanel = memo(function ResizablePanel({
     }
   }, [clampSize, resetSize, onResize, collapsed, onToggleCollapse]);
 
+  const handle = (
+    <div
+      className={`
+        group relative flex items-center justify-center select-none shrink-0
+        ${direction === 'horizontal' ? 'w-3 cursor-col-resize' : 'h-3 cursor-row-resize'}
+        ${isDragging ? 'bg-accent/10' : 'hover:bg-surface-hover'}
+      `}
+      style={{
+        cursor: direction === 'horizontal' ? 'col-resize' : 'row-resize',
+        touchAction: 'none',
+      }}
+      onMouseDown={handleMouseDown}
+      onDoubleClick={handleDoubleClick}
+      role="separator"
+      aria-orientation={direction}
+      aria-valuenow={size}
+      aria-valuemin={minSize}
+      aria-valuemax={maxSize}
+    >
+      {/* Divider line */}
+      <div
+        className={`
+          absolute
+          ${direction === 'horizontal'
+            ? `${isStartHandle ? 'right-0' : 'left-0'} top-0 bottom-0 w-px`
+            : `${isStartHandle ? 'bottom-0' : 'top-0'} left-0 right-0 h-px`}
+          ${isDragging ? 'bg-accent' : 'bg-border'}
+        `}
+      />
+      {/* Collapse button overlaid on drag handle */}
+      <button
+        onClick={onToggleCollapse}
+        className="
+          absolute z-10 p-1 rounded-none
+          bg-surface-elevated border border-border
+          hover:bg-surface-hover hover:border-accent
+          opacity-0 group-hover:opacity-100
+          transition-colors duration-150
+          left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
+        "
+        aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+        style={{
+          boxShadow: 'var(--vscode-shadow-none)',
+        }}
+      >
+        <svg
+          className="w-3 h-3 text-secondary group-hover:text-primary transition-colors"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          {direction === 'horizontal' ? (
+            // Chevron indicates collapse/expand for horizontal panels
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={collapsed ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7'} />
+          ) : (
+            // Chevron for vertical panels
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={collapsed ? 'M19 9l-7 7-7-7' : 'M5 15l7-7 7 7'} />
+          )}
+        </svg>
+      </button>
+    </div>
+  );
+
   return (
     <div className={`relative flex h-full w-full min-w-0 min-h-0 ${direction === 'horizontal' ? 'flex-row' : 'flex-col'} ${className}`}>
+      {isStartHandle ? handle : null}
       {/* Panel content - hidden when collapsed, children handle their own overflow */}
       <div className={`flex-1 overflow-hidden ${collapsed ? 'hidden' : 'block'}`}>
         {children}
       </div>
 
-      {/* Drag handle / collapse gutter - VS Code style with better visibility */}
-      <div
-        className={`
-          group absolute z-10 flex items-center justify-center
-          ${direction === 'horizontal'
-            ? `${isStartHandle ? 'left-0' : 'right-0'} top-0 bottom-0 w-3 cursor-col-resize`
-            : `${isStartHandle ? 'top-0' : 'bottom-0'} left-0 right-0 h-3 cursor-row-resize`}
-          transition-colors duration-150
-        `}
-        onMouseDown={handleMouseDown}
-        onDoubleClick={handleDoubleClick}
-        role="separator"
-        aria-orientation={direction}
-        aria-valuenow={size}
-        aria-valuemin={minSize}
-        aria-valuemax={maxSize}
-      >
-        {/* Visual feedback area - wider hit target (5px for easier grabbing) */}
-        <div
-          className={`
-            absolute
-            ${direction === 'horizontal'
-              ? `inset-y-0 ${isStartHandle ? '-right-3' : '-left-3'} w-8`
-              : `inset-x-0 ${isStartHandle ? '-bottom-3' : '-top-3'} h-8`}
-            ${isDragging ? 'bg-accent/15' : 'hover:bg-surface-hover'}
-            transition-colors duration-150
-          `}
-        />
-
-        {/* Divider line */}
-        <div
-          className={`
-            absolute
-            ${direction === 'horizontal' ? 'inset-y-0 left-1/2 w-px' : 'inset-x-0 top-1/2 h-px'}
-            ${isDragging ? 'bg-accent' : 'bg-border'}
-          `}
-        />
-        
-        {/* Collapse button overlaid on drag handle */}
-        <button
-          onClick={onToggleCollapse}
-          className="
-            absolute z-10 p-1 rounded-none
-            bg-surface-elevated border border-border
-            hover:bg-surface-hover hover:border-accent
-            opacity-0 group-hover:opacity-100
-            transition-colors duration-150
-            left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
-          "
-          aria-label="Collapse panel"
-          style={{
-            boxShadow: 'var(--vscode-shadow-none)',
-          }}
-        >
-          <svg
-            className="w-3 h-3 text-secondary group-hover:text-primary transition-colors"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {direction === 'horizontal' ? (
-              // Chevron indicates collapse/expand for horizontal panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={collapsed ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7'} />
-            ) : (
-              // Chevron for vertical panels
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={collapsed ? 'M19 9l-7 7-7-7' : 'M5 15l7-7 7 7'} />
-            )}
-          </svg>
-        </button>
-      </div>
+      {!isStartHandle ? handle : null}
     </div>
   );
 });

@@ -103,7 +103,7 @@ export function TerminalPanel() {
   } as CSSProperties;
   
   return (
-    <div className="flex flex-col h-full bg-surface" style={tabBarStyle}>
+    <div className="flex flex-col h-full min-h-0 bg-surface" style={tabBarStyle}>
       {/* Tab bar */}
       <TabBar
         tabs={tabs}
@@ -117,12 +117,12 @@ export function TerminalPanel() {
         role="tabpanel"
         id={`tabpanel-${activeTab}`}
         aria-labelledby={`tab-${activeTab}`}
-        className="flex-1 overflow-hidden"
+        className="flex-1 overflow-hidden min-h-0"
       >
         {activeTab === 'terminal' && (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full min-h-0">
             <TerminalSessionTabs className="shrink-0 text-xs" />
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden min-h-0">
               {activeSessionId ? (
                 <TerminalView sessionId={activeSessionId} />
               ) : (
@@ -145,20 +145,7 @@ function EmptyTerminalState() {
   return (
     <div className="flex items-center justify-center h-full text-secondary bg-surface">
       <div className="text-center">
-        <svg
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mx-auto mb-4 opacity-40"
-        >
-          <polyline points="4 17 10 11 4 5" />
-          <line x1="12" y1="19" x2="20" y2="19" />
-        </svg>
+        <span className="codicon codicon-terminal text-4xl mb-3 opacity-60" aria-hidden="true" />
         <p className="text-sm text-tertiary">Terminal</p>
         <p className="text-xs text-tertiary mt-2">No terminal sessions. Click + to create one.</p>
       </div>

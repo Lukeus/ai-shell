@@ -2,11 +2,11 @@
 @font-face {
   font-family: "codicon";
   font-display: block;
-  src: url("../assets/codicon.ttf") format("truetype");
+  src: url("/codicon.ttf") format("truetype");
 }
 
 .codicon[class*='codicon-'] {
-  font-family: "codicon";
+  font: normal normal normal 16px/1 "codicon";
   font-style: normal;
   font-weight: normal;
   line-height: 1;

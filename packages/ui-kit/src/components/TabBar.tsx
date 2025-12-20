@@ -126,7 +126,7 @@ export function TabBar({
   return (
     <div
       role="tablist"
-      className={`flex items-center border-b border-[var(--vscode-tab-border)] bg-[var(--vscode-tab-inactiveBackground)] overflow-x-auto scrollbar-thin ${className}`}
+      className={`flex items-center min-w-0 border-b border-[var(--vscode-tab-border)] bg-[var(--vscode-tab-inactiveBackground)] overflow-x-auto overflow-y-hidden hide-scrollbar ${className}`}
       style={{ height: tabHeight }}
     >
       {tabs.map((tab, index) => {

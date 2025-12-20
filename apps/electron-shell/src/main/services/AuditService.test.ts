@@ -1,29 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AuditService } from './AuditService';
 import * as fs from 'fs';
-import * as path from 'path';
-
-const mockUserDataPath = 'C:\\mock\\userdata';
-const mockAuditPath = path.join(mockUserDataPath, 'audit.log.jsonl');
 
 let appendedContent = '';
 
 vi.mock('electron', () => ({
   app: {
-    getPath: vi.fn(() => mockUserDataPath),
+    getPath: vi.fn(() => 'C:\\mock\\userdata'),
   },
 }));
 
 vi.mock('fs', () => ({
   readFileSync: vi.fn(),
   appendFileSync: vi.fn((file: string, data: string) => {
-    if (file === mockAuditPath) {
+    if (file === 'C:\\mock\\userdata\\audit.log.jsonl') {
       appendedContent += data;
     }
   }),
   existsSync: vi.fn(),
   mkdirSync: vi.fn(),
 }));
+
+import { AuditService } from './AuditService';
 
 describe('AuditService', () => {
   let service: AuditService;
@@ -40,7 +37,7 @@ describe('AuditService', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
 
     const event = service.logSecretAccess({
-      connectionId: 'conn-1',
+      connectionId: '00000000-0000-0000-0000-000000000001',
       requesterId: 'ext-1',
       reason: 'Needs token',
       allowed: true,
@@ -70,12 +67,12 @@ describe('AuditService', () => {
   it('lists audit events with pagination', () => {
     const events = [
       service.logSecretAccess({
-        connectionId: 'conn-1',
+        connectionId: '00000000-0000-0000-0000-000000000001',
         requesterId: 'ext-1',
         allowed: true,
       }),
       service.logSecretAccess({
-        connectionId: 'conn-2',
+        connectionId: '00000000-0000-0000-0000-000000000002',
         requesterId: 'ext-2',
         allowed: false,
       }),
