@@ -38,6 +38,41 @@ import type {
   DiagnosticsUpdateEvent,
   DiagnosticsSummaryEvent,
 } from './types/diagnostics';
+import type {
+  AgentRunStartRequest,
+  AgentRunStartResponse,
+  AgentRunControlRequest,
+  AgentRunControlResponse,
+  ListAgentRunsResponse,
+  GetAgentRunRequest,
+  GetAgentRunResponse,
+} from './types/agent-runs';
+import type {
+  AgentEvent,
+  AgentEventSubscriptionRequest,
+  ListAgentTraceRequest,
+  ListAgentTraceResponse,
+} from './types/agent-events';
+import type {
+  CreateConnectionRequest,
+  CreateConnectionResponse,
+  UpdateConnectionRequest,
+  UpdateConnectionResponse,
+  DeleteConnectionRequest,
+  ListConnectionsResponse,
+} from './types/connections';
+import type {
+  SetSecretRequest,
+  SetSecretResponse,
+  ReplaceSecretRequest,
+  ReplaceSecretResponse,
+  SecretAccessRequest,
+  SecretAccessResponse,
+} from './types/secrets';
+import type {
+  ListAuditEventsRequest,
+  ListAuditEventsResponse,
+} from './types/audit';
 
 /**
  * Preload API surface exposed to the renderer process via contextBridge.
@@ -414,6 +449,110 @@ export interface PreloadAPI {
      * @returns Unsubscribe function (call to remove listener)
      */
     onSummary(callback: (event: DiagnosticsSummaryEvent) => void): () => void;
+  };
+
+  /**
+   * Agent runs + event stream APIs.
+   * 
+   * Security: renderer receives metadata and events only (no secrets).
+   */
+  agents: {
+    /**
+     * Lists all agent runs.
+     */
+    listRuns(): Promise<ListAgentRunsResponse>;
+
+    /**
+     * Gets a single agent run.
+     */
+    getRun(request: GetAgentRunRequest): Promise<GetAgentRunResponse>;
+
+    /**
+     * Starts a new agent run.
+     */
+    startRun(request: AgentRunStartRequest): Promise<AgentRunStartResponse>;
+
+    /**
+     * Cancels an agent run.
+     */
+    cancelRun(request: AgentRunControlRequest): Promise<AgentRunControlResponse>;
+
+    /**
+     * Retries an agent run.
+     */
+    retryRun(request: AgentRunControlRequest): Promise<AgentRunControlResponse>;
+
+    /**
+     * Lists trace events for a run.
+     */
+    listTrace(request: ListAgentTraceRequest): Promise<ListAgentTraceResponse>;
+
+    /**
+     * Subscribes to agent event stream.
+     */
+    subscribeEvents(request: AgentEventSubscriptionRequest): Promise<void>;
+
+    /**
+     * Unsubscribes from agent event stream.
+     */
+    unsubscribeEvents(request: AgentEventSubscriptionRequest): Promise<void>;
+
+    /**
+     * Receives agent events.
+     */
+    onEvent(callback: (event: AgentEvent) => void): () => void;
+  };
+
+  /**
+   * Connections + secrets APIs.
+   * 
+   * Security: secrets are written to main only; renderer never receives plaintext.
+   */
+  connections: {
+    /**
+     * Lists all connections.
+     */
+    list(): Promise<ListConnectionsResponse>;
+    
+    /**
+     * Creates a connection (metadata + non-secret config).
+     */
+    create(request: CreateConnectionRequest): Promise<CreateConnectionResponse>;
+    
+    /**
+     * Updates a connection (metadata + non-secret config).
+     */
+    update(request: UpdateConnectionRequest): Promise<UpdateConnectionResponse>;
+    
+    /**
+     * Deletes a connection.
+     */
+    delete(request: DeleteConnectionRequest): Promise<void>;
+    
+    /**
+     * Sets a secret for a connection.
+     */
+    setSecret(request: SetSecretRequest): Promise<SetSecretResponse>;
+    
+    /**
+     * Replaces a secret for a connection.
+     */
+    replaceSecret(request: ReplaceSecretRequest): Promise<ReplaceSecretResponse>;
+    
+    /**
+     * Requests secret access (consent-gated).
+     */
+    requestSecretAccess(request: SecretAccessRequest): Promise<SecretAccessResponse>;
+  };
+
+  /**
+   * Audit APIs (read-only).
+   */
+  audit: {
+    /**
+     * Lists audit events.
+     */
+    list(request: ListAuditEventsRequest): Promise<ListAuditEventsResponse>;
   };
   
   // Future expansion:

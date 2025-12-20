@@ -3,14 +3,16 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 
+const packagerConfig: ForgeConfig['packagerConfig'] & { asarUnpack: string[] } = {
+  asar: true,
+  asarUnpack: [
+    '**/node-pty/**',
+    '**/@homebridge/node-pty-prebuilt-multiarch/**',
+  ],
+};
+
 const config: ForgeConfig = {
-  packagerConfig: {
-    asar: true,
-    asarUnpack: [
-      '**/node-pty/**',
-      '**/@homebridge/node-pty-prebuilt-multiarch/**',
-    ],
-  },
+  packagerConfig,
   rebuildConfig: {
     onlyModules: ['node-pty', '@homebridge/node-pty-prebuilt-multiarch'],
   },

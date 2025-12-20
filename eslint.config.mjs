@@ -84,6 +84,10 @@ export default [
         DOMException: 'readonly',
         MouseEvent: 'readonly',
         KeyboardEvent: 'readonly',
+        PromiseRejectionEvent: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLSelectElement: 'readonly',
+        HTMLButtonElement: 'readonly',
       },
     },
     rules: {

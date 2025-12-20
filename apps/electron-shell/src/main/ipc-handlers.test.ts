@@ -5,6 +5,11 @@ import { registerIPCHandlers } from './ipc-handlers';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
 import { terminalService } from './services/TerminalService';
+import { connectionsService } from './services/ConnectionsService';
+import { secretsService } from './services/SecretsService';
+import { consentService } from './services/ConsentService';
+import { auditService } from './services/AuditService';
+import { agentRunStore } from './services/AgentRunStore';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -51,6 +56,48 @@ vi.mock('./services/SettingsService', () => ({
     getSettings: vi.fn(),
     updateSettings: vi.fn(),
     resetSettings: vi.fn(),
+  },
+}));
+
+vi.mock('./services/ConnectionsService', () => ({
+  connectionsService: {
+    listConnections: vi.fn(),
+    createConnection: vi.fn(),
+    updateConnection: vi.fn(),
+    deleteConnection: vi.fn(),
+    setSecretRef: vi.fn(),
+  },
+}));
+
+vi.mock('./services/SecretsService', () => ({
+  secretsService: {
+    setSecret: vi.fn(),
+    replaceSecret: vi.fn(),
+  },
+}));
+
+vi.mock('./services/ConsentService', () => ({
+  consentService: {
+    evaluateAccess: vi.fn(),
+    recordDecision: vi.fn(),
+  },
+}));
+
+vi.mock('./services/AuditService', () => ({
+  auditService: {
+    logSecretAccess: vi.fn(),
+    listEvents: vi.fn(),
+  },
+}));
+
+vi.mock('./services/AgentRunStore', () => ({
+  agentRunStore: {
+    listRuns: vi.fn(),
+    getRun: vi.fn(),
+    createRun: vi.fn(),
+    updateRunStatus: vi.fn(),
+    appendEvent: vi.fn(),
+    listEvents: vi.fn(),
   },
 }));
 
@@ -439,8 +486,343 @@ describe('IPC Handlers', () => {
     });
   });
 
+  describe('Agent handlers', () => {
+    it('should register AGENT_RUNS_LIST handler', () => {
+      expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_LIST)).toBe(true);
+    });
+
+    it('should list agent runs', async () => {
+      const mockRuns = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          status: 'queued' as const,
+          source: 'user' as const,
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+      ];
+      vi.mocked(agentRunStore.listRuns).mockReturnValue(mockRuns);
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_LIST);
+      const result = await handler();
+
+      expect(agentRunStore.listRuns).toHaveBeenCalled();
+      expect(result).toEqual({ runs: mockRuns });
+    });
+
+    it('should get an agent run', async () => {
+      const run = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        status: 'queued' as const,
+        source: 'user' as const,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+      vi.mocked(agentRunStore.getRun).mockReturnValue(run);
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_GET);
+      const result = await handler(null, { runId: run.id });
+
+      expect(agentRunStore.getRun).toHaveBeenCalledWith(run.id);
+      expect(result).toEqual({ run });
+    });
+
+    it('should throw if agent run is missing', async () => {
+      vi.mocked(agentRunStore.getRun).mockReturnValue(undefined);
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_GET);
+      await expect(handler(null, { runId: '123e4567-e89b-12d3-a456-426614174000' }))
+        .rejects.toThrow('Agent run not found');
+    });
+
+    it('should start a run and append a status event', async () => {
+      const run = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        status: 'queued' as const,
+        source: 'user' as const,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+      vi.mocked(agentRunStore.createRun).mockReturnValue(run);
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_START);
+      const result = await handler(null, { goal: 'Do the thing' });
+
+      expect(agentRunStore.createRun).toHaveBeenCalledWith('user');
+      expect(agentRunStore.appendEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'status',
+          runId: run.id,
+          status: 'queued',
+        })
+      );
+      expect(result).toEqual({ run });
+    });
+
+    it('should cancel a run and append a status event', async () => {
+      const run = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        status: 'canceled' as const,
+        source: 'user' as const,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      };
+      vi.mocked(agentRunStore.updateRunStatus).mockReturnValue(run);
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_CANCEL);
+      const result = await handler(null, { runId: run.id, action: 'cancel' });
+
+      expect(agentRunStore.updateRunStatus).toHaveBeenCalledWith(run.id, 'canceled');
+      expect(agentRunStore.appendEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'status',
+          runId: run.id,
+          status: 'canceled',
+        })
+      );
+      expect(result).toEqual({ run });
+    });
+
+    it('should retry a run and append a status event', async () => {
+      const run = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        status: 'queued' as const,
+        source: 'user' as const,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      };
+      vi.mocked(agentRunStore.updateRunStatus).mockReturnValue(run);
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_RETRY);
+      const result = await handler(null, { runId: run.id, action: 'retry' });
+
+      expect(agentRunStore.updateRunStatus).toHaveBeenCalledWith(run.id, 'queued');
+      expect(agentRunStore.appendEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'status',
+          runId: run.id,
+          status: 'queued',
+        })
+      );
+      expect(result).toEqual({ run });
+    });
+
+    it('should list agent trace events', async () => {
+      vi.mocked(agentRunStore.listEvents).mockReturnValue({
+        events: [],
+        nextCursor: undefined,
+      });
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_TRACE_LIST);
+      const result = await handler(null, {
+        runId: '123e4567-e89b-12d3-a456-426614174000',
+        limit: 1,
+      });
+
+      expect(agentRunStore.listEvents).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: '123e4567-e89b-12d3-a456-426614174000',
+          limit: 1,
+        })
+      );
+      expect(result).toEqual({ events: [], nextCursor: undefined });
+    });
+  });
+
+  describe('Connections handlers', () => {
+    it('should register CONNECTIONS_LIST handler', () => {
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_LIST)).toBe(true);
+    });
+
+    it('should list connections via ConnectionsService', async () => {
+      const mockConnections = [
+        {
+          metadata: {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            providerId: 'mcp',
+            scope: 'user' as const,
+            displayName: 'My Conn',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
+          config: { host: 'localhost' },
+        },
+      ];
+      vi.mocked(connectionsService.listConnections).mockReturnValue(mockConnections);
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_LIST);
+      const result = await handler();
+
+      expect(connectionsService.listConnections).toHaveBeenCalled();
+      expect(result).toEqual({ connections: mockConnections });
+    });
+
+    it('should create connection via ConnectionsService', async () => {
+      const mockConnection = {
+        metadata: {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          providerId: 'mcp',
+          scope: 'user' as const,
+          displayName: 'My Conn',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        config: { host: 'localhost' },
+      };
+      vi.mocked(connectionsService.createConnection).mockReturnValue(mockConnection);
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_CREATE);
+      const result = await handler(null, {
+        providerId: 'mcp',
+        scope: 'user' as const,
+        displayName: 'My Conn',
+        config: { host: 'localhost' },
+      });
+
+      expect(connectionsService.createConnection).toHaveBeenCalled();
+      expect(result).toEqual({ connection: mockConnection });
+    });
+
+    it('should update connection via ConnectionsService', async () => {
+      const mockConnection = {
+        metadata: {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          providerId: 'mcp',
+          scope: 'user' as const,
+          displayName: 'Updated',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+        },
+        config: { host: '127.0.0.1' },
+      };
+      vi.mocked(connectionsService.updateConnection).mockReturnValue(mockConnection);
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_UPDATE);
+      const result = await handler(null, {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        displayName: 'Updated',
+        config: { host: '127.0.0.1' },
+      });
+
+      expect(connectionsService.updateConnection).toHaveBeenCalled();
+      expect(result).toEqual({ connection: mockConnection });
+    });
+
+    it('should delete connection via ConnectionsService', async () => {
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_DELETE);
+      await handler(null, { id: '123e4567-e89b-12d3-a456-426614174000' });
+
+      expect(connectionsService.deleteConnection).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174000'
+      );
+    });
+
+    it('should set secret and update connection metadata', async () => {
+      vi.mocked(connectionsService.listConnections).mockReturnValue([
+        {
+          metadata: {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            providerId: 'mcp',
+            scope: 'user' as const,
+            displayName: 'Conn',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
+          config: { host: 'localhost' },
+        },
+      ]);
+      vi.mocked(secretsService.setSecret).mockReturnValue('secret-ref');
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_SET_SECRET);
+      const result = await handler(null, {
+        connectionId: '123e4567-e89b-12d3-a456-426614174000',
+        secretValue: 'secret',
+      });
+
+      expect(secretsService.setSecret).toHaveBeenCalled();
+      expect(connectionsService.setSecretRef).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174000',
+        'secret-ref'
+      );
+      expect(result).toEqual({ secretRef: 'secret-ref' });
+    });
+
+    it('should replace secret and update connection metadata', async () => {
+      vi.mocked(connectionsService.listConnections).mockReturnValue([
+        {
+          metadata: {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            providerId: 'mcp',
+            scope: 'user' as const,
+            displayName: 'Conn',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
+          config: { host: 'localhost' },
+        },
+      ]);
+      vi.mocked(secretsService.replaceSecret).mockReturnValue('secret-ref');
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_REPLACE_SECRET);
+      const result = await handler(null, {
+        connectionId: '123e4567-e89b-12d3-a456-426614174000',
+        secretValue: 'secret',
+      });
+
+      expect(secretsService.replaceSecret).toHaveBeenCalled();
+      expect(connectionsService.setSecretRef).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174000',
+        'secret-ref'
+      );
+      expect(result).toEqual({ secretRef: 'secret-ref' });
+    });
+
+    it('should gate secret access via ConsentService', async () => {
+      vi.mocked(consentService.evaluateAccess).mockReturnValue(true);
+      vi.mocked(connectionsService.listConnections).mockReturnValue([
+        {
+          metadata: {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            providerId: 'mcp',
+            scope: 'user' as const,
+            displayName: 'Conn',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+            secretRef: 'secret-ref',
+          },
+          config: { host: 'localhost' },
+        },
+      ]);
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_REQUEST_SECRET_ACCESS);
+      const result = await handler(null, {
+        connectionId: '123e4567-e89b-12d3-a456-426614174000',
+        requesterId: 'ext-1',
+      });
+
+      expect(consentService.evaluateAccess).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174000',
+        'ext-1'
+      );
+      expect(auditService.logSecretAccess).toHaveBeenCalled();
+      expect(result).toEqual({ granted: true, secretRef: 'secret-ref' });
+    });
+
+    it('should list audit events', async () => {
+      vi.mocked(auditService.listEvents).mockReturnValue({
+        events: [],
+      });
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_AUDIT_LIST);
+      const result = await handler(null, {});
+
+      expect(auditService.listEvents).toHaveBeenCalled();
+      expect(result).toEqual({ events: [] });
+    });
+  });
+
   describe('All handlers registered', () => {
-    it('should register all 18 expected IPC handlers', () => {
+    it('should register all 34 expected IPC handlers', () => {
       // Existing handlers (4)
       expect(handlers.has(IPC_CHANNELS.GET_VERSION)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.GET_SETTINGS)).toBe(true);
@@ -467,8 +849,28 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.TERMINAL_CLOSE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.TERMINAL_LIST)).toBe(true);
 
-      // Total: 18 handlers
-      expect(handlers.size).toBe(18);
+      // Agent handlers (8)
+      expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_LIST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_GET)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_START)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_CANCEL)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_RETRY)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_EVENTS_SUBSCRIBE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_EVENTS_UNSUBSCRIBE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_TRACE_LIST)).toBe(true);
+
+      // Connections handlers (8)
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_LIST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_CREATE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_UPDATE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_DELETE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_SET_SECRET)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_REPLACE_SECRET)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_REQUEST_SECRET_ACCESS)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_AUDIT_LIST)).toBe(true);
+
+      // Total: 34 handlers
+      expect(handlers.size).toBe(34);
     });
   });
 });

@@ -50,7 +50,7 @@ export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderP
       <button
         onClick={onToggleCollapse}
         className="
-          p-1 rounded-sm transition-colors duration-150
+          p-1 rounded-none transition-colors duration-150
           hover:bg-surface-hover
           group focus:outline-none focus:ring-1 focus:ring-accent
         "

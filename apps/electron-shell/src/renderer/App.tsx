@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { ShellLayout, ResizablePanel, ActivityBar, StatusBar, PanelHeader } from 'packages-ui-kit';
+import { IPC_CHANNELS } from 'packages-api-contracts';
 import { LayoutProvider, useLayoutContext } from './contexts/LayoutContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { FileTreeContextProvider, useFileTree } from './components/explorer/FileTreeContext';
 import { ExplorerPanel } from './components/layout/ExplorerPanel';
 import { EditorArea } from './components/editor/EditorArea';
 import { TerminalPanel } from './components/layout/TerminalPanel';
-import { AIAssistantPanel } from './components/layout/AIAssistantPanel';
+import { SecondarySidebar } from './components/layout/SecondarySidebar';
 import { SettingsPanel } from './components/settings/SettingsPanel';
 import { TerminalContextProvider } from './contexts/TerminalContext';
 
@@ -75,19 +76,40 @@ function AppContent() {
     const handleMenuRefreshExplorer = () => {
       refresh();
     };
+
+    const handleMenuToggleSecondarySidebar = () => {
+      toggleSecondarySidebar();
+    };
     
     // Subscribe to menu events from main process
-    window.electron?.ipcRenderer?.on?.('menu:workspace-open', handleMenuWorkspaceOpen);
-    window.electron?.ipcRenderer?.on?.('menu:workspace-close', handleMenuWorkspaceClose);
-    window.electron?.ipcRenderer?.on?.('menu:refresh-explorer', handleMenuRefreshExplorer);
+    window.electron?.ipcRenderer?.on?.(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handleMenuWorkspaceOpen);
+    window.electron?.ipcRenderer?.on?.(IPC_CHANNELS.MENU_WORKSPACE_CLOSE, handleMenuWorkspaceClose);
+    window.electron?.ipcRenderer?.on?.(IPC_CHANNELS.MENU_REFRESH_EXPLORER, handleMenuRefreshExplorer);
+    window.electron?.ipcRenderer?.on?.(
+      IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
+      handleMenuToggleSecondarySidebar
+    );
     
     // Cleanup listeners on unmount
     return () => {
-      window.electron?.ipcRenderer?.removeListener?.('menu:workspace-open', handleMenuWorkspaceOpen);
-      window.electron?.ipcRenderer?.removeListener?.('menu:workspace-close', handleMenuWorkspaceClose);
-      window.electron?.ipcRenderer?.removeListener?.('menu:refresh-explorer', handleMenuRefreshExplorer);
+      window.electron?.ipcRenderer?.removeListener?.(
+        IPC_CHANNELS.MENU_WORKSPACE_OPEN,
+        handleMenuWorkspaceOpen
+      );
+      window.electron?.ipcRenderer?.removeListener?.(
+        IPC_CHANNELS.MENU_WORKSPACE_CLOSE,
+        handleMenuWorkspaceClose
+      );
+      window.electron?.ipcRenderer?.removeListener?.(
+        IPC_CHANNELS.MENU_REFRESH_EXPLORER,
+        handleMenuRefreshExplorer
+      );
+      window.electron?.ipcRenderer?.removeListener?.(
+        IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
+        handleMenuToggleSecondarySidebar
+      );
     };
-  }, [openWorkspace, closeWorkspace, refresh]);
+  }, [openWorkspace, closeWorkspace, refresh, toggleSecondarySidebar]);
 
   return (
     <div className="h-screen overflow-hidden bg-surface text-primary">
@@ -125,25 +147,12 @@ function AppContent() {
         }
         editorArea={isSettingsView ? <SettingsPanel /> : <EditorArea />}
         secondarySidebar={
-          <ResizablePanel
-            direction="horizontal"
-            size={state.secondarySidebarWidth}
-            minSize={200}
-            maxSize={600}
+          <SecondarySidebar
+            width={state.secondarySidebarWidth}
             collapsed={state.secondarySidebarCollapsed}
-            defaultSize={300}
             onResize={updateSecondarySidebarWidth}
             onToggleCollapse={toggleSecondarySidebar}
-          >
-            <div className="flex flex-col h-full">
-              <PanelHeader
-                title="AI Assistant"
-                collapsed={state.secondarySidebarCollapsed}
-                onToggleCollapse={toggleSecondarySidebar}
-              />
-              <AIAssistantPanel />
-            </div>
-          </ResizablePanel>
+          />
         }
         bottomPanel={
           <ResizablePanel
@@ -153,6 +162,7 @@ function AppContent() {
             maxSize={600}
             collapsed={state.bottomPanelCollapsed}
             defaultSize={200}
+            handlePosition="start"
             onResize={updateBottomPanelHeight}
             onToggleCollapse={toggleBottomPanel}
           >

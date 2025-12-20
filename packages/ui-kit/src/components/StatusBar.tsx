@@ -53,12 +53,12 @@ export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
           title={item.tooltip}
           className={`
             h-full inline-flex items-center gap-1.5 px-2.5
-            text-xs ${item.active ? 'text-primary' : 'text-secondary'}
-            hover:bg-surface-hover hover:text-primary
+            text-xs ${item.active ? 'text-white' : 'text-white/80'}
+            hover:bg-[var(--vscode-statusBar-hoverBackground)] hover:text-white
             focus:outline-none focus:ring-1 focus:ring-accent
           `}
           style={{
-            borderLeft: index === 0 ? 'none' : '1px solid var(--color-border-subtle)',
+            borderLeft: index === 0 ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
           }}
         >
           {renderIcon(item.icon)}
@@ -74,6 +74,7 @@ export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
       style={{
         height: 'var(--vscode-statusBar-height)',
         backgroundColor: 'var(--vscode-statusBar-background)',
+        color: 'var(--vscode-statusBar-foreground)',
       }}
     >
       <div className="flex items-center h-full">

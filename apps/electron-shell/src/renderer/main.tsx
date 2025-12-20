@@ -5,7 +5,6 @@ import './monaco/monacoWorkers';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
-import 'monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css';
 import './styles/themes.css';
 import './styles/globals.css';
 

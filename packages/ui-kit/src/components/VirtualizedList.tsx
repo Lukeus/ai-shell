@@ -31,6 +31,12 @@ export interface VirtualizedListProps<T> {
   
   /** Distance from the end to trigger onEndReached (in pixels) */
   endReachedThreshold?: number;
+
+  /** Optional scroll handler for the scroll container */
+  onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
+
+  /** Optional ref for the scroll container */
+  scrollRef?: React.RefObject<HTMLDivElement>;
 }
 
 /**
@@ -68,8 +74,11 @@ export function VirtualizedList<T>({
   height = '100%',
   onEndReached,
   endReachedThreshold = 100,
+  onScroll,
+  scrollRef,
 }: VirtualizedListProps<T>) {
-  const parentRef = useRef<HTMLDivElement>(null);
+  const internalRef = useRef<HTMLDivElement>(null);
+  const parentRef = scrollRef ?? internalRef;
   
   // Initialize virtualizer
   const virtualizer = useVirtualizer({
@@ -81,6 +90,10 @@ export function VirtualizedList<T>({
   
   // Handle scroll for infinite loading
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (onScroll) {
+      onScroll(e);
+    }
+
     if (!onEndReached) return;
     
     const target = e.currentTarget;

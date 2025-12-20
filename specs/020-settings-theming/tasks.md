@@ -434,7 +434,7 @@ pnpm test:e2e  # Run E2E tests
 
 ---
 
-## Task 14 — Update documentation for settings and theming
+## Task 14 - Update documentation for settings and theming
 **Description**: Update README, CONTRIBUTING, and docs/architecture with settings architecture and theme usage.
 
 **Files to create/modify**:
@@ -470,6 +470,40 @@ pnpm dev  # Verify links work, documentation is accurate
 - **P7 (Spec-Driven Development)**: Documentation reflects spec.md and plan.md accurately
 - **P1 (Process isolation)**: Docs emphasize renderer-only theme system (no main process involvement except settings storage)
 - **P6 (Contracts-first)**: Docs reference SettingsSchema from api-contracts
+
+---
+
+## Task 15 - Align UI styling to VS Code Dark+ layout
+**Description**: Update theme tokens and ui-kit layout styling to match VS Code Dark+ colors, sizing, and spacing.
+
+**Files to modify:**
+- `apps/electron-shell/src/renderer/styles/themes.css`
+- `apps/electron-shell/src/renderer/styles/globals.css`
+- `packages/ui-kit/src/components/ShellLayout.tsx`
+- `packages/ui-kit/src/components/ActivityBar.tsx`
+- `packages/ui-kit/src/components/PanelHeader.tsx`
+- `packages/ui-kit/src/components/StatusBar.tsx`
+- `packages/ui-kit/src/components/ResizablePanel.tsx`
+- `packages/ui-kit/src/components/__tests__/ActivityBar.test.tsx`
+
+**Implementation details:**
+- Default dark theme variables map to VS Code Dark+ tokens for surfaces, borders, text, and accents.
+- Global theme mapping uses `--color-*` variables so theme switching applies uniformly.
+- Activity bar and status bar sizing use VS Code tokens; avoid rounded corners.
+- Active/hover states match VS Code (left border highlight, subtle hovers).
+
+**Verification commands:**
+```powershell
+pnpm --filter apps-electron-shell typecheck
+pnpm --filter apps-electron-shell lint
+pnpm --filter packages-ui-kit typecheck
+pnpm --filter packages-ui-kit lint
+```
+
+**Invariants that must remain true:**
+- **P4 (UI design system)**: Styling uses CSS variables and Tailwind tokens only.
+- **P1 (Process isolation)**: Renderer styling only; no main/OS changes.
+- **P5 (Performance budgets)**: Styling changes do not add runtime overhead.
 
 ---
 

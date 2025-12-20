@@ -157,7 +157,7 @@ describe('OutputView', () => {
     let appendCallback: ((event: OutputAppendEvent) => void) | undefined;
     mockOutputApi.onAppend.mockReturnValue(vi.fn());
     mockOutputApi.onAppend.mockImplementation(() => {
-      appendCallback = (event: OutputAppendEvent) => {
+      appendCallback = (_event: OutputAppendEvent) => {
         // Callback will be invoked by test
       };
       return vi.fn();
@@ -194,7 +194,7 @@ describe('OutputView', () => {
     let clearCallback: ((event: OutputClearEvent) => void) | undefined;
     mockOutputApi.onClear.mockReturnValue(vi.fn());
     mockOutputApi.onClear.mockImplementation(() => {
-      clearCallback = (event: OutputClearEvent) => {
+      clearCallback = (_event: OutputClearEvent) => {
         // Callback will be invoked by test
       };
       return vi.fn();

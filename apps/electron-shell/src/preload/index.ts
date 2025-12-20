@@ -133,6 +133,47 @@ const api: PreloadAPI = {
       };
     },
   },
+
+  // Agent runs + events (read-only stream + controls)
+  agents: {
+    listRuns: () => ipcRenderer.invoke(IPC_CHANNELS.AGENT_RUNS_LIST),
+    getRun: (request) => ipcRenderer.invoke(IPC_CHANNELS.AGENT_RUNS_GET, request),
+    startRun: (request) => ipcRenderer.invoke(IPC_CHANNELS.AGENT_RUNS_START, request),
+    cancelRun: (request) => ipcRenderer.invoke(IPC_CHANNELS.AGENT_RUNS_CANCEL, request),
+    retryRun: (request) => ipcRenderer.invoke(IPC_CHANNELS.AGENT_RUNS_RETRY, request),
+    listTrace: (request) => ipcRenderer.invoke(IPC_CHANNELS.AGENT_TRACE_LIST, request),
+    subscribeEvents: (request) => ipcRenderer.invoke(IPC_CHANNELS.AGENT_EVENTS_SUBSCRIBE, request),
+    unsubscribeEvents: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.AGENT_EVENTS_UNSUBSCRIBE, request),
+    onEvent: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.AGENT_EVENTS_ON_EVENT, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.AGENT_EVENTS_ON_EVENT, listener);
+      };
+    },
+  },
+
+  // Connections + secrets methods (metadata only)
+  connections: {
+    list: () => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_LIST),
+    create: (request) => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_CREATE, request),
+    update: (request) => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_UPDATE, request),
+    delete: (request) => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_DELETE, request),
+    setSecret: (request) => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_SET_SECRET, request),
+    replaceSecret: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_REPLACE_SECRET, request),
+    requestSecretAccess: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_REQUEST_SECRET_ACCESS, request),
+  },
+
+  // Audit methods (read-only)
+  audit: {
+    list: (request) => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_AUDIT_LIST, request),
+  },
 };
 
 // P2 (Security defaults): Expose minimal API via contextBridge
@@ -145,16 +186,26 @@ contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
     on: (channel: string, func: (...args: unknown[]) => void) => {
       // Whitelist allowed channels for menu events
-      const validChannels = ['menu:workspace-open', 'menu:workspace-close', 'menu:refresh-explorer'];
-      if (validChannels.includes(channel)) {
+      const validChannels = new Set<string>([
+        IPC_CHANNELS.MENU_WORKSPACE_OPEN,
+        IPC_CHANNELS.MENU_WORKSPACE_CLOSE,
+        IPC_CHANNELS.MENU_REFRESH_EXPLORER,
+        IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
+      ]);
+      if (validChannels.has(channel)) {
         // Remove all previous listeners for this channel before adding new one
         ipcRenderer.removeAllListeners(channel);
         ipcRenderer.on(channel, (_, ...args) => func(...args));
       }
     },
     removeListener: (channel: string, func: (...args: unknown[]) => void) => {
-      const validChannels = ['menu:workspace-open', 'menu:workspace-close', 'menu:refresh-explorer'];
-      if (validChannels.includes(channel)) {
+      const validChannels = new Set<string>([
+        IPC_CHANNELS.MENU_WORKSPACE_OPEN,
+        IPC_CHANNELS.MENU_WORKSPACE_CLOSE,
+        IPC_CHANNELS.MENU_REFRESH_EXPLORER,
+        IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
+      ]);
+      if (validChannels.has(channel)) {
         ipcRenderer.removeListener(channel, func);
       }
     },

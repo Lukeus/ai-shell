@@ -79,14 +79,16 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
   // Split icons into top (main) and bottom (settings)
   const topIcons = ACTIVITY_ICONS.filter(icon => icon.id !== 'settings');
   const bottomIcons = ACTIVITY_ICONS.filter(icon => icon.id === 'settings');
-  const itemSize = 'var(--vscode-activityBar-width)';
+  const itemSize = 'var(--size-activityBar-width, var(--vscode-activityBar-width))';
   const iconSize = 'var(--vscode-activityBar-iconSize)';
   
   return (
     <div
-      className="flex flex-col items-center h-full bg-surface-elevated border-r border-border-subtle"
+      className="flex flex-col items-center h-full overflow-hidden bg-surface-elevated border-r border-border-subtle"
       style={{
-        width: 'var(--size-activityBar-width)',
+        width: itemSize,
+        minWidth: itemSize,
+        maxWidth: itemSize,
       }}
     >
       {/* Top section - main icons */}
@@ -102,7 +104,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                 relative flex items-center justify-center
                 transition-colors duration-150 ease-out group
                 text-secondary
-                ${isActive ? 'bg-surface text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
+                ${isActive ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
               `}
               style={{
                 width: itemSize,
@@ -119,7 +121,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                   fontSize: iconSize,
                 }}
               />
-              <div className="absolute opacity-0 group-hover:opacity-100 group-focus:opacity-100 bg-surface-elevated text-xs text-primary px-2 py-1 rounded-sm shadow z-20 left-full ml-2 pointer-events-none">
+              <div className="absolute opacity-0 group-hover:opacity-100 group-focus:opacity-100 bg-surface-elevated text-xs text-primary px-2 py-1 rounded-none border border-border shadow z-20 left-full ml-2 pointer-events-none">
                 {icon.label}
               </div>
             </button>
@@ -143,7 +145,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                 relative flex items-center justify-center
                 transition-colors duration-150 ease-out group
                 text-secondary
-                ${isActive ? 'bg-surface text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
+                ${isActive ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
               `}
               style={{
                 width: itemSize,
@@ -160,7 +162,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                   fontSize: iconSize,
                 }}
               />
-              <div className="absolute opacity-0 group-hover:opacity-100 group-focus:opacity-100 bg-surface-elevated text-xs text-primary px-2 py-1 rounded-sm shadow z-20 left-full ml-2 pointer-events-none">
+              <div className="absolute opacity-0 group-hover:opacity-100 group-focus:opacity-100 bg-surface-elevated text-xs text-primary px-2 py-1 rounded-none border border-border shadow z-20 left-full ml-2 pointer-events-none">
                 {icon.label}
               </div>
             </button>

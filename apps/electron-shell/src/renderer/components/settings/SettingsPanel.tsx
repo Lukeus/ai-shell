@@ -3,6 +3,7 @@ import type { Settings, Theme } from 'packages-api-contracts';
 import { SearchBar } from './SearchBar';
 import { SettingsCategoryNav, type SettingsCategory } from './SettingsCategoryNav';
 import { SettingItem, type SettingType } from './SettingItem';
+import { ConnectionsPanel } from './connections/ConnectionsPanel';
 
 /**
  * Setting definition for rendering.
@@ -26,6 +27,7 @@ interface SettingDefinition {
 const CATEGORIES: SettingsCategory[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'editor', label: 'Editor' },
+  { id: 'connections', label: 'Connections' },
   { id: 'extensions', label: 'Extensions' },
 ];
 
@@ -189,6 +191,7 @@ export function SettingsPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   // eslint-disable-next-line no-undef
   const [updateTimeoutId, setUpdateTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const isConnectionsCategory = activeCategory === 'connections';
 
   /**
    * Fetch settings on mount
@@ -255,6 +258,7 @@ export function SettingsPanel() {
    */
   const filteredSettings = useMemo(() => {
     if (!settings) return [];
+    if (isConnectionsCategory) return [];
 
     let filtered = SETTINGS_DEFINITIONS;
 
@@ -296,41 +300,47 @@ export function SettingsPanel() {
         />
       </div>
 
-      {/* Right content - Settings list */}
-      <div className="flex-1 overflow-auto p-6">
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search settings..."
-        />
-
-        {/* Category title (hidden when searching) */}
-        {!searchQuery && (
-          <h3 className="text-lg font-semibold text-primary mb-4">
-            {CATEGORIES.find((cat) => cat.id === activeCategory)?.label}
-          </h3>
-        )}
-
-        {/* Settings list */}
-        {filteredSettings.length === 0 ? (
-          <p className="text-secondary text-sm">
-            {searchQuery ? 'No settings match your search.' : 'No settings in this category.'}
-          </p>
+      {/* Right content - Settings list or Connections panel */}
+      <div className="flex-1 overflow-hidden">
+        {isConnectionsCategory ? (
+          <ConnectionsPanel />
         ) : (
-          <div>
-            {filteredSettings.map((def) => (
-              <SettingItem
-                key={def.key}
-                label={def.label}
-                description={def.description}
-                value={def.getValue(settings)}
-                type={def.type}
-                options={def.options}
-                onChange={(value) => handleSettingChange(def.key, value)}
-                min={def.min}
-                max={def.max}
-              />
-            ))}
+          <div className="flex-1 overflow-auto p-6">
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search settings..."
+            />
+
+            {/* Category title (hidden when searching) */}
+            {!searchQuery && (
+              <h3 className="text-lg font-semibold text-primary mb-4">
+                {CATEGORIES.find((cat) => cat.id === activeCategory)?.label}
+              </h3>
+            )}
+
+            {/* Settings list */}
+            {filteredSettings.length === 0 ? (
+              <p className="text-secondary text-sm">
+                {searchQuery ? 'No settings match your search.' : 'No settings in this category.'}
+              </p>
+            ) : (
+              <div>
+                {filteredSettings.map((def) => (
+                  <SettingItem
+                    key={def.key}
+                    label={def.label}
+                    description={def.description}
+                    value={def.getValue(settings)}
+                    type={def.type}
+                    options={def.options}
+                    onChange={(value) => handleSettingChange(def.key, value)}
+                    min={def.min}
+                    max={def.max}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
