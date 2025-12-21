@@ -221,15 +221,16 @@ pnpm -r build
 - All extensions marked inactive after crash
 - Renderer notified of state changes via IPC events
 
-## Task 10: Build Extensions UI page in Settings
-**Purpose:** User interface for managing extensions
+## Task 10: Build Extensions panel in primary sidebar
+**Purpose:** User interface for managing extensions (VS Code-style Extensions panel)
 
 **Files to create/change:**
-- `apps/electron-shell/src/renderer/pages/settings/ExtensionsPage.tsx` - Extensions management UI
-- `apps/electron-shell/src/renderer/components/ExtensionCard.tsx` - Extension list item
-- `apps/electron-shell/src/renderer/components/PermissionDialog.tsx` - Permission consent dialog
-- `apps/electron-shell/src/renderer/pages/settings/SettingsPage.tsx` - Add Extensions route
-- E2E tests for Extensions page
+- `apps/electron-shell/src/renderer/components/extensions/ExtensionsPanel.tsx` - Extensions management UI
+- `apps/electron-shell/src/renderer/components/extensions/ExtensionCard.tsx` - Extension list item
+- `apps/electron-shell/src/renderer/components/permissions/PermissionDialog.tsx` - Permission consent dialog
+- `apps/electron-shell/src/renderer/App.tsx` - Wire panel to activity bar selection
+- `apps/electron-shell/src/renderer/components/layout/ExplorerPanel.tsx` - Route primary sidebar content
+- E2E tests for Extensions panel
 
 **Verification commands:**
 ```bash
@@ -246,13 +247,32 @@ pnpm test:e2e --grep "extensions"
 - Enable/disable actions go through main process
 - Uninstall requires confirmation
 
-## Task 11: Integrate extension commands into Command Palette
-**Purpose:** Extension commands appear and execute from command palette
+## Task 10.1: Keep Extensions preferences in Settings
+**Purpose:** Maintain VS Code-style Extensions preferences tab in Settings
 
 **Files to create/change:**
-- `apps/electron-shell/src/renderer/components/CommandPalette.tsx` - Add extension commands
+- `apps/electron-shell/src/renderer/components/settings/SettingsPanel.tsx` - Ensure Extensions preferences present
+
+**Description:**
+Keep auto-update and telemetry preferences under Settings ▸ Extensions while the
+Extensions panel handles install/manage actions.
+
+**Verification:**
+```bash
+pnpm --filter apps-electron-shell typecheck
+pnpm --filter apps-electron-shell lint
+```
+
+**Invariants:**
+- P4: UI uses Tailwind 4 tokens and theme variables
+
+## Task 11: Integrate extension commands into Command Palette
+**Purpose:** Extension commands and base app commands appear and execute from command palette
+
+**Files to create/change:**
+- `apps/electron-shell/src/renderer/components/command-palette/CommandPalette.tsx` - Add extension + base commands
 - `apps/electron-shell/src/renderer/hooks/useExtensionCommands.ts` - Hook to fetch extension commands
-- `apps/electron-shell/src/renderer/components/CommandPaletteItem.tsx` - Show category prefix
+- `apps/electron-shell/src/renderer/App.tsx` - Provide base command list for File/Terminal actions
 
 **Verification commands:**
 ```bash
@@ -267,6 +287,8 @@ pnpm test:e2e --grep "command palette.*extension"
 - Command execution goes through window.api.extensions.executeCommand()
 - Failed commands show error notification
 - Command palette does not block while waiting for extension commands
+- Base app commands include core File and Terminal actions
+- Use Workbench Command Palette (VS Code-style), not Monaco's editor palette
 
 ## Task 12: Write comprehensive tests and fixtures
 **Purpose:** Achieve >80% test coverage with unit, integration, and E2E tests

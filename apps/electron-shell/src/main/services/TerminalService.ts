@@ -7,6 +7,7 @@ import {
   TerminalDataEvent,
   TerminalExitEvent,
 } from 'packages-api-contracts';
+import { settingsService } from './SettingsService';
 
 /**
  * TerminalService - Singleton service for managing PTY sessions.
@@ -325,9 +326,26 @@ export class TerminalService extends EventEmitter {
    * @returns Default shell path
    */
   private getDefaultShell(): string {
+    const preferredShell = settingsService.getSettings().terminal.defaultShell;
+
     if (process.platform === 'win32') {
-      return process.env.COMSPEC || 'cmd.exe';
+      switch (preferredShell) {
+        case 'pwsh':
+          return 'pwsh.exe';
+        case 'powershell':
+          return 'powershell.exe';
+        case 'cmd':
+          return 'cmd.exe';
+        case 'default':
+        default:
+          return process.env.COMSPEC || 'cmd.exe';
+      }
     }
+
+    if (preferredShell === 'pwsh' || preferredShell === 'powershell') {
+      return 'pwsh';
+    }
+
     return process.env.SHELL || '/bin/bash';
   }
 

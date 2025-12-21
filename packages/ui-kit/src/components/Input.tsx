@@ -113,8 +113,8 @@ export function Input({
       min={min}
       max={max}
       className={`
-        px-3 py-2 rounded-md
-        bg-surface text-primary text-sm
+        px-2 py-1.5 rounded-none
+        bg-surface text-primary text-[13px]
         focus:outline-none focus:ring-2 focus:ring-accent
         transition-colors duration-200
         ${isOutOfRange 

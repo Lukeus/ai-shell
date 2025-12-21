@@ -7,6 +7,7 @@ export interface ProviderPickerProps {
   value: string;
   onChange: (providerId: string) => void;
   disabled?: boolean;
+  className?: string;
 }
 
 export function ProviderPicker({
@@ -14,6 +15,7 @@ export function ProviderPicker({
   value,
   onChange,
   disabled = false,
+  className,
 }: ProviderPickerProps) {
   const options = providers.map((provider) => ({
     value: provider.id,
@@ -26,6 +28,7 @@ export function ProviderPicker({
       onChange={onChange}
       options={options}
       disabled={disabled}
+      className={className}
     />
   );
 }

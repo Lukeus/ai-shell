@@ -77,7 +77,7 @@ describe('MonacoEditor', () => {
           value: 'const x = 42;',
           language: 'typescript',
           theme: 'vs-dark',
-          readOnly: true,
+          readOnly: false,
         })
       );
     });

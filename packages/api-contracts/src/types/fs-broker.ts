@@ -91,6 +91,25 @@ export const ReadFileResponseSchema = z.object({
 export type ReadFileResponse = z.infer<typeof ReadFileResponseSchema>;
 
 /**
+ * Request to write file contents.
+ *
+ * Path can be absolute or relative to workspace root.
+ * Main process validates path is within workspace before writing.
+ */
+export const WriteFileRequestSchema = z.object({
+  /** Path to file (absolute or relative to workspace root) */
+  path: z.string(),
+
+  /** File content as string */
+  content: z.string(),
+});
+
+/**
+ * WriteFileRequest type inferred from schema.
+ */
+export type WriteFileRequest = z.infer<typeof WriteFileRequestSchema>;
+
+/**
  * Request to create a new file.
  * 
  * Path can be absolute or relative to workspace root.

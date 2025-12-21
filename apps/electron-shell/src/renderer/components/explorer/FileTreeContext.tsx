@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
 import type { Workspace, FileEntry } from 'packages-api-contracts';
 
@@ -36,6 +37,8 @@ export interface FileTreeContextValue {
   // Editor tabs
   openTabs: string[];
   activeTabIndex: number;
+  dirtyTabs: Set<string>;
+  draftContents: Map<string, string>;
 
   // Workspace operations
   loadWorkspace: () => Promise<void>;
@@ -54,6 +57,10 @@ export interface FileTreeContextValue {
   closeOtherTabs: (index: number) => void;
   closeTabsToRight: (index: number) => void;
   setActiveTab: (index: number) => void;
+  setDraftContent: (path: string, content: string) => void;
+  setSavedContent: (path: string, content: string) => void;
+  saveFile: (path: string) => Promise<void>;
+  saveAllFiles: () => Promise<void>;
   createFile: (parentPath: string, filename: string, content?: string) => Promise<void>;
   createFolder: (parentPath: string, folderName: string) => Promise<void>;
   renameItem: (oldPath: string, newPath: string) => Promise<void>;
@@ -104,6 +111,12 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
   // Editor tabs
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTabIndex, setActiveTabIndex] = useState(-1);
+  const [dirtyTabs, setDirtyTabs] = useState<Set<string>>(new Set());
+  const [draftContents, setDraftContents] = useState<Map<string, string>>(new Map());
+  const [savedContents, setSavedContents] = useState<Map<string, string>>(new Map());
+  const draftContentsRef = useRef(draftContents);
+  const savedContentsRef = useRef(savedContents);
+  const dirtyTabsRef = useRef(dirtyTabs);
 
   // Generate localStorage key for current workspace
   const localStorageKey = useMemo(() => {
@@ -153,6 +166,18 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     }
   }, [localStorageKey, expandedFolders, openTabs]);
 
+  useEffect(() => {
+    draftContentsRef.current = draftContents;
+  }, [draftContents]);
+
+  useEffect(() => {
+    savedContentsRef.current = savedContents;
+  }, [savedContents]);
+
+  useEffect(() => {
+    dirtyTabsRef.current = dirtyTabs;
+  }, [dirtyTabs]);
+
   /**
    * Load current workspace from main process.
    */
@@ -188,6 +213,9 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
         setDirectoryCache(new Map());
         setOpenTabs([]);
         setActiveTabIndex(-1);
+        setDirtyTabs(new Set());
+        setDraftContents(new Map());
+        setSavedContents(new Map());
       }
     } catch (err) {
       const message = typeof err === 'object' && err !== null && 'message' in err ? (err as Error).message : 'Failed to open workspace';
@@ -210,6 +238,9 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
       setDirectoryCache(new Map());
       setOpenTabs([]);
       setActiveTabIndex(-1);
+      setDirtyTabs(new Set());
+      setDraftContents(new Map());
+      setSavedContents(new Map());
       setError(null);
     } catch (err) {
       const message = typeof err === 'object' && err !== null && 'message' in err ? (err as Error).message : 'Failed to close workspace';
@@ -335,6 +366,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
    * Close tab at index.
    */
   const closeTab = useCallback((index: number) => {
+    const path = openTabs[index];
     setOpenTabs((prev) => {
       const next = prev.filter((_, i) => i !== index);
 
@@ -348,7 +380,24 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
 
       return next;
     });
-  }, []);
+    if (path) {
+      setDraftContents((prev) => {
+        const next = new Map(prev);
+        next.delete(path);
+        return next;
+      });
+      setSavedContents((prev) => {
+        const next = new Map(prev);
+        next.delete(path);
+        return next;
+      });
+      setDirtyTabs((prev) => {
+        const next = new Set(prev);
+        next.delete(path);
+        return next;
+      });
+    }
+  }, [openTabs]);
 
   /**
    * Close all tabs except the specified index.
@@ -360,7 +409,32 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
       setActiveTabIndex(0);
       return [target];
     });
-  }, []);
+    setDraftContents((prev) => {
+      const target = openTabs[index];
+      if (!target) return prev;
+      const next = new Map<string, string>();
+      const value = prev.get(target);
+      if (value !== undefined) {
+        next.set(target, value);
+      }
+      return next;
+    });
+    setSavedContents((prev) => {
+      const target = openTabs[index];
+      if (!target) return prev;
+      const next = new Map<string, string>();
+      const value = prev.get(target);
+      if (value !== undefined) {
+        next.set(target, value);
+      }
+      return next;
+    });
+    setDirtyTabs((prev) => {
+      const target = openTabs[index];
+      if (!target) return prev;
+      return prev.has(target) ? new Set([target]) : new Set();
+    });
+  }, [openTabs]);
 
   /**
    * Close tabs to the right of the specified index.
@@ -372,7 +446,36 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
       setActiveTabIndex((prevActive) => Math.min(prevActive, next.length - 1));
       return next;
     });
-  }, []);
+    setDraftContents((prev) => {
+      if (index < 0 || index >= openTabs.length) return prev;
+      const keep = new Set(openTabs.slice(0, index + 1));
+      const next = new Map<string, string>();
+      keep.forEach((path) => {
+        const value = prev.get(path);
+        if (value !== undefined) {
+          next.set(path, value);
+        }
+      });
+      return next;
+    });
+    setSavedContents((prev) => {
+      if (index < 0 || index >= openTabs.length) return prev;
+      const keep = new Set(openTabs.slice(0, index + 1));
+      const next = new Map<string, string>();
+      keep.forEach((path) => {
+        const value = prev.get(path);
+        if (value !== undefined) {
+          next.set(path, value);
+        }
+      });
+      return next;
+    });
+    setDirtyTabs((prev) => {
+      if (index < 0 || index >= openTabs.length) return prev;
+      const keep = new Set(openTabs.slice(0, index + 1));
+      return new Set(Array.from(prev).filter((path) => keep.has(path)));
+    });
+  }, [openTabs]);
 
   /**
    * Set active tab by index.
@@ -380,6 +483,57 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
   const setActiveTab = useCallback((index: number) => {
     setActiveTabIndex(index);
   }, []);
+
+  const setDraftContent = useCallback((path: string, content: string) => {
+    setDraftContents((prev) => {
+      const next = new Map(prev);
+      next.set(path, content);
+      return next;
+    });
+    const saved = savedContentsRef.current.get(path);
+    setDirtyTabs((prev) => {
+      const next = new Set(prev);
+      if (saved !== undefined && saved === content) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }, []);
+
+  const setSavedContent = useCallback((path: string, content: string) => {
+    setSavedContents((prev) => {
+      const next = new Map(prev);
+      next.set(path, content);
+      return next;
+    });
+    setDraftContents((prev) => {
+      const next = new Map(prev);
+      next.set(path, content);
+      return next;
+    });
+    setDirtyTabs((prev) => {
+      const next = new Set(prev);
+      next.delete(path);
+      return next;
+    });
+  }, []);
+
+  const saveFile = useCallback(async (path: string) => {
+    const draft = draftContentsRef.current.get(path);
+    const saved = savedContentsRef.current.get(path);
+    const content = draft ?? saved ?? '';
+    await window.api.fs.writeFile({ path, content });
+    setSavedContent(path, content);
+  }, [setSavedContent]);
+
+  const saveAllFiles = useCallback(async () => {
+    const paths = Array.from(dirtyTabsRef.current);
+    for (const path of paths) {
+      await saveFile(path);
+    }
+  }, [saveFile]);
 
   /**
    * Create new file.
@@ -436,6 +590,33 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
 
         // Update open tabs if renamed item is open
         setOpenTabs((prev) => prev.map((tab) => (tab === oldPath ? newPath : tab)));
+        setDraftContents((prev) => {
+          if (!prev.has(oldPath)) return prev;
+          const next = new Map(prev);
+          const value = next.get(oldPath);
+          next.delete(oldPath);
+          if (value !== undefined) {
+            next.set(newPath, value);
+          }
+          return next;
+        });
+        setSavedContents((prev) => {
+          if (!prev.has(oldPath)) return prev;
+          const next = new Map(prev);
+          const value = next.get(oldPath);
+          next.delete(oldPath);
+          if (value !== undefined) {
+            next.set(newPath, value);
+          }
+          return next;
+        });
+        setDirtyTabs((prev) => {
+          if (!prev.has(oldPath)) return prev;
+          const next = new Set(prev);
+          next.delete(oldPath);
+          next.add(newPath);
+          return next;
+        });
 
         // Refresh parent directory
         const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'));
@@ -467,6 +648,21 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
           }
           return prev.filter((tab) => tab !== path);
         });
+        setDraftContents((prev) => {
+          const next = new Map(prev);
+          next.delete(path);
+          return next;
+        });
+        setSavedContents((prev) => {
+          const next = new Map(prev);
+          next.delete(path);
+          return next;
+        });
+        setDirtyTabs((prev) => {
+          const next = new Set(prev);
+          next.delete(path);
+          return next;
+        });
 
         // Refresh parent directory
         const parentPath = path.substring(0, path.lastIndexOf('/'));
@@ -494,6 +690,8 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     directoryCache,
     openTabs,
     activeTabIndex,
+    dirtyTabs,
+    draftContents,
     loadWorkspace,
     openWorkspace,
     closeWorkspace,
@@ -506,6 +704,10 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     closeOtherTabs,
     closeTabsToRight,
     setActiveTab,
+    setDraftContent,
+    setSavedContent,
+    saveFile,
+    saveAllFiles,
     createFile,
     createFolder,
     renameItem,

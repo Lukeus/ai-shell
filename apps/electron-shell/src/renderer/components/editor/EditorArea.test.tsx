@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { EditorArea } from './EditorArea';
 import { FileTreeContextProvider } from '../explorer/FileTreeContext';
+import { LayoutProvider } from '../../contexts/LayoutContext';
 
 // Mock EditorLoader to avoid Monaco loading
 vi.mock('./EditorLoader', () => ({
@@ -54,7 +55,11 @@ describe('EditorArea', () => {
   });
 
   const renderWithContext = (ui: React.ReactElement) => {
-    return render(<FileTreeContextProvider>{ui}</FileTreeContextProvider>);
+    return render(
+      <LayoutProvider>
+        <FileTreeContextProvider>{ui}</FileTreeContextProvider>
+      </LayoutProvider>
+    );
   };
 
   it('should render EditorTabBar', () => {

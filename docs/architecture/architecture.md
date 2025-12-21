@@ -437,6 +437,7 @@ pnpm -r build
    - Sandboxed extension runtime
    - Extension marketplace integration
 
+
 3. **IPC Broker** (packages/broker-*):
    - Message routing between processes
    - Request validation and throttling

@@ -41,6 +41,10 @@ export function getExtensionCommandService(): ExtensionCommandService | null {
   return extensionCommandService;
 }
 
+export function getExtensionRegistry(): ExtensionRegistry | null {
+  return extensionRegistry;
+}
+
 export function getPermissionService(): PermissionService | null {
   return permissionService;
 }

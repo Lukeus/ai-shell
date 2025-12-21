@@ -75,6 +75,9 @@ importers:
       node-pty:
         specifier: npm:@homebridge/node-pty-prebuilt-multiarch@0.13.1
         version: '@homebridge/node-pty-prebuilt-multiarch@0.13.1'
+      packages-agent-tools:
+        specifier: workspace:*
+        version: link:../../packages/agent-tools
       packages-api-contracts:
         specifier: workspace:*
         version: link:../../packages/api-contracts

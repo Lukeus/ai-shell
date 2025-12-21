@@ -16,9 +16,11 @@ import type { ExtensionToolService } from './extension-tool-service';
 import { fsBrokerService } from './FsBrokerService';
 import { workspaceService } from './WorkspaceService';
 
+type BrokerMainInstance = InstanceType<typeof brokerMainModule.BrokerMain>;
+
 type AgentHostConfig = {
   agentHostPath: string;
-  brokerMain?: BrokerMain;
+  brokerMain?: BrokerMainInstance;
   getExtensionToolService?: () => ExtensionToolService | null;
 };
 
@@ -64,7 +66,7 @@ type AgentHostMessage =
  */
 export class AgentHostManager {
   private readonly config: AgentHostConfig;
-  private readonly brokerMain: brokerMainModule.BrokerMain;
+  private readonly brokerMain: BrokerMainInstance;
   private childProcess: ChildProcess | null = null;
   private eventHandlers: Array<(event: AgentEvent) => void> = [];
   private runErrorHandlers: Array<(runId: string, message: string) => void> = [];
@@ -300,7 +302,7 @@ export class AgentHostManager {
           const child = spawn('rg', args, { cwd: workspace.path });
           let stderr = '';
 
-          child.stdout.on('data', (data) => {
+          child.stdout.on('data', (data: Buffer) => {
             const lines = data.toString().split('\n').filter((line) => line.length > 0);
             for (const line of lines) {
               try {
@@ -326,7 +328,7 @@ export class AgentHostManager {
             }
           });
 
-          child.stderr.on('data', (data) => {
+          child.stderr.on('data', (data: Buffer) => {
             stderr += data.toString();
           });
 

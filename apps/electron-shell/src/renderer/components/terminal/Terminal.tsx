@@ -29,6 +29,7 @@ export function Terminal({ sessionId }: TerminalProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [fitAddon, setFitAddon] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const lastOutputLengthRef = useRef(0);
   
   const { outputs, writeToSession, resizeSession } = useTerminal();
   
@@ -102,6 +103,7 @@ export function Terminal({ sessionId }: TerminalProps) {
     }
 
     setTerminal(term);
+    lastOutputLengthRef.current = 0;
 
     // Handle user input - send to main process via IPC
     const disposable = term.onData((data: string) => {
@@ -116,16 +118,36 @@ export function Terminal({ sessionId }: TerminalProps) {
       term.dispose();
     };
   }, [xterm, fitAddon, sessionId, writeToSession, resizeSession]);
+
+  useEffect(() => {
+    lastOutputLengthRef.current = 0;
+  }, [sessionId]);
   
   // Write output from context to terminal
   useEffect(() => {
     if (!terminal) return;
     
     const output = outputs.get(sessionId);
-    if (output) {
-      // Write accumulated output to terminal
-      terminal.write(output);
-      // Note: We don't clear the output here as it's managed by TerminalContext
+    if (typeof output !== 'string') {
+      return;
+    }
+
+    if (output.length === 0) {
+      if (lastOutputLengthRef.current > 0 && typeof terminal.clear === 'function') {
+        terminal.clear();
+      }
+      lastOutputLengthRef.current = 0;
+      return;
+    }
+
+    if (output.length < lastOutputLengthRef.current) {
+      lastOutputLengthRef.current = 0;
+    }
+
+    const delta = output.slice(lastOutputLengthRef.current);
+    if (delta) {
+      terminal.write(delta);
+      lastOutputLengthRef.current = output.length;
     }
   }, [terminal, outputs, sessionId]);
   

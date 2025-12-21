@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
  * - Monaco Editor is dynamically imported to keep it out of initial bundle
  * - Editor instance is properly disposed on unmount to prevent memory leaks
  * - Handles resize events to maintain correct editor layout
- * - Content is read-only by default (save functionality deferred to future spec)
+ * - Content is editable; save lifecycle handled by EditorArea + FileTreeContext
  */
 
 export interface BreadcrumbPosition {
@@ -38,6 +38,7 @@ export interface MonacoEditorHandle {
   focus: () => void;
   setPosition: (position: BreadcrumbPosition) => void;
   revealRangeInCenter: (range: BreadcrumbRange) => void;
+  layout: () => void;
 }
 
 export interface MonacoEditorProps {
@@ -242,7 +243,7 @@ export function MonacoEditor({
 
   // Initialize editor instance when Monaco is loaded
   useEffect(() => {
-    if (!monaco || !editorRef.current) return;
+    if (!monaco || !editorRef.current || editor) return;
 
     // Create editor instance with all features enabled
     // Worker configuration is handled in src/renderer/monaco/monacoWorkers.ts
@@ -251,7 +252,7 @@ export function MonacoEditor({
       language: language,
       theme: 'vs-dark',
       automaticLayout: false, // We'll handle layout manually
-      readOnly: true, // Read-only for now (save functionality deferred)
+      readOnly: false,
       minimap: { enabled: true },
       scrollBeyondLastLine: false,
       fontFamily: 'var(--vscode-editor-font-family)',
@@ -262,18 +263,21 @@ export function MonacoEditor({
     });
 
     setEditor(editorInstance);
+  }, [monaco, editor, content, language]);
 
-    // Handle content changes if onChange provided
-    if (onChange) {
-      const disposable = editorInstance.onDidChangeModelContent(() => {
-        onChange(editorInstance.getValue());
-      });
-
-      return () => {
-        disposable.dispose();
-      };
+  useEffect(() => {
+    if (!editor || !onChange) {
+      return;
     }
-  }, [monaco, content, language, onChange]);
+
+    const disposable = editor.onDidChangeModelContent(() => {
+      onChange(editor.getValue());
+    });
+
+    return () => {
+      disposable.dispose();
+    };
+  }, [editor, onChange]);
 
   useEffect(() => {
     if (!editor || !onEditorReady) {
@@ -284,6 +288,7 @@ export function MonacoEditor({
       focus: () => editor.focus(),
       setPosition: (position) => editor.setPosition(position),
       revealRangeInCenter: (range) => editor.revealRangeInCenter(range),
+      layout: () => editor.layout(),
     };
 
     onEditorReady(handle);
@@ -362,13 +367,25 @@ export function MonacoEditor({
 
     window.addEventListener('resize', handleResize);
 
+    let observer: ResizeObserver | null = null;
+    if (editorRef.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        editor.layout();
+      });
+      observer.observe(editorRef.current);
+    }
+
     // Trigger initial layout
-    setTimeout(() => {
+    const layoutTimer = window.setTimeout(() => {
       editor.layout();
     }, 0);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (observer) {
+        observer.disconnect();
+      }
+      window.clearTimeout(layoutTimer);
     };
   }, [editor]);
 

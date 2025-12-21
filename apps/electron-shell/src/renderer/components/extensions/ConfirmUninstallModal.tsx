@@ -1,42 +1,21 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-/**
- * ConfirmDeleteModal - Portal-rendered modal for delete confirmations.
- * 
- * Features:
- * - Renders in portal (outside component tree)
- * - Shows item name in confirmation message
- * - Escape key cancels
- * - Click outside cancels
- * - Confirm/Cancel buttons
- * 
- * P1 (Process isolation): Pure UI component, no Node.js access
- * P4 (UI design): Tailwind 4 tokens for styling
- */
-
-export interface ConfirmDeleteModalProps {
-  /** Name of the item to delete (file or folder) */
-  itemName: string;
-  /** Whether the item is a folder */
-  isFolder?: boolean;
-  /** Called when user confirms deletion */
+interface ConfirmUninstallModalProps {
+  extensionName: string;
   onConfirm: () => void;
-  /** Called when user cancels deletion */
   onCancel: () => void;
 }
 
-export function ConfirmDeleteModal({
-  itemName,
-  isFolder = false,
+export function ConfirmUninstallModal({
+  extensionName,
   onConfirm,
   onCancel,
-}: ConfirmDeleteModalProps) {
-  // Handle Escape key
+}: ConfirmUninstallModalProps) {
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
         onCancel();
       }
     };
@@ -45,8 +24,8 @@ export function ConfirmDeleteModal({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onCancel]);
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+  const handleBackdropClick = (event: React.MouseEvent) => {
+    if (event.target === event.currentTarget) {
       onCancel();
     }
   };
@@ -57,7 +36,7 @@ export function ConfirmDeleteModal({
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="delete-modal-title"
+      aria-labelledby="extension-uninstall-title"
     >
       <div
         className="rounded-sm border shadow-lg"
@@ -69,28 +48,20 @@ export function ConfirmDeleteModal({
           padding: 'var(--vscode-space-4)',
         }}
       >
-        {/* Header */}
         <h2
-          id="delete-modal-title"
-          className="font-semibold text-primary"
+          id="extension-uninstall-title"
+          className="text-primary font-semibold"
           style={{ fontSize: 'var(--vscode-font-size-ui)' }}
         >
-          Delete {isFolder ? 'Folder' : 'File'}
+          Uninstall Extension
         </h2>
-
-        {/* Message */}
-        <p className="mt-2 text-secondary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-          Are you sure you want to delete{' '}
-          <strong className="text-primary">{itemName}</strong>?
-          {isFolder && (
-            <span className="block mt-2 text-xs text-secondary">
-              The folder and all its contents will be moved to the trash.
-            </span>
-          )}
+        <p
+          className="text-secondary mt-2"
+          style={{ fontSize: 'var(--vscode-font-size-small)' }}
+        >
+          Are you sure you want to uninstall <span className="text-primary">{extensionName}</span>?
         </p>
-
-        {/* Actions */}
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="flex justify-end gap-2 mt-4">
           <button
             onClick={onCancel}
             className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-secondaryBackground)] bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
@@ -104,7 +75,7 @@ export function ConfirmDeleteModal({
             type="button"
             autoFocus
           >
-            Delete
+            Uninstall
           </button>
         </div>
       </div>

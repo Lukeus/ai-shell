@@ -162,16 +162,21 @@ export const ResizablePanel = memo(function ResizablePanel({
     }
   }, [clampSize, resetSize, onResize, collapsed, onToggleCollapse]);
 
+  const lineThickness = isDragging ? 2 : 1;
+
   const handle = (
     <div
       className={`
-        group relative flex items-center justify-center select-none shrink-0
-        ${direction === 'horizontal' ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'}
-        ${isDragging ? 'bg-accent/10' : 'hover:bg-surface-hover'}
+        group relative flex items-center justify-center select-none shrink-0 z-40
+        ${direction === 'horizontal' ? 'cursor-col-resize' : 'cursor-row-resize'}
+        ${isDragging ? 'bg-accent/15' : 'hover:bg-surface-hover'}
       `}
       style={{
         cursor: direction === 'horizontal' ? 'col-resize' : 'row-resize',
         touchAction: 'none',
+        pointerEvents: 'auto',
+        width: direction === 'horizontal' ? '6px' : '100%',
+        height: direction === 'horizontal' ? '100%' : '6px',
       }}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
@@ -186,10 +191,14 @@ export const ResizablePanel = memo(function ResizablePanel({
         className={`
           absolute
           ${direction === 'horizontal'
-            ? `${isStartHandle ? 'right-0' : 'left-0'} top-0 bottom-0 w-px`
-            : `${isStartHandle ? 'bottom-0' : 'top-0'} left-0 right-0 h-px`}
-          ${isDragging ? 'bg-accent' : 'bg-border'}
+            ? `${isStartHandle ? 'right-0' : 'left-0'} top-0 bottom-0`
+            : `${isStartHandle ? 'bottom-0' : 'top-0'} left-0 right-0`}
         `}
+        style={{
+          width: direction === 'horizontal' ? `${lineThickness}px` : '100%',
+          height: direction === 'horizontal' ? '100%' : `${lineThickness}px`,
+          backgroundColor: isDragging ? 'var(--color-accent)' : 'transparent',
+        }}
       />
       {/* Collapse button overlaid on drag handle */}
       <button

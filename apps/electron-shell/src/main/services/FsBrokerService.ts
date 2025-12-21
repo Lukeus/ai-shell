@@ -132,6 +132,22 @@ export class FsBrokerService {
   }
 
   /**
+   * Write file contents.
+   *
+   * @param requestPath - Path to file (absolute or relative to workspace root)
+   * @param content - File content to write
+   * @throws FsError if path is outside workspace or write fails
+   */
+  public async writeFile(requestPath: string, content: string): Promise<void> {
+    try {
+      const validatedPath = this.validatePathWithinWorkspace(requestPath);
+      await fs.promises.writeFile(validatedPath, content, 'utf-8');
+    } catch (error) {
+      throw this.mapErrorToFsError(error, requestPath);
+    }
+  }
+
+  /**
    * Create a new file.
    * 
    * @param requestPath - Path to new file (absolute or relative to workspace root)

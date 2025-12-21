@@ -59,6 +59,24 @@
   --vscode-menubar-selectionBackground: #2a2d2e;
   --vscode-menubar-selectionForeground: #ffffff;
   --vscode-menubar-selectionBorder: #007acc;
+  --vscode-menu-background: #252526;
+  --vscode-menu-foreground: #cccccc;
+  --vscode-menu-selectionBackground: #094771;
+  --vscode-menu-selectionForeground: #ffffff;
+  --vscode-menu-border: #454545;
+
+  /* Button colors */
+  --vscode-button-background: #0e639c;
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-hoverBackground: #1177bb;
+  --vscode-button-secondaryBackground: #3a3d41;
+  --vscode-button-secondaryForeground: #ffffff;
+  --vscode-button-secondaryHoverBackground: #45494e;
+
+  /* Widget/Dialog colors */
+  --vscode-editorWidget-background: #252526;
+  --vscode-editorWidget-border: #454545;
+  --vscode-widget-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
   
   /* ===================================================================
      SPACING TOKENS - 4px base scale

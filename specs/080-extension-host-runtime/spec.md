@@ -9,6 +9,7 @@ The application requires a secure, isolated runtime for executing untrusted thir
 - Implement lazy activation based on activation events to maintain performance budgets
 - Create a permission model for extensions with explicit user consent flows
 - Enable extensions to register capabilities that integrate with the shell's UI and functionality
+- Add a VS Code-style Extensions panel in the primary sidebar for managing installed extensions
 - Ensure all extension-related contracts are defined in packages/api-contracts using Zod schemas
 
 ## Non-goals
@@ -34,6 +35,7 @@ The application requires a secure, isolated runtime for executing untrusted thir
 - Permission prompts must be clear and actionable when extensions request new capabilities
 - Extension failures must not crash the main application or freeze the renderer
 - Users should see clear feedback when extensions are loading or activating
+- Extensions panel matches VS Code styling and uses Tailwind 4 token variables
 
 ## Functional requirements
 1. **Extension Host Process**
@@ -62,6 +64,19 @@ The application requires a secure, isolated runtime for executing untrusted thir
    - Settings: extensions can define configuration schemas
    - Connection Providers: extensions can register providers for external service connections
    - Tools: extensions can register tool implementations for agent use
+
+7. **Extensions Panel**
+   - Extensions view appears in the primary sidebar when Extensions icon is selected
+   - Lists installed extensions with enable/disable and uninstall actions
+   - Shows activation status and version metadata
+   - Supports permission review via a dialog
+8. **Extensions Preferences**
+   - Settings includes an Extensions preferences tab for auto-update and telemetry
+   - Preferences are distinct from the Extensions panel content
+9. **Command Palette Integration**
+   - Use a Workbench-level Command Palette (VS Code-style), not Monaco's editor palette
+   - Include base app commands for core File and Terminal actions alongside extension commands
+   - Extension commands surface through the Workbench palette
 
 5. **Extension API**
    - Provide extension context object with lifecycle hooks (activate, deactivate)
@@ -137,6 +152,10 @@ The application requires a secure, isolated runtime for executing untrusted thir
 13. Extension activation does not block UI thread
 14. Multiple extensions can be active concurrently without interference
 15. Documentation exists for extension API and contribution points
+16. Extensions panel renders in the primary sidebar with VS Code-like styling
+17. Extensions panel supports enable/disable/uninstall and permission review actions
+18. Extensions preferences are available in Settings under Extensions
+19. Command palette includes base File and Terminal commands alongside extensions
 
 ## Out of scope / Future work
 - Extension marketplace UI and browsing experience

@@ -27,6 +27,7 @@ const api: PreloadAPI = {
   fs: {
     readDirectory: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_READ_DIRECTORY, request),
     readFile: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_READ_FILE, request),
+    writeFile: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_WRITE_FILE, request),
     createFile: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_CREATE_FILE, request),
     createDirectory: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_CREATE_DIRECTORY, request),
     rename: (request) => ipcRenderer.invoke(IPC_CHANNELS.FS_RENAME, request),
@@ -180,13 +181,20 @@ const api: PreloadAPI = {
   // All extension operations go through main process
   extensions: {
     list: () => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_LIST),
-    get: (extensionId) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_GET, extensionId),
+    get: (request) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_GET, request),
+    enable: (request) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_ENABLE, request),
+    disable: (request) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_DISABLE, request),
+    uninstall: (request) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_UNINSTALL, request),
     executeCommand: (command, args) =>
       ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_EXECUTE_COMMAND, command, args),
     listCommands: () => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_LIST_COMMANDS),
     listViews: () => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS),
     requestPermission: (extensionId, scope) =>
       ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_REQUEST_PERMISSION, extensionId, scope),
+    listPermissions: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_LIST_PERMISSIONS, request),
+    revokePermissions: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_REVOKE_PERMISSION, request),
 
     // P2 (Security defaults): Event subscription with proper cleanup
     onStateChange: (callback) => {
