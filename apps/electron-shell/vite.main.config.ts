@@ -13,6 +13,8 @@ export default defineConfig({
         'electron',
         'electron-squirrel-startup',
         'node-pty', // Native addon - must be loaded at runtime from node_modules
+        'packages-broker-main',
+        'packages-agent-tools',
       ],
     },
   },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ShellLayout, ResizablePanel, ActivityBar, StatusBar, PanelHeader, TabBar, type Tab } from 'packages-ui-kit';
 import { IPC_CHANNELS, SETTINGS_DEFAULTS, type Settings } from 'packages-api-contracts';
 import { LayoutProvider, useLayoutContext } from './contexts/LayoutContext';
@@ -10,7 +10,8 @@ import { EditorArea } from './components/editor/EditorArea';
 import { TerminalPanel } from './components/layout/TerminalPanel';
 import { SecondarySidebar } from './components/layout/SecondarySidebar';
 import { SettingsPanel } from './components/settings/SettingsPanel';
-import { TerminalContextProvider } from './contexts/TerminalContext';
+import { TerminalContextProvider, useTerminal } from './contexts/TerminalContext';
+import { CommandPalette, type BuiltInCommand } from './components/command-palette/CommandPalette';
 
 type SettingsUpdateListener = (event: { detail?: Settings }) => void;
 
@@ -62,9 +63,38 @@ function AppContent() {
     setActiveActivityBarIcon,
   } = useLayoutContext();
 
-  const { workspace, openWorkspace, closeWorkspace, refresh, openTabs, activeTabIndex } = useFileTree();
+  const {
+    workspace,
+    openWorkspace,
+    closeWorkspace,
+    refresh,
+    openTabs,
+    activeTabIndex,
+    dirtyTabs,
+    saveFile,
+    saveAllFiles,
+  } = useFileTree();
+  const {
+    activeSessionId,
+    createSession,
+    closeSession,
+    clearOutput,
+  } = useTerminal();
   const isSettingsView = state.activeActivityBarIcon === 'settings';
+  const primarySidebarTitleMap: Record<string, string> = {
+    explorer: 'Explorer',
+    search: 'Search',
+    'source-control': 'Source Control',
+    'run-debug': 'Run and Debug',
+    extensions: 'Extensions',
+    settings: 'Settings',
+  };
+  const primarySidebarTitle = isSettingsView
+    ? 'Explorer'
+    : primarySidebarTitleMap[state.activeActivityBarIcon] ?? 'Explorer';
+  const primarySidebarView = isSettingsView ? 'explorer' : state.activeActivityBarIcon;
   const [menuBarVisible, setMenuBarVisible] = useState(SETTINGS_DEFAULTS.appearance.menuBarVisible);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const isMac = typeof navigator !== 'undefined'
     ? (navigator.platform || navigator.userAgent || '').toLowerCase().includes('mac')
     : false;
@@ -162,6 +192,173 @@ function AppContent() {
     };
   }, [openWorkspace, closeWorkspace, refresh, toggleSecondarySidebar]);
 
+  const activeFilePath =
+    activeTabIndex >= 0 && activeTabIndex < openTabs.length ? openTabs[activeTabIndex] : null;
+  const canSaveFile = Boolean(activeFilePath && dirtyTabs.has(activeFilePath));
+  const canSaveAllFiles = dirtyTabs.size > 0;
+
+  const handleSaveFile = useCallback(async () => {
+    if (!activeFilePath) return;
+    await saveFile(activeFilePath);
+  }, [activeFilePath, saveFile]);
+
+  const handleSaveAllFiles = useCallback(async () => {
+    await saveAllFiles();
+  }, [saveAllFiles]);
+
+  const handleCreateTerminal = useCallback(async () => {
+    if (!workspace) return;
+    await createSession({ cwd: workspace.path, env: undefined });
+  }, [createSession, workspace]);
+
+  const handleKillTerminal = useCallback(async () => {
+    if (!activeSessionId) return;
+    await closeSession(activeSessionId);
+  }, [activeSessionId, closeSession]);
+
+  const handleClearTerminal = useCallback(() => {
+    if (!activeSessionId) return;
+    clearOutput(activeSessionId);
+  }, [activeSessionId, clearOutput]);
+
+  const builtInCommands = useMemo<BuiltInCommand[]>(() => [
+    {
+      id: 'file.openFolder',
+      title: 'Open Folder...',
+      category: 'File',
+      enabled: true,
+      action: openWorkspace,
+    },
+    {
+      id: 'file.closeFolder',
+      title: 'Close Folder',
+      category: 'File',
+      enabled: Boolean(workspace),
+      action: closeWorkspace,
+    },
+    {
+      id: 'file.refreshExplorer',
+      title: 'Refresh Explorer',
+      category: 'File',
+      enabled: Boolean(workspace),
+      action: refresh,
+    },
+    {
+      id: 'file.save',
+      title: 'Save',
+      category: 'File',
+      enabled: canSaveFile,
+      action: handleSaveFile,
+    },
+    {
+      id: 'file.saveAll',
+      title: 'Save All',
+      category: 'File',
+      enabled: canSaveAllFiles,
+      action: handleSaveAllFiles,
+    },
+    {
+      id: 'terminal.new',
+      title: 'New Terminal',
+      category: 'Terminal',
+      enabled: Boolean(workspace),
+      action: handleCreateTerminal,
+    },
+    {
+      id: 'terminal.kill',
+      title: 'Kill Terminal',
+      category: 'Terminal',
+      enabled: Boolean(activeSessionId),
+      action: handleKillTerminal,
+    },
+    {
+      id: 'terminal.clear',
+      title: 'Clear Terminal',
+      category: 'Terminal',
+      enabled: Boolean(activeSessionId),
+      action: handleClearTerminal,
+    },
+  ], [
+    activeSessionId,
+    canSaveAllFiles,
+    canSaveFile,
+    closeWorkspace,
+    handleClearTerminal,
+    handleCreateTerminal,
+    handleKillTerminal,
+    handleSaveAllFiles,
+    handleSaveFile,
+    openWorkspace,
+    refresh,
+    workspace,
+  ]);
+
+  useEffect(() => {
+    let chordTimeout: ReturnType<typeof setTimeout> | null = null;
+    const saveAllChordArmed = { current: false };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMacPlatform = typeof navigator !== 'undefined'
+        ? (navigator.platform || navigator.userAgent || '').toLowerCase().includes('mac')
+        : false;
+      const modifierPressed = isMacPlatform ? event.metaKey : event.ctrlKey;
+      const key = event.key.toLowerCase();
+
+      if (modifierPressed && key === 'k') {
+        event.preventDefault();
+        saveAllChordArmed.current = true;
+        if (chordTimeout) {
+          clearTimeout(chordTimeout);
+        }
+        chordTimeout = setTimeout(() => {
+          saveAllChordArmed.current = false;
+        }, 1200);
+        return;
+      }
+
+      if (saveAllChordArmed.current && key === 's') {
+        event.preventDefault();
+        saveAllChordArmed.current = false;
+        if (chordTimeout) {
+          clearTimeout(chordTimeout);
+          chordTimeout = null;
+        }
+        void handleSaveAllFiles();
+        return;
+      }
+
+      if (!modifierPressed || key !== 's') return;
+      event.preventDefault();
+      void handleSaveFile();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      if (chordTimeout) {
+        clearTimeout(chordTimeout);
+      }
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleSaveAllFiles, handleSaveFile]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMacPlatform = typeof navigator !== 'undefined'
+        ? (navigator.platform || navigator.userAgent || '').toLowerCase().includes('mac')
+        : false;
+      const modifierPressed = isMacPlatform ? event.metaKey : event.ctrlKey;
+      const key = event.key.toLowerCase();
+
+      if ((modifierPressed && event.shiftKey && key === 'p') || event.key === 'F1') {
+        event.preventDefault();
+        setIsCommandPaletteOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface text-primary">
       {!isMac && menuBarVisible && (
@@ -170,6 +367,15 @@ function AppContent() {
           onOpenFolder={openWorkspace}
           onCloseFolder={closeWorkspace}
           onRefreshExplorer={refresh}
+          onSaveFile={handleSaveFile}
+          onSaveAllFiles={handleSaveAllFiles}
+          canSaveFile={canSaveFile}
+          canSaveAllFiles={canSaveAllFiles}
+          onCreateTerminal={handleCreateTerminal}
+          onKillTerminal={handleKillTerminal}
+          onClearTerminal={handleClearTerminal}
+          canCreateTerminal={Boolean(workspace)}
+          canManageTerminal={Boolean(activeSessionId)}
           onTogglePrimarySidebar={togglePrimarySidebar}
           onToggleSecondarySidebar={toggleSecondarySidebar}
           onToggleBottomPanel={toggleBottomPanel}
@@ -200,11 +406,11 @@ function AppContent() {
             >
               <div className="flex flex-col h-full">
                 <PanelHeader
-                  title="Explorer"
+                  title={primarySidebarTitle}
                   collapsed={state.primarySidebarCollapsed}
                   onToggleCollapse={togglePrimarySidebar}
                 />
-                <ExplorerPanel />
+                <ExplorerPanel activeView={primarySidebarView} />
               </div>
             </ResizablePanel>
           }
@@ -305,6 +511,11 @@ function AppContent() {
           }
         />
       </div>
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        builtInCommands={builtInCommands}
+      />
     </div>
   );
 }

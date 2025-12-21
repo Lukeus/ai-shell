@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { BrokerMain, createVfsToolHandlers, type AuditLogger } from './index';
+import { BrokerMain, createVfsToolDefinitions, type AuditLogger } from './index';
+import { z } from 'zod';
 import type { ToolCallEnvelope } from 'packages-api-contracts';
 
 describe('BrokerMain with VFS tools', () => {
@@ -34,9 +35,9 @@ describe('BrokerMain with VFS tools', () => {
       ],
     };
 
-    const vfsHandlers = createVfsToolHandlers(mockVfs);
-    for (const [toolId, handler] of Object.entries(vfsHandlers)) {
-      broker.registerTool(toolId, handler);
+    const vfsTools = createVfsToolDefinitions(mockVfs);
+    for (const tool of vfsTools) {
+      broker.registerToolDefinition(tool);
     }
 
     const runId = randomUUID();
@@ -85,6 +86,32 @@ describe('BrokerMain with VFS tools', () => {
     expect(auditLog.every((log) => log.allowed)).toBe(true);
   });
 
+  it('registers and executes tool definitions', async () => {
+    broker.registerToolDefinition({
+      id: 'tool.upper',
+      description: 'Uppercase',
+      inputSchema: z.object({ text: z.string() }),
+      outputSchema: z.object({ value: z.string() }),
+      execute: (input) => {
+        const text = (input as { text: string }).text;
+        return { value: text.toUpperCase() };
+      },
+    });
+
+    const runId = randomUUID();
+    const envelope: ToolCallEnvelope = {
+      callId: randomUUID(),
+      toolId: 'tool.upper',
+      requesterId: 'agent-host',
+      runId,
+      input: { text: 'hello' },
+    };
+
+    const result = await broker.handleAgentToolCall(envelope);
+    expect(result.ok).toBe(true);
+    expect(result.output).toEqual({ value: 'HELLO' });
+  });
+
   it('enforces policy on VFS tools', async () => {
     const mockVfs = {
       ls: () => [],
@@ -95,9 +122,9 @@ describe('BrokerMain with VFS tools', () => {
       grep: () => [],
     };
 
-    const vfsHandlers = createVfsToolHandlers(mockVfs);
-    for (const [toolId, handler] of Object.entries(vfsHandlers)) {
-      broker.registerTool(toolId, handler);
+    const vfsTools = createVfsToolDefinitions(mockVfs);
+    for (const tool of vfsTools) {
+      broker.registerToolDefinition(tool);
     }
 
     // Create broker with denylist
@@ -112,8 +139,8 @@ describe('BrokerMain with VFS tools', () => {
       },
     });
 
-    for (const [toolId, handler] of Object.entries(vfsHandlers)) {
-      deniedBroker.registerTool(toolId, handler);
+    for (const tool of vfsTools) {
+      deniedBroker.registerToolDefinition(tool);
     }
 
     const runId = randomUUID();

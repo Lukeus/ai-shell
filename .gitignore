@@ -9,3 +9,5 @@ build/
 
 .sdd/
 out/
+.turbo/
+.cache/

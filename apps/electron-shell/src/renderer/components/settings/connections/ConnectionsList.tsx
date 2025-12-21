@@ -22,10 +22,24 @@ export function ConnectionsList({
   }, [providers]);
 
   return (
-    <div className="w-64 flex-shrink-0 border-r border-border bg-surface-secondary">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+    <div className="w-64 flex-shrink-0 border-r border-border-subtle bg-surface-secondary">
+      <div
+        className="flex items-center justify-between border-b border-border-subtle"
+        style={{
+          height: 'var(--vscode-panelHeader-height)',
+          paddingLeft: 'var(--vscode-space-3)',
+          paddingRight: 'var(--vscode-space-3)',
+        }}
+      >
         <div>
-          <div className="text-xs font-semibold text-primary uppercase tracking-wide">
+          <div
+            className="text-primary uppercase"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              letterSpacing: '0.08em',
+              fontWeight: 600,
+            }}
+          >
             Connections
           </div>
           <div className="text-[11px] text-secondary">
@@ -35,7 +49,7 @@ export function ConnectionsList({
         <button
           type="button"
           onClick={onCreate}
-          className="text-xs font-medium text-accent hover:text-accent-hover"
+          className="text-xs font-semibold text-accent hover:text-accent-hover"
         >
           New
         </button>
@@ -58,13 +72,21 @@ export function ConnectionsList({
                     type="button"
                     onClick={() => onSelect(connection.metadata.id)}
                     className={`
-                      w-full text-left px-4 py-2
+                      w-full text-left
                       transition-colors duration-150
                       ${isActive
-                        ? 'bg-selection text-primary'
+                        ? 'text-[var(--vscode-list-activeSelectionForeground)]'
                         : 'text-secondary hover:bg-surface-hover hover:text-primary'
                       }
                     `}
+                    style={{
+                      height: 'var(--vscode-list-rowHeight)',
+                      paddingLeft: 'var(--vscode-space-3)',
+                      paddingRight: 'var(--vscode-space-3)',
+                      backgroundColor: isActive
+                        ? 'var(--vscode-list-activeSelectionBackground)'
+                        : 'transparent',
+                    }}
                   >
                     <div className="text-[13px] font-medium truncate">
                       {connection.metadata.displayName}

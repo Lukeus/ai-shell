@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useFileTree } from '../explorer/FileTreeContext';
 import { FileTree } from '../explorer/FileTree';
 import { ConfirmDeleteModal } from '../explorer/ConfirmDeleteModal';
+import { ExtensionsPanel } from '../extensions/ExtensionsPanel';
 
 /**
  * ExplorerPanel - Root explorer component with file tree and header actions.
@@ -25,7 +26,11 @@ interface DeleteTarget {
   isFolder: boolean;
 }
 
-export function ExplorerPanel() {
+interface ExplorerPanelProps {
+  activeView?: string;
+}
+
+export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
   const {
     workspace,
     error,
@@ -36,6 +41,31 @@ export function ExplorerPanel() {
     createFolder,
     deleteItem,
   } = useFileTree();
+
+  if (activeView === 'extensions') {
+    return <ExtensionsPanel />;
+  }
+
+  if (activeView !== 'explorer') {
+    return (
+      <div className="flex flex-col h-full bg-surface">
+        <div
+          className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
+          style={{
+            paddingLeft: 'var(--vscode-space-4)',
+            paddingRight: 'var(--vscode-space-4)',
+          }}
+        >
+          <div className="flex flex-col items-center gap-3">
+            <span className="codicon codicon-compass text-2xl opacity-50" aria-hidden="true" />
+            <p className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
+              This view is not available yet.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const [inlineInputMode, setInlineInputMode] = useState<InlineInputMode>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);

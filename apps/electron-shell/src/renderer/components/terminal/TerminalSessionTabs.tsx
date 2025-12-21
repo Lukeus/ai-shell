@@ -92,14 +92,16 @@ export function TerminalSessionTabs({ className = '' }: TerminalSessionTabsProps
                   [{session.exitCode}]
                 </span>
               )}
-              <button
+              <span
+                role="button"
+                tabIndex={-1}
                 onClick={(e) => handleCloseSession(session.sessionId, e)}
                 className="ml-1 flex items-center justify-center w-5 h-5 rounded-sm text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
                 title="Close terminal"
-                disabled={isLoading}
+                aria-label="Close terminal"
               >
                 <span className="codicon codicon-close" aria-hidden="true" />
-              </button>
+              </span>
             </button>
           );
         })}

@@ -111,14 +111,12 @@ export function ShellLayout({
       </div>
 
       {/* Primary Sidebar - Left collapsible/resizable panel */}
-      {!layoutState.primarySidebarCollapsed && (
-        <div
-          className="bg-surface-secondary border-r border-border-subtle overflow-visible min-h-0 min-w-0"
-          style={{ gridArea: 'primary-sidebar' }}
-        >
-          {primarySidebar}
-        </div>
-      )}
+      <div
+        className="bg-surface-secondary border-r border-border-subtle overflow-visible min-h-0 min-w-0"
+        style={{ gridArea: 'primary-sidebar' }}
+      >
+        {primarySidebar}
+      </div>
 
       {/* Editor Area - Center main content area */}
       <div
@@ -129,24 +127,20 @@ export function ShellLayout({
       </div>
 
       {/* Secondary Sidebar - Right collapsible/resizable panel */}
-      {!layoutState.secondarySidebarCollapsed && (
-        <div
-          className="bg-surface-secondary border-l border-border-subtle overflow-visible min-h-0 min-w-0"
-          style={{ gridArea: 'secondary-sidebar' }}
-        >
-          {secondarySidebar}
-        </div>
-      )}
+      <div
+        className="bg-surface-secondary border-l border-border-subtle overflow-visible min-h-0 min-w-0"
+        style={{ gridArea: 'secondary-sidebar' }}
+      >
+        {secondarySidebar}
+      </div>
 
       {/* Bottom Panel - Bottom horizontal collapsible/resizable panel */}
-      {!layoutState.bottomPanelCollapsed && (
-        <div
-          className="bg-surface-secondary border-t border-border-subtle overflow-visible min-h-0 min-w-0"
-          style={{ gridArea: 'bottom-panel' }}
-        >
-          {bottomPanel}
-        </div>
-      )}
+      <div
+        className="bg-surface-secondary border-t border-border-subtle overflow-visible min-h-0 min-w-0"
+        style={{ gridArea: 'bottom-panel' }}
+      >
+        {bottomPanel}
+      </div>
 
       {/* Status Bar - Bottom fixed-height bar */}
       <div

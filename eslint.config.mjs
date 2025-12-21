@@ -130,8 +130,14 @@ export default [
   },
 
   // Extension Host and Agent Host (pure Node.js environment)
-  {
-    files: ['apps/extension-host/**/*.ts', 'apps/agent-host/**/*.ts', 'packages/broker-main/**/*.ts'],
+    {
+      files: [
+        'apps/extension-host/**/*.ts',
+        'apps/agent-host/**/*.ts',
+        'packages/agent-runtime/**/*.ts',
+        'packages/agent-tools/**/*.ts',
+        'packages/broker-main/**/*.ts',
+      ],
     languageOptions: {
       globals: {
         // Node.js runtime globals

@@ -6,6 +6,7 @@ import type {
   ReadDirectoryResponse,
   ReadFileRequest,
   ReadFileResponse,
+  WriteFileRequest,
   CreateFileRequest,
   CreateDirectoryRequest,
   RenameRequest,
@@ -74,8 +75,10 @@ import type {
   ListAuditEventsResponse,
 } from './types/audit';
 import type {
-  ExtensionManifest,
-} from './types/extension-manifest';
+  ExtensionRegistryItem,
+  ExtensionIdRequest,
+  ListExtensionsResponse,
+} from './types/extension-registry';
 import type {
   ExtensionStateChangeEvent,
 } from './types/extension-events';
@@ -85,6 +88,7 @@ import type {
 } from './types/extension-contributions';
 import type {
   PermissionScope,
+  PermissionGrant,
 } from './types/extension-permissions';
 import type { WindowState } from './types/window-state';
 
@@ -205,6 +209,15 @@ export interface PreloadAPI {
      * @throws FsError if path is outside workspace, not found, or permission denied
      */
     readFile(request: ReadFileRequest): Promise<ReadFileResponse>;
+
+    /**
+     * Writes file contents.
+     *
+     * @param request - File path and new content
+     * @returns Promise resolving when file is written
+     * @throws FsError if path is outside workspace or write fails
+     */
+    writeFile(request: WriteFileRequest): Promise<void>;
     
     /**
      * Creates a new file.
@@ -580,17 +593,32 @@ export interface PreloadAPI {
     /**
      * Lists all installed extensions.
      * 
-     * @returns Promise resolving to array of extension manifests
+     * @returns Promise resolving to list response with extension items
      */
-    list(): Promise<ExtensionManifest[]>;
+    list(): Promise<ListExtensionsResponse>;
 
     /**
      * Gets a specific extension by ID.
      * 
      * @param extensionId - Extension identifier
-     * @returns Promise resolving to extension manifest, or null if not found
+     * @returns Promise resolving to extension item, or null if not found
      */
-    get(extensionId: string): Promise<ExtensionManifest | null>;
+    get(request: ExtensionIdRequest): Promise<ExtensionRegistryItem | null>;
+
+    /**
+     * Enables an extension by ID.
+     */
+    enable(request: ExtensionIdRequest): Promise<void>;
+
+    /**
+     * Disables an extension by ID.
+     */
+    disable(request: ExtensionIdRequest): Promise<void>;
+
+    /**
+     * Uninstalls an extension by ID.
+     */
+    uninstall(request: ExtensionIdRequest): Promise<void>;
 
     /**
      * Executes an extension command.
@@ -629,6 +657,16 @@ export interface PreloadAPI {
      * @returns Promise resolving to true if granted, false if denied
      */
     requestPermission(extensionId: string, scope: PermissionScope): Promise<boolean>;
+
+    /**
+     * Lists all permissions for an extension.
+     */
+    listPermissions(request: ExtensionIdRequest): Promise<PermissionGrant[]>;
+
+    /**
+     * Revokes all permissions for an extension.
+     */
+    revokePermissions(request: ExtensionIdRequest): Promise<void>;
 
     /**
      * Subscribes to extension state change events.

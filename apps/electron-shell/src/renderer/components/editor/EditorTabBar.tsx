@@ -20,6 +20,7 @@ export function EditorTabBar() {
   const {
     openTabs,
     activeTabIndex,
+    dirtyTabs,
     closeTab,
     closeOtherTabs,
     closeTabsToRight,
@@ -50,9 +51,9 @@ export function EditorTabBar() {
       id: path,
       label: getBasename(path),
       icon: <span className="codicon codicon-file" aria-hidden="true" />,
-      dirty: false,
+      dirty: dirtyTabs.has(path),
     }));
-  }, [openTabs]);
+  }, [openTabs, dirtyTabs]);
 
   const handleChange = (tabId: string) => {
     const index = openTabs.indexOf(tabId);

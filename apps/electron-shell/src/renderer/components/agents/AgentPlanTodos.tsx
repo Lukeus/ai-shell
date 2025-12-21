@@ -15,9 +15,29 @@ const extractPlanSteps = (events: AgentEvent[]): PlanStep[] => {
   const stepMap = new Map<string, PlanStep>();
 
   for (const event of events) {
+    if (event.type === 'plan') {
+      for (const step of event.steps) {
+        stepMap.set(step.stepId, {
+          stepId: step.stepId,
+          title: step.title,
+          status: step.status ?? 'pending',
+          timestamp: event.timestamp,
+        });
+      }
+    }
+
     if (event.type === 'plan-step') {
       stepMap.set(event.stepId, {
         stepId: event.stepId,
+        title: event.title,
+        status: event.status,
+        timestamp: event.timestamp,
+      });
+    }
+
+    if (event.type === 'todo-update') {
+      stepMap.set(event.todoId, {
+        stepId: event.todoId,
         title: event.title,
         status: event.status,
         timestamp: event.timestamp,

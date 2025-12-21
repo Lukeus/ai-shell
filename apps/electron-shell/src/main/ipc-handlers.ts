@@ -10,6 +10,7 @@ import {
   ReadDirectoryResponse,
   ReadFileRequestSchema,
   ReadFileResponse,
+  WriteFileRequestSchema,
   CreateFileRequestSchema,
   CreateDirectoryRequestSchema,
   RenameRequestSchema,
@@ -48,6 +49,8 @@ import {
   ListAuditEventsRequestSchema,
   ListAuditEventsResponse,
   WindowStateSchema,
+  ExtensionIdRequestSchema,
+  ListExtensionsResponse,
 } from 'packages-api-contracts';
 import { settingsService } from './services/SettingsService';
 import { workspaceService } from './services/WorkspaceService';
@@ -58,7 +61,14 @@ import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
 import { auditService } from './services/AuditService';
 import { agentRunStore } from './services/AgentRunStore';
-import { getExtensionCommandService, getExtensionViewService, getExtensionToolService, getPermissionService } from './index';
+import {
+  getAgentHostManager,
+  getExtensionCommandService,
+  getExtensionRegistry,
+  getExtensionViewService,
+  getExtensionToolService,
+  getPermissionService,
+} from './index';
 
 type AgentSubscriber = {
   sender: WebContents;
@@ -96,8 +106,51 @@ const publishAgentEvent = (event: AgentEvent): void => {
 };
 
 const appendAndPublish = (event: AgentEvent): void => {
+  if (event.type === 'status') {
+    try {
+      agentRunStore.updateRunStatus(event.runId, event.status);
+    } catch {
+      // Ignore missing runs; events may arrive before metadata is created.
+    }
+  }
   agentRunStore.appendEvent(event);
   publishAgentEvent(event);
+};
+
+let agentHostBindingsReady = false;
+
+const ensureAgentHostBindings = (): void => {
+  if (agentHostBindingsReady) {
+    return;
+  }
+
+  const agentHostManager = getAgentHostManager();
+  if (!agentHostManager) {
+    return;
+  }
+
+  agentHostManager.onEvent((event) => {
+    appendAndPublish(event);
+  });
+
+  agentHostManager.onRunError((runId, message) => {
+    appendAndPublish(
+      AgentEventSchema.parse({
+        id: randomUUID(),
+        runId,
+        timestamp: new Date().toISOString(),
+        type: 'error',
+        message,
+      })
+    );
+    try {
+      agentRunStore.updateRunStatus(runId, 'failed');
+    } catch {
+      // Ignore missing runs; failure event is still published.
+    }
+  });
+
+  agentHostBindingsReady = true;
 };
 
 const getWindowFromEvent = (event: Electron.IpcMainInvokeEvent): BrowserWindow | null => {
@@ -120,6 +173,7 @@ const buildStatusEvent = (runId: string, status: AgentRunStatus): AgentEvent =>
  * P1 (Process isolation): Main process owns OS access
  */
 export function registerIPCHandlers(): void {
+  ensureAgentHostBindings();
   // Handler for GET_VERSION channel
   ipcMain.handle(IPC_CHANNELS.GET_VERSION, async (): Promise<AppInfo> => {
     const info: AppInfo = {
@@ -253,6 +307,21 @@ export function registerIPCHandlers(): void {
       // P6 (Contracts-first): Validate request with Zod schema
       const validated = ReadFileRequestSchema.parse(request);
       return await fsBrokerService.readFile(validated.path);
+    }
+  );
+
+  /**
+   * Handler for FS_WRITE_FILE channel.
+   * Writes file contents with security validation.
+   *
+   * @param request - WriteFileRequest with path and content
+   * @throws FsError if validation fails or FS operation fails
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.FS_WRITE_FILE,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = WriteFileRequestSchema.parse(request);
+      await fsBrokerService.writeFile(validated.path, validated.content);
     }
   );
 
@@ -445,10 +514,44 @@ export function registerIPCHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.AGENT_RUNS_START,
     async (_event, request: unknown): Promise<AgentRunStartResponse> => {
-      AgentRunStartRequestSchema.parse(request);
+      const validated = AgentRunStartRequestSchema.parse(request);
       const run = agentRunStore.createRun('user');
       appendAndPublish(buildStatusEvent(run.id, run.status));
-      return { run };
+
+      ensureAgentHostBindings();
+      const agentHostManager = getAgentHostManager();
+
+      if (!agentHostManager) {
+        appendAndPublish(
+          AgentEventSchema.parse({
+            id: randomUUID(),
+            runId: run.id,
+            timestamp: new Date().toISOString(),
+            type: 'error',
+            message: 'Agent Host not available.',
+          })
+        );
+        return { run };
+      }
+
+      try {
+        await agentHostManager.startRun(run.id, validated);
+        return { run };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to start agent run';
+        const failedRun = agentRunStore.updateRunStatus(run.id, 'failed');
+        appendAndPublish(
+          AgentEventSchema.parse({
+            id: randomUUID(),
+            runId: run.id,
+            timestamp: new Date().toISOString(),
+            type: 'error',
+            message,
+          })
+        );
+        return { run: failedRun };
+      }
     }
   );
 
@@ -639,6 +742,116 @@ export function registerIPCHandlers(): void {
   // ========================================
 
   /**
+   * Handler for EXTENSIONS_LIST channel.
+   * Lists installed extensions from registry.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_LIST,
+    async (): Promise<ListExtensionsResponse> => {
+      const registry = getExtensionRegistry();
+      if (!registry) {
+        return { extensions: [] };
+      }
+
+      const extensions = registry.getAllExtensions().map((item) => ({
+        manifest: item.manifest,
+        enabled: item.enabled,
+        installedAt: item.installedAt,
+        updatedAt: item.updatedAt,
+      }));
+
+      return { extensions };
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_GET channel.
+   * Gets a single extension by ID.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_GET,
+    async (_event, request: unknown) => {
+      const validated = ExtensionIdRequestSchema.parse(request);
+      const registry = getExtensionRegistry();
+      if (!registry) {
+        return null;
+      }
+
+      const extension = registry.getExtension(validated.extensionId);
+      if (!extension) {
+        return null;
+      }
+
+      return {
+        manifest: extension.manifest,
+        enabled: extension.enabled,
+        installedAt: extension.installedAt,
+        updatedAt: extension.updatedAt,
+      };
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_ENABLE channel.
+   * Enables an extension by ID.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_ENABLE,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = ExtensionIdRequestSchema.parse(request);
+      const registry = getExtensionRegistry();
+      if (!registry) {
+        throw new Error('Extension registry not initialized');
+      }
+
+      const ok = await registry.enableExtension(validated.extensionId);
+      if (!ok) {
+        throw new Error(`Extension not found: ${validated.extensionId}`);
+      }
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_DISABLE channel.
+   * Disables an extension by ID.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_DISABLE,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = ExtensionIdRequestSchema.parse(request);
+      const registry = getExtensionRegistry();
+      if (!registry) {
+        throw new Error('Extension registry not initialized');
+      }
+
+      const ok = await registry.disableExtension(validated.extensionId);
+      if (!ok) {
+        throw new Error(`Extension not found: ${validated.extensionId}`);
+      }
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_UNINSTALL channel.
+   * Uninstalls an extension by ID.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_UNINSTALL,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = ExtensionIdRequestSchema.parse(request);
+      const registry = getExtensionRegistry();
+      if (!registry) {
+        throw new Error('Extension registry not initialized');
+      }
+
+      const ok = await registry.uninstallExtension(validated.extensionId);
+      if (!ok) {
+        throw new Error(`Extension not found: ${validated.extensionId}`);
+      }
+    }
+  );
+
+  /**
    * Handler for EXTENSIONS_EXECUTE_COMMAND channel.
    * Executes a command from an extension.
    * 
@@ -697,13 +910,14 @@ export function registerIPCHandlers(): void {
    */
   ipcMain.handle(
     IPC_CHANNELS.EXTENSIONS_LIST_PERMISSIONS,
-    async (_event, extensionId: string) => {
+    async (_event, request: unknown) => {
+      const validated = ExtensionIdRequestSchema.parse(request);
       const permService = getPermissionService();
       if (!permService) {
         return [];
       }
 
-      return permService.getAllPermissions(extensionId);
+      return permService.getAllPermissions(validated.extensionId);
     }
   );
 
@@ -714,13 +928,14 @@ export function registerIPCHandlers(): void {
    */
   ipcMain.handle(
     IPC_CHANNELS.EXTENSIONS_REVOKE_PERMISSION,
-    async (_event, extensionId: string) => {
+    async (_event, request: unknown) => {
+      const validated = ExtensionIdRequestSchema.parse(request);
       const permService = getPermissionService();
       if (!permService) {
         throw new Error('Permission service not initialized');
       }
 
-      await permService.revokeAllPermissions(extensionId);
+      await permService.revokeAllPermissions(validated.extensionId);
     }
   );
 

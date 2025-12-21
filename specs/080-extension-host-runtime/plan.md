@@ -279,12 +279,17 @@ Extension Host process isolation and communication:
 - Renderer displays extension view → requests view content via main → main requests HTML/component from Extension Host → main sanitizes and forwards to renderer
 
 ## UI components and routes
-### Extensions page (Settings)
-**Location:** `apps/electron-shell/src/renderer/pages/settings/ExtensionsPage.tsx`
+### Extensions panel (Primary Sidebar)
+**Location:** `apps/electron-shell/src/renderer/components/extensions/ExtensionsPanel.tsx`
+- Appears in the primary sidebar when Extensions icon is selected
 - List installed extensions with state badges (active/inactive/failed)
 - Enable/disable toggle per extension
 - View extension details: manifest, permissions, contributions
 - Uninstall button (with confirmation)
+
+### Extensions preferences (Settings)
+**Location:** `apps/electron-shell/src/renderer/components/settings/SettingsPanel.tsx`
+- Extensions preferences remain in Settings (auto-update, telemetry)
 
 ### Extension views integration
 **Primary/Secondary Sidebar and Panel:**
@@ -293,13 +298,15 @@ Extension Host process isolation and communication:
 - View activation triggered by user clicking on view icon
 
 ### Command palette integration
-**Location:** `apps/electron-shell/src/renderer/components/CommandPalette.tsx`
+**Location:** `apps/electron-shell/src/renderer/components/command-palette/CommandPalette.tsx`
+Use a Workbench-level Command Palette (VS Code-style).
 - Display extension commands alongside built-in commands
+- Include base app commands for core File and Terminal actions
 - Execute extension command via `window.api.extensions.executeCommand()`
 - Show command category prefix (e.g., "Extension: Do Something")
 
 ### Permission consent dialog
-**Component:** `apps/electron-shell/src/renderer/components/PermissionDialog.tsx`
+**Component:** `apps/electron-shell/src/renderer/components/permissions/PermissionDialog.tsx`
 - Modal dialog triggered when extension requests new permission
 - Clear explanation of permission scope and reason
 - User can grant once, grant always, or deny
@@ -538,7 +545,7 @@ Feature is complete when ALL of the following are verified:
 9. **Permission checks:** Permission system enforces declared capabilities before sensitive operations
 10. **Crash recovery:** Extension Host crashes do not crash main process; Extension Host automatically restarts
 11. **Secrets flow:** Extensions access secrets via handle-based flow (no plaintext exposure)
-12. **UI integration:** Extensions page in Settings allows enable/disable/uninstall; extension commands in command palette
+12. **UI integration:** Extensions panel allows enable/disable/uninstall; extension commands in command palette
 13. **Permission UI:** Permission consent dialog shown when extension requests new permission
 14. **Non-blocking activation:** Extension activation does not block UI thread or renderer
 15. **Concurrent extensions:** Multiple extensions can be active concurrently without interference

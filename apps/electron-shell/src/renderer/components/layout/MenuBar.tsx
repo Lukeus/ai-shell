@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 type MenuAction = () => void | Promise<void>;
 
@@ -21,6 +21,15 @@ export interface MenuBarProps {
   onOpenFolder: MenuAction;
   onCloseFolder: MenuAction;
   onRefreshExplorer: MenuAction;
+  onSaveFile: MenuAction;
+  onSaveAllFiles: MenuAction;
+  canSaveFile: boolean;
+  canSaveAllFiles: boolean;
+  onCreateTerminal: MenuAction;
+  onKillTerminal: MenuAction;
+  onClearTerminal: MenuAction;
+  canCreateTerminal: boolean;
+  canManageTerminal: boolean;
   onTogglePrimarySidebar: () => void;
   onToggleSecondarySidebar: () => void;
   onToggleBottomPanel: () => void;
@@ -40,6 +49,12 @@ function getPlatformIsMac() {
   return platform.includes('mac');
 }
 
+type DragStyle = CSSProperties & { WebkitAppRegion?: 'drag' | 'no-drag' };
+
+const dragRegionStyle = (region: 'drag' | 'no-drag'): DragStyle => ({
+  WebkitAppRegion: region,
+});
+
 /**
  * MenuBar component - VS Code-style top menu bar for core actions.
  *
@@ -51,6 +66,15 @@ export function MenuBar({
   onOpenFolder,
   onCloseFolder,
   onRefreshExplorer,
+  onSaveFile,
+  onSaveAllFiles,
+  canSaveFile,
+  canSaveAllFiles,
+  onCreateTerminal,
+  onKillTerminal,
+  onClearTerminal,
+  canCreateTerminal,
+  canManageTerminal,
   onTogglePrimarySidebar,
   onToggleSecondarySidebar,
   onToggleBottomPanel,
@@ -79,6 +103,20 @@ export function MenuBar({
           label: 'Open Folder...',
           shortcut: isMac ? 'Cmd+K Cmd+O' : 'Ctrl+K Ctrl+O',
           action: onOpenFolder,
+        },
+        {
+          id: 'save-file',
+          label: 'Save',
+          enabled: canSaveFile,
+          shortcut: isMac ? 'Cmd+S' : 'Ctrl+S',
+          action: onSaveFile,
+        },
+        {
+          id: 'save-all-files',
+          label: 'Save All',
+          enabled: canSaveAllFiles,
+          shortcut: isMac ? 'Cmd+K S' : 'Ctrl+K S',
+          action: onSaveAllFiles,
         },
         {
           id: 'close-folder',
@@ -142,7 +180,27 @@ export function MenuBar({
     {
       id: 'terminal',
       label: 'Terminal',
-      items: [],
+      items: [
+        {
+          id: 'terminal-new',
+          label: 'New Terminal',
+          enabled: canCreateTerminal,
+          shortcut: isMac ? 'Ctrl+`' : 'Ctrl+`',
+          action: onCreateTerminal,
+        },
+        {
+          id: 'terminal-kill',
+          label: 'Kill Terminal',
+          enabled: canManageTerminal,
+          action: onKillTerminal,
+        },
+        {
+          id: 'terminal-clear',
+          label: 'Clear Terminal',
+          enabled: canManageTerminal,
+          action: onClearTerminal,
+        },
+      ],
     },
     {
       id: 'help',
@@ -155,6 +213,15 @@ export function MenuBar({
     onCloseFolder,
     onOpenFolder,
     onRefreshExplorer,
+    onSaveFile,
+    onSaveAllFiles,
+    canSaveFile,
+    canSaveAllFiles,
+    onCreateTerminal,
+    onKillTerminal,
+    onClearTerminal,
+    canCreateTerminal,
+    canManageTerminal,
     onToggleBottomPanel,
     onTogglePrimarySidebar,
     onToggleSecondarySidebar,
@@ -420,7 +487,7 @@ export function MenuBar({
         height: 'var(--vscode-menuBar-height, var(--vscode-titleBar-height))',
         padding: `0 var(--vscode-space-1)`,
         fontSize: 'var(--vscode-font-size-ui)',
-        WebkitAppRegion: isMac ? 'no-drag' : 'drag',
+        ...dragRegionStyle(isMac ? 'no-drag' : 'drag'),
       }}
     >
       <div className="flex items-center flex-1 min-w-0">
@@ -431,7 +498,7 @@ export function MenuBar({
             height: '16px',
             marginRight: 'var(--vscode-space-2)',
             color: 'var(--vscode-titleBar-activeForeground)',
-            WebkitAppRegion: 'no-drag',
+            ...dragRegionStyle('no-drag'),
           }}
           aria-label="App icon"
         >
@@ -502,7 +569,7 @@ export function MenuBar({
                   margin: 0,
                   border: 'none',
                   background: 'transparent',
-                  WebkitAppRegion: 'no-drag',
+                  ...dragRegionStyle('no-drag'),
                 }}
               >
                 <span
@@ -516,7 +583,7 @@ export function MenuBar({
                     outlineColor: 'var(--vscode-menubar-selectionBorder)',
                     outlineOffset: '-1px',
                     padding: `0 var(--vscode-space-2)`,
-                    WebkitAppRegion: 'no-drag',
+                    ...dragRegionStyle('no-drag'),
                   }}
                 >
                   {menu.label}
@@ -527,11 +594,13 @@ export function MenuBar({
                 <div
                   role="menu"
                   aria-label={`${menu.label} menu`}
-                  className="absolute left-0 top-full mt-[1px] min-w-[180px] border border-border-subtle bg-surface-elevated py-1"
+                  className="absolute left-0 top-full mt-[1px] min-w-[180px] border py-[2px]"
                   style={{
                     zIndex: 'var(--vscode-z-dropdown)',
+                    backgroundColor: 'var(--vscode-menu-background)',
+                    borderColor: 'var(--vscode-menu-border)',
                     boxShadow: '0 2px 8px var(--color-shadow-medium)',
-                    WebkitAppRegion: 'no-drag',
+                    ...dragRegionStyle('no-drag'),
                   }}
                 >
                   {items.map((item, itemIndex) => {
@@ -555,20 +624,36 @@ export function MenuBar({
                         }}
                         className={`
                           flex w-full items-center justify-between gap-4 text-left
-                          ${isDisabled ? 'cursor-not-allowed text-tertiary' : 'text-secondary'}
-                          ${isActive && !isDisabled ? 'bg-surface-hover text-primary' : ''}
+                          ${isDisabled ? 'cursor-not-allowed' : 'cursor-default'}
+                          ${isActive && !isDisabled ? 'text-[var(--vscode-menu-selectionForeground)]' : ''}
+                          focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]
                         `}
                         style={{
                           height: 'var(--vscode-list-rowHeight)',
                           paddingLeft: 'var(--vscode-space-3)',
                           paddingRight: 'var(--vscode-space-3)',
                           fontSize: 'var(--vscode-font-size-ui)',
-                          WebkitAppRegion: 'no-drag',
+                          color: isDisabled
+                            ? 'var(--vscode-foreground-muted)'
+                            : 'var(--vscode-menu-foreground)',
+                          backgroundColor: isActive && !isDisabled
+                            ? 'var(--vscode-menu-selectionBackground)'
+                            : 'transparent',
+                          ...dragRegionStyle('no-drag'),
                         }}
                       >
                         <span className="truncate">{item.label}</span>
                         {item.shortcut && (
-                          <span className="text-[11px] text-tertiary">{item.shortcut}</span>
+                          <span
+                            className="text-[11px]"
+                            style={{
+                              color: isDisabled
+                                ? 'var(--vscode-foreground-muted)'
+                                : 'var(--vscode-foreground-secondary)',
+                            }}
+                          >
+                            {item.shortcut}
+                          </span>
                         )}
                       </button>
                     );
@@ -583,7 +668,7 @@ export function MenuBar({
       {!isMac && (
         <div
           className="flex items-center"
-          style={{ WebkitAppRegion: 'no-drag', marginLeft: 'auto' }}
+          style={{ ...dragRegionStyle('no-drag'), marginLeft: 'auto' }}
         >
           <button
             type="button"

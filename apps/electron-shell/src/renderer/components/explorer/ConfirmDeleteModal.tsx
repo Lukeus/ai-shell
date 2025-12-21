@@ -53,43 +53,54 @@ export function ConfirmDeleteModal({
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-modal-title"
     >
-      <div className="bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+      <div
+        className="rounded-sm border shadow-lg"
+        style={{
+          backgroundColor: 'var(--vscode-editorWidget-background, var(--panel-bg))',
+          borderColor: 'var(--vscode-editorWidget-border)',
+          boxShadow: 'var(--vscode-widget-shadow)',
+          width: 'min(420px, 92vw)',
+          padding: 'var(--vscode-space-4)',
+        }}
+      >
         {/* Header */}
         <h2
           id="delete-modal-title"
-          className="text-lg font-semibold mb-4 text-[var(--panel-fg)]"
+          className="font-semibold text-primary"
+          style={{ fontSize: 'var(--vscode-font-size-ui)' }}
         >
           Delete {isFolder ? 'Folder' : 'File'}
         </h2>
 
         {/* Message */}
-        <p className="mb-6 text-[var(--secondary-fg)]">
-          Are you sure you want to delete <strong className="text-[var(--panel-fg)]">{itemName}</strong>?
+        <p className="mt-2 text-secondary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
+          Are you sure you want to delete{' '}
+          <strong className="text-primary">{itemName}</strong>?
           {isFolder && (
-            <span className="block mt-2 text-sm">
+            <span className="block mt-2 text-xs text-secondary">
               The folder and all its contents will be moved to the trash.
             </span>
           )}
         </p>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3">
+        <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded bg-[var(--button-bg)] text-[var(--button-fg)] hover:bg-[var(--button-hover-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)]"
+            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-secondaryBackground)] bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
             type="button"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 rounded bg-[var(--error-bg)] text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)]"
+            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-background)] bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] hover:bg-[var(--vscode-button-hoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
             type="button"
             autoFocus
           >

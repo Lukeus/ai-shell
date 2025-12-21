@@ -6,6 +6,7 @@ import {
   type ToolCallEnvelope,
   type ToolCallResult,
 } from 'packages-api-contracts';
+import { ToolExecutor, ToolRegistry, type ToolDefinition } from 'packages-agent-tools';
 import { PolicyService } from './policy/PolicyService';
 
 export const TOOL_ERROR_CODES = {
@@ -40,23 +41,43 @@ type BrokerMainOptions = {
 export class BrokerMain {
   private readonly policyService: PolicyService;
   private readonly auditLogger?: AuditLogger;
-  private readonly toolHandlers = new Map<string, ToolHandler>();
+  private readonly registry: ToolRegistry;
+  private readonly executor: ToolExecutor;
 
   constructor(options: BrokerMainOptions = {}) {
     this.policyService = options.policyService ?? new PolicyService();
     this.auditLogger = options.auditLogger;
+    this.registry = new ToolRegistry();
+    this.executor = new ToolExecutor(this.registry);
   }
 
   public registerTool(toolId: string, handler: ToolHandler): void {
-    this.toolHandlers.set(toolId, handler);
+    const tool: ToolDefinition = {
+      id: toolId,
+      description: toolId,
+      inputSchema: JsonValueSchema,
+      outputSchema: JsonValueSchema,
+      execute: (input, context) => {
+        const envelope = context?.envelope as ToolCallEnvelope | undefined;
+        if (!envelope) {
+          throw new Error('Missing tool execution envelope.');
+        }
+        return handler(input as JsonValue, envelope);
+      },
+    };
+    this.registry.register(tool);
+  }
+
+  public registerToolDefinition(tool: ToolDefinition): void {
+    this.registry.register(tool);
   }
 
   public unregisterTool(toolId: string): void {
-    this.toolHandlers.delete(toolId);
+    this.registry.unregister(toolId);
   }
 
   public listTools(): string[] {
-    return Array.from(this.toolHandlers.keys());
+    return this.registry.list().map((tool) => tool.id);
   }
 
   public async handleAgentToolCall(envelope: ToolCallEnvelope): Promise<ToolCallResult> {
@@ -75,15 +96,36 @@ export class BrokerMain {
       return this.buildErrorResult(validated, TOOL_ERROR_CODES.POLICY_DENIED, 0);
     }
 
-    const handler = this.toolHandlers.get(validated.toolId);
-    if (!handler) {
-      return this.buildErrorResult(validated, TOOL_ERROR_CODES.TOOL_NOT_FOUND, 0);
-    }
-
     const startedAt = Date.now();
 
     try {
-      const output = await handler(validated.input, validated);
+      const execResult = await this.executor.execute(validated.toolId, validated.input, {
+        envelope: validated,
+      });
+
+      if (!execResult.ok) {
+        const error = execResult.error ?? 'Tool execution failed';
+        if (error.startsWith('Tool not found:')) {
+          return this.buildErrorResult(
+            validated,
+            TOOL_ERROR_CODES.TOOL_NOT_FOUND,
+            this.elapsedMs(startedAt)
+          );
+        }
+        if (error.startsWith('Invalid tool output')) {
+          return this.buildErrorResult(
+            validated,
+            TOOL_ERROR_CODES.INVALID_TOOL_OUTPUT,
+            this.elapsedMs(startedAt)
+          );
+        }
+        return this.buildErrorResult(
+          validated,
+          TOOL_ERROR_CODES.TOOL_EXECUTION_FAILED,
+          this.elapsedMs(startedAt)
+        );
+      }
+
       const result: ToolCallResult = {
         callId: validated.callId,
         toolId: validated.toolId,
@@ -92,8 +134,8 @@ export class BrokerMain {
         durationMs: this.elapsedMs(startedAt),
       };
 
-      if (output !== undefined) {
-        const outputParsed = JsonValueSchema.safeParse(output);
+      if (execResult.output !== undefined) {
+        const outputParsed = JsonValueSchema.safeParse(execResult.output);
         if (!outputParsed.success) {
           return this.buildErrorResult(
             validated,
@@ -152,35 +194,93 @@ export function createVfsToolHandlers(vfs: {
   glob: (pattern: string, mountPath: string) => string[];
   grep: (pattern: string, mountPath: string) => Array<{ file: string; line: number; text: string }>;
 }): Record<string, ToolHandler> {
-  return {
-    'vfs.ls': (input: JsonValue) => {
-      const { path } = input as { path: string };
-      return vfs.ls(path);
+  return Object.fromEntries(
+    createVfsToolDefinitions(vfs).map((tool) => [
+      tool.id,
+      (input: JsonValue) => tool.execute(input) as JsonValue,
+    ])
+  );
+}
+
+export function createVfsToolDefinitions(vfs: {
+  ls: (vfsPath: string) => string[];
+  read: (vfsPath: string) => string;
+  write: (vfsPath: string, content: string) => void;
+  edit: (vfsPath: string, replacements: Array<{ search: string; replace: string }>) => void;
+  glob: (pattern: string, mountPath: string) => string[];
+  grep: (pattern: string, mountPath: string) => Array<{ file: string; line: number; text: string }>;
+}): ToolDefinition[] {
+  return [
+    {
+      id: 'vfs.ls',
+      description: 'List virtual filesystem entries.',
+      inputSchema: JsonValueSchema,
+      outputSchema: JsonValueSchema,
+      category: 'fs',
+      execute: (input: unknown) => {
+        const { path } = input as { path: string };
+        return vfs.ls(path);
+      },
     },
-    'vfs.read': (input: JsonValue) => {
-      const { path } = input as { path: string };
-      return { content: vfs.read(path) };
+    {
+      id: 'vfs.read',
+      description: 'Read a virtual filesystem file.',
+      inputSchema: JsonValueSchema,
+      outputSchema: JsonValueSchema,
+      category: 'fs',
+      execute: (input: unknown) => {
+        const { path } = input as { path: string };
+        return { content: vfs.read(path) };
+      },
     },
-    'vfs.write': (input: JsonValue) => {
-      const { path, content } = input as { path: string; content: string };
-      vfs.write(path, content);
-      return { success: true };
+    {
+      id: 'vfs.write',
+      description: 'Write a virtual filesystem file.',
+      inputSchema: JsonValueSchema,
+      outputSchema: JsonValueSchema,
+      category: 'fs',
+      execute: (input: unknown) => {
+        const { path, content } = input as { path: string; content: string };
+        vfs.write(path, content);
+        return { success: true };
+      },
     },
-    'vfs.edit': (input: JsonValue) => {
-      const { path, replacements } = input as {
-        path: string;
-        replacements: Array<{ search: string; replace: string }>;
-      };
-      vfs.edit(path, replacements);
-      return { success: true };
+    {
+      id: 'vfs.edit',
+      description: 'Edit a virtual filesystem file.',
+      inputSchema: JsonValueSchema,
+      outputSchema: JsonValueSchema,
+      category: 'fs',
+      execute: (input: unknown) => {
+        const { path, replacements } = input as {
+          path: string;
+          replacements: Array<{ search: string; replace: string }>;
+        };
+        vfs.edit(path, replacements);
+        return { success: true };
+      },
     },
-    'vfs.glob': (input: JsonValue) => {
-      const { pattern, mountPath } = input as { pattern: string; mountPath: string };
-      return vfs.glob(pattern, mountPath);
+    {
+      id: 'vfs.glob',
+      description: 'Glob virtual filesystem paths.',
+      inputSchema: JsonValueSchema,
+      outputSchema: JsonValueSchema,
+      category: 'fs',
+      execute: (input: unknown) => {
+        const { pattern, mountPath } = input as { pattern: string; mountPath: string };
+        return vfs.glob(pattern, mountPath);
+      },
     },
-    'vfs.grep': (input: JsonValue) => {
-      const { pattern, mountPath } = input as { pattern: string; mountPath: string };
-      return vfs.grep(pattern, mountPath);
+    {
+      id: 'vfs.grep',
+      description: 'Grep virtual filesystem paths.',
+      inputSchema: JsonValueSchema,
+      outputSchema: JsonValueSchema,
+      category: 'fs',
+      execute: (input: unknown) => {
+        const { pattern, mountPath } = input as { pattern: string; mountPath: string };
+        return vfs.grep(pattern, mountPath);
+      },
     },
-  };
+  ];
 }

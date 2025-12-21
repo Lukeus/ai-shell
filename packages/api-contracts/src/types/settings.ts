@@ -112,6 +112,21 @@ export const ExtensionSettingsSchema = z.object({
 export type ExtensionSettings = z.infer<typeof ExtensionSettingsSchema>;
 
 /**
+ * Terminal settings.
+ *
+ * Controls the default shell selection for new terminal sessions.
+ */
+export const TerminalSettingsSchema = z.object({
+  /** Default shell for new terminal sessions */
+  defaultShell: z.enum(['default', 'powershell', 'pwsh', 'cmd']).default('default'),
+});
+
+/**
+ * Terminal settings type inferred from TerminalSettingsSchema.
+ */
+export type TerminalSettings = z.infer<typeof TerminalSettingsSchema>;
+
+/**
  * Root settings schema.
  * 
  * Top-level settings object with nested categories for appearance, editor,
@@ -138,6 +153,9 @@ export const SettingsSchema = z.object({
   /** Editor behavior settings */
   editor: EditorSettingsSchema,
   
+  /** Terminal settings */
+  terminal: TerminalSettingsSchema,
+
   /** Extension management settings */
   extensions: ExtensionSettingsSchema,
 });
@@ -164,6 +182,7 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export const SETTINGS_DEFAULTS: Settings = SettingsSchema.parse({
   appearance: {},
   editor: {},
+  terminal: {},
   extensions: {},
 });
 

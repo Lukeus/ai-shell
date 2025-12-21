@@ -25,6 +25,30 @@ export const AgentRunMetadataSchema = z.object({
 
 export type AgentRunMetadata = z.infer<typeof AgentRunMetadataSchema>;
 
+export const DeepAgentRunConfigSchema = z.object({
+  modelRef: z.string().optional(),
+  toolAllowlist: z.array(z.string()).optional(),
+  mounts: z
+    .array(
+      z.object({
+        name: z.string(),
+        path: z.string(),
+        readOnly: z.boolean().optional(),
+      })
+    )
+    .optional(),
+  budgets: z
+    .object({
+      maxSteps: z.number().int().min(1).optional(),
+      maxToolCalls: z.number().int().min(1).optional(),
+      maxWallclockMs: z.number().int().min(1).optional(),
+    })
+    .optional(),
+  metadata: z.record(z.string()).optional(),
+});
+
+export type DeepAgentRunConfig = z.infer<typeof DeepAgentRunConfigSchema>;
+
 export const ListAgentRunsRequestSchema = z.object({});
 
 export type ListAgentRunsRequest = z.infer<typeof ListAgentRunsRequestSchema>;
@@ -51,6 +75,7 @@ export const AgentRunStartRequestSchema = z.object({
   goal: z.string().min(1),
   inputs: z.record(JsonValueSchema).optional(),
   toolAllowlist: z.array(z.string()).optional(),
+  config: DeepAgentRunConfigSchema.optional(),
   metadata: z.record(z.string()).optional(),
 });
 

@@ -63,8 +63,9 @@ describe('DeepAgentRunner', () => {
       input: { path: '/tmp' },
     };
 
-    await expect(runner.startRun(runId, { goal: 'Read file' }, [toolCall]))
-      .rejects.toThrow('tool failed');
+    await expect(runner.startRun(runId, { goal: 'Read file' }, [toolCall])).rejects.toThrow(
+      'tool failed'
+    );
 
     const errorEvent = events.find((event) => event.type === 'error');
     const statusEvents = events.filter((event) => event.type === 'status');
@@ -128,7 +129,9 @@ describe('DeepAgentRunner', () => {
       type: 'tool-call',
       runId,
     });
-    expect(toolCallEvents[0].type === 'tool-call' && toolCallEvents[0].toolCall.toolId).toBe('vfs.read');
+    expect(toolCallEvents[0].type === 'tool-call' && toolCallEvents[0].toolCall.toolId).toBe(
+      'vfs.read'
+    );
 
     // tool-result event has nested result object
     expect(toolResultEvents[0]).toMatchObject({
@@ -175,7 +178,9 @@ describe('DeepAgentRunner', () => {
     const toolResultEvents = events.filter((e) => e.type === 'tool-result');
     expect(toolResultEvents.length).toBe(1);
     expect(toolResultEvents[0].type === 'tool-result' && toolResultEvents[0].result.ok).toBe(false);
-    expect(toolResultEvents[0].type === 'tool-result' && toolResultEvents[0].result.error).toBe('POLICY_DENIED');
+    expect(toolResultEvents[0].type === 'tool-result' && toolResultEvents[0].result.error).toBe(
+      'POLICY_DENIED'
+    );
 
     // Verify status shows completed (policy denial is not a run failure)
     const statusEvents = events.filter((e) => e.type === 'status');
@@ -215,9 +220,8 @@ describe('DeepAgentRunner', () => {
     // Verify tool-call event structure is correct
     const toolCallEvents = events.filter((e) => e.type === 'tool-call');
     expect(toolCallEvents.length).toBe(1);
-    expect(toolCallEvents[0].type === 'tool-call' && toolCallEvents[0].toolCall.toolId).toBe('api.call');
-
-    // Note: In production, AgentRunStore.appendEvent() redacts sensitive fields before persistence
-    // This test verifies events are emitted; redaction is tested in AgentRunStore.test.ts
+    expect(toolCallEvents[0].type === 'tool-call' && toolCallEvents[0].toolCall.toolId).toBe(
+      'api.call'
+    );
   });
 });

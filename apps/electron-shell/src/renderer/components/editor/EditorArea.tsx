@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import { SETTINGS_DEFAULTS, type Settings } from 'packages-api-contracts';
+import { useLayoutContext } from '../../contexts/LayoutContext';
 import { useFileTree } from '../explorer/FileTreeContext';
 import { EditorTabBar } from './EditorTabBar';
 import { EditorPlaceholder } from './EditorPlaceholder';
@@ -26,7 +27,16 @@ import type { BreadcrumbPosition, BreadcrumbSymbol, MonacoEditorHandle } from '.
 type SettingsUpdateListener = (event: { detail?: Settings }) => void;
 
 export function EditorArea() {
-  const { openTabs, activeTabIndex, workspace, toggleFolder, openFile } = useFileTree();
+  const {
+    openTabs,
+    activeTabIndex,
+    workspace,
+    toggleFolder,
+    openFile,
+    draftContents,
+    setDraftContent,
+    setSavedContent,
+  } = useFileTree();
   const [fileContent, setFileContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +46,7 @@ export function EditorArea() {
   const [symbols, setSymbols] = useState<BreadcrumbSymbol[]>([]);
   const [cursorPosition, setCursorPosition] = useState<BreadcrumbPosition | null>(null);
   const [editorHandle, setEditorHandle] = useState<MonacoEditorHandle | null>(null);
+  const { state: layoutState } = useLayoutContext();
 
   // Determine active file path
   const activeFilePath =
@@ -116,6 +127,16 @@ export function EditorArea() {
     }
 
     let isMounted = true;
+    const existingDraft = draftContents.get(activeFilePath);
+
+    if (existingDraft !== undefined) {
+      setFileContent(existingDraft);
+      setIsLoading(false);
+      setError(null);
+      return () => {
+        isMounted = false;
+      };
+    }
 
     const fetchFileContent = async () => {
       try {
@@ -127,7 +148,9 @@ export function EditorArea() {
 
         if (!isMounted) return;
 
-        setFileContent(response.content || '');
+        const content = response.content || '';
+        setFileContent(content);
+        setSavedContent(activeFilePath, content);
         setIsLoading(false);
       } catch (err) {
         console.error('Failed to read file:', err);
@@ -143,7 +166,7 @@ export function EditorArea() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilePath]);
+  }, [activeFilePath, draftContents, setSavedContent]);
 
   // Infer Monaco language from file extension
   const getLanguageFromPath = (filePath: string): string => {
@@ -239,9 +262,38 @@ export function EditorArea() {
     setCursorPosition(position);
   }, []);
 
+  const handleContentChange = useCallback(
+    (nextContent: string) => {
+      if (!activeFilePath) return;
+      setFileContent(nextContent);
+      setDraftContent(activeFilePath, nextContent);
+    },
+    [activeFilePath, setDraftContent]
+  );
+
   const handleEditorReady = useCallback((handle: MonacoEditorHandle) => {
     setEditorHandle(handle);
   }, []);
+
+  useEffect(() => {
+    if (!editorHandle) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      editorHandle.layout();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    editorHandle,
+    layoutState.primarySidebarWidth,
+    layoutState.secondarySidebarWidth,
+    layoutState.bottomPanelHeight,
+    layoutState.primarySidebarCollapsed,
+    layoutState.secondarySidebarCollapsed,
+    layoutState.bottomPanelCollapsed,
+  ]);
 
   const handleSymbolNavigate = useCallback(
     (symbol: BreadcrumbSymbol) => {
@@ -470,7 +522,8 @@ export function EditorArea() {
               filePath={activeFilePath}
               content={fileContent}
               language={getLanguageFromPath(activeFilePath)}
-              onEditorReady={breadcrumbsEnabled ? handleEditorReady : undefined}
+              onChange={handleContentChange}
+              onEditorReady={handleEditorReady}
               onCursorChange={breadcrumbsEnabled ? handleCursorChange : undefined}
               onSymbolsChange={breadcrumbsEnabled ? handleSymbolsChange : undefined}
             />

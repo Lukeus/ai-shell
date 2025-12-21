@@ -10,6 +10,10 @@ const formatEvent = (event: AgentEvent): string => {
       return `Status: ${event.status}`;
     case 'plan-step':
       return `Step: ${event.title} (${event.status})`;
+    case 'plan':
+      return `Plan updated (${event.steps.length} steps)`;
+    case 'todo-update':
+      return `Todo: ${event.title} (${event.status})`;
     case 'tool-call':
       return `Tool call: ${event.toolCall.toolId}`;
     case 'tool-result':

@@ -5,5 +5,5 @@
 - Terminal: @xterm/xterm
 - Secrets: Electron safeStorage (OS crypto), no .env
 - Extensions: separate host + signed + policy-governed store
-- Agentic runtime: Deep Agents in separate agent-host; tools via broker+policy
+- Agentic runtime: LangChain DeepAgents in packages/agent-runtime; agent-host is a thin process boundary; tools via broker+policy
 - Contracts-first: Zod schemas in packages/api-contracts

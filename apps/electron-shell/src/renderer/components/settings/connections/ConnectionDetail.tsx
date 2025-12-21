@@ -29,12 +29,16 @@ export interface ConnectionDetailProps {
 }
 
 const inputClassName = `
-  px-3 py-2 rounded-md
-  bg-surface border border-border
-  text-primary text-sm
+  w-full max-w-[360px]
+  px-2 py-1.5 rounded-none
+  bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)]
+  text-primary text-[13px]
   focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent
-  transition-colors duration-200
+  transition-colors duration-150
 `;
+
+const fieldClassName =
+  'w-full max-w-[360px] bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)]';
 
 const getDefaultConfigValue = (field: ConnectionField) => {
   if (field.defaultValue !== undefined) {
@@ -221,6 +225,7 @@ export function ConnectionDetail({
           value={String(fieldValue ?? '')}
           onChange={(next) => handleConfigChange(field.id, next)}
           options={options}
+          className={fieldClassName}
         />
       );
     }
@@ -232,6 +237,7 @@ export function ConnectionDetail({
           value={fieldValue as string | number}
           onChange={(next) => handleConfigChange(field.id, next)}
           min={0}
+          className={fieldClassName}
         />
       );
     }
@@ -242,6 +248,7 @@ export function ConnectionDetail({
         value={fieldValue as string | number}
         onChange={(next) => handleConfigChange(field.id, next)}
         placeholder={field.placeholder}
+        className={fieldClassName}
       />
     );
   };
@@ -263,79 +270,104 @@ export function ConnectionDetail({
   }
 
   return (
-    <div className="flex-1 p-6 overflow-auto">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-primary">
-            {mode === 'create' ? 'New connection' : 'Connection details'}
-          </h3>
-          <p className="text-xs text-secondary">
-            Secrets are stored securely and never shown after saving.
-          </p>
+    <div className="flex-1 overflow-auto bg-surface">
+      <div
+        className="border-b border-border-subtle bg-surface-secondary"
+        style={{
+          paddingLeft: 'var(--vscode-space-3)',
+          paddingRight: 'var(--vscode-space-3)',
+          paddingTop: 'var(--vscode-space-2)',
+          paddingBottom: 'var(--vscode-space-2)',
+        }}
+      >
+        <div
+          className="text-primary uppercase"
+          style={{
+            fontSize: 'var(--vscode-font-size-small)',
+            letterSpacing: '0.08em',
+            fontWeight: 600,
+          }}
+        >
+          {mode === 'create' ? 'New connection' : 'Connection details'}
+        </div>
+        <div className="text-[11px] text-secondary">
+          Secrets are stored securely and never shown after saving.
         </div>
         {mode === 'view' && connection && (
           <button
             type="button"
             onClick={handleDelete}
             disabled={isBusy}
-            className="text-xs font-medium text-status-error hover:text-status-error/80 disabled:opacity-50"
+            className="mt-2 text-xs font-semibold text-status-error hover:text-status-error/80 disabled:opacity-50"
           >
             Delete
           </button>
         )}
       </div>
 
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-[13px] font-medium text-primary mb-1">
-              Provider
-            </label>
-            {mode === 'create' ? (
-              <ProviderPicker
-                providers={providers}
-                value={providerId}
-                onChange={handleProviderChange}
-              />
-            ) : (
-              <div className="text-sm text-secondary">
-                {provider?.name ?? connection?.metadata.providerId}
-              </div>
-            )}
-          </div>
+      <div
+        className="p-6"
+        style={{
+          paddingLeft: 'var(--vscode-space-4)',
+          paddingRight: 'var(--vscode-space-4)',
+          paddingTop: 'var(--vscode-space-3)',
+          paddingBottom: 'var(--vscode-space-4)',
+        }}
+      >
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[13px] font-medium text-primary mb-1">
+                Provider
+              </label>
+              {mode === 'create' ? (
+                <ProviderPicker
+                  providers={providers}
+                  value={providerId}
+                  onChange={handleProviderChange}
+                  className={fieldClassName}
+                />
+              ) : (
+                <div className="text-sm text-secondary">
+                  {provider?.name ?? connection?.metadata.providerId}
+                </div>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-[13px] font-medium text-primary mb-1">
-              Display name
-            </label>
-            <Input
-              type="text"
-              value={displayName}
-              onChange={(next) => setDisplayName(String(next))}
-              placeholder="My connection"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[13px] font-medium text-primary mb-1">
-              Scope
-            </label>
-            {mode === 'create' ? (
-              <Select
-                value={scope}
-                onChange={(next) => setScope(next as ConnectionScope)}
-                options={[
-                  { value: 'user', label: 'User' },
-                  { value: 'workspace', label: 'Workspace' },
-                ]}
+            <div>
+              <label className="block text-[13px] font-medium text-primary mb-1">
+                Display name
+              </label>
+              <Input
+                type="text"
+                value={displayName}
+                onChange={(next) => setDisplayName(String(next))}
+                placeholder="My connection"
+                className={fieldClassName}
               />
-            ) : (
-              <div className="text-sm text-secondary capitalize">
-                {connection?.metadata.scope}
-              </div>
-            )}
+            </div>
+
+            <div>
+              <label className="block text-[13px] font-medium text-primary mb-1">
+                Scope
+              </label>
+              {mode === 'create' ? (
+                <Select
+                  value={scope}
+                  onChange={(next) => setScope(next as ConnectionScope)}
+                  options={[
+                    { value: 'user', label: 'User' },
+                    { value: 'workspace', label: 'Workspace' },
+                  ]}
+                  className={fieldClassName}
+                />
+              ) : (
+                <div className="text-sm text-secondary capitalize">
+                  {connection?.metadata.scope}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
         {provider && (
           <div>
@@ -391,7 +423,7 @@ export function ConnectionDetail({
                   type="button"
                   onClick={handleCreate}
                   disabled={isBusy || !displayName.trim()}
-                  className="px-3 py-2 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50"
+                  className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
                 >
                   Create connection
                 </button>
@@ -400,7 +432,7 @@ export function ConnectionDetail({
                   type="button"
                   onClick={handleReplaceSecret}
                   disabled={isBusy || !replaceSecretValue.trim()}
-                  className="px-3 py-2 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50"
+                  className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
                 >
                   Replace secret
                 </button>
@@ -415,7 +447,7 @@ export function ConnectionDetail({
               type="button"
               onClick={handleUpdate}
               disabled={isBusy || !displayName.trim()}
-              className="px-3 py-2 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50"
+              className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
             >
               Save changes
             </button>
@@ -428,12 +460,13 @@ export function ConnectionDetail({
               type="button"
               onClick={handleCreate}
               disabled={isBusy || !displayName.trim()}
-              className="px-3 py-2 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50"
+              className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
             >
               Create connection
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

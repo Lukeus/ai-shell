@@ -60,6 +60,9 @@ export const IPC_CHANNELS = {
   
   /** Read file contents */
   FS_READ_FILE: 'fs:read-file',
+
+  /** Write file contents */
+  FS_WRITE_FILE: 'fs:write-file',
   
   /** Create new file */
   FS_CREATE_FILE: 'fs:create-file',

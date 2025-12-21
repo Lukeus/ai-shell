@@ -22,6 +22,7 @@ export * from './types/extension-events';
 export * from './types/extension-host-protocol';
 export * from './types/extension-manifest';
 export * from './types/extension-permissions';
+export * from './types/extension-registry';
 export * from './types/fs-broker';
 export * from './types/layout-state';
 export * from './types/output';

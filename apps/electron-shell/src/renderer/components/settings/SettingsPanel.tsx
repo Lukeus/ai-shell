@@ -28,6 +28,7 @@ interface SettingDefinition {
 const CATEGORIES: SettingsCategory[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'editor', label: 'Editor' },
+  { id: 'terminal', label: 'Terminal' },
   { id: 'connections', label: 'Connections' },
   { id: 'extensions', label: 'Extensions' },
 ];
@@ -194,6 +195,27 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
       },
     }),
   },
+  // Terminal settings
+  {
+    key: 'terminal.defaultShell',
+    category: 'terminal',
+    label: 'Default Shell',
+    description: 'Default shell for new terminal sessions',
+    type: 'enum',
+    getValue: (settings) => settings.terminal.defaultShell,
+    setValue: (settings, value) => ({
+      terminal: {
+        ...settings.terminal,
+        defaultShell: value as 'default' | 'powershell' | 'pwsh' | 'cmd',
+      },
+    }),
+    options: [
+      { value: 'default', label: 'System Default' },
+      { value: 'powershell', label: 'Windows PowerShell' },
+      { value: 'pwsh', label: 'PowerShell (pwsh)' },
+      { value: 'cmd', label: 'Command Prompt' },
+    ],
+  },
 ];
 
 /**
@@ -262,6 +284,7 @@ export function SettingsPanel() {
       ...settings,
       appearance: { ...settings.appearance, ...updates.appearance },
       editor: { ...settings.editor, ...updates.editor },
+      terminal: { ...settings.terminal, ...updates.terminal },
       extensions: { ...settings.extensions, ...updates.extensions },
     };
     setSettings(newSettings);
