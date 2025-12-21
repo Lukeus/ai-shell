@@ -1,0 +1,11 @@
+{
+  "id": "acme.permission-extension",
+  "name": "permission-extension",
+  "version": "1.0.0",
+  "publisher": "acme",
+  "displayName": "Permission Extension",
+  "description": "Fixture extension that declares secrets permissions.",
+  "main": "index.js",
+  "activationEvents": ["onStartup"],
+  "permissions": ["secrets", "terminal"]
+}

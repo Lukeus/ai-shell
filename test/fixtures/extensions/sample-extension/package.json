@@ -1,0 +1,38 @@
+{
+  "id": "acme.sample-extension",
+  "name": "sample-extension",
+  "version": "1.0.0",
+  "publisher": "acme",
+  "displayName": "Sample Extension",
+  "description": "Fixture extension for testing.",
+  "main": "index.js",
+  "activationEvents": ["onStartup"],
+  "permissions": ["filesystem", "ui"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "sampleExtension.hello",
+        "title": "Sample: Hello"
+      }
+    ],
+    "views": [
+      {
+        "id": "sampleExtension.view",
+        "name": "Sample View",
+        "location": "panel"
+      }
+    ],
+    "tools": [
+      {
+        "name": "echo",
+        "description": "Echoes input back to the caller.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string" }
+          }
+        }
+      }
+    ]
+  }
+}

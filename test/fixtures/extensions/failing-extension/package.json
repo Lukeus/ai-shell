@@ -1,0 +1,11 @@
+{
+  "id": "acme.failing-extension",
+  "name": "failing-extension",
+  "version": "1.0.0",
+  "publisher": "acme",
+  "displayName": "Failing Extension",
+  "description": "Fixture extension that throws during activation.",
+  "main": "index.js",
+  "activationEvents": ["onStartup"],
+  "permissions": ["ui"]
+}
