@@ -1,0 +1,19 @@
+{
+  "id": "acme.sample-extension",
+  "name": "sample-extension",
+  "version": "1.0.0",
+  "publisher": "acme",
+  "displayName": "Sample Extension",
+  "description": "A minimal sample extension for ai-shell.",
+  "main": "index.js",
+  "activationEvents": ["onStartup"],
+  "permissions": ["ui"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "sampleExtension.hello",
+        "title": "Sample: Hello"
+      }
+    ]
+  }
+}

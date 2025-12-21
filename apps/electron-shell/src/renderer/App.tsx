@@ -465,7 +465,7 @@ function AppContent() {
                 {
                   id: 'git',
                   icon: 'codicon-source-control',
-                  label: 'master',
+                  label: 'main',
                   tooltip: 'Git branch (placeholder)',
                 },
               ]}

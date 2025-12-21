@@ -2,6 +2,8 @@
 
 An enterprise-grade Electron application shell with secure process architecture, designed for building AI-powered development tools.
 
+![AI Shell Settings](docs/images/ui-settings.png)
+
 ## Features
 
 - **Secure Process Architecture**: Sandboxed renderer with contextIsolation, minimal preload API
