@@ -20,7 +20,7 @@ test.describe('Agent Runs', () => {
 
     // Create a run via preload API
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({ goal: 'E2E test run' });
+      return (window as any).api.agents.startRun({ goal: 'E2E test run' });
     });
 
     expect(runResult.run).toBeDefined();
@@ -30,7 +30,7 @@ test.describe('Agent Runs', () => {
 
     // List runs and verify the new run is present
     const listResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.list();
+      return (window as any).api.agents.listRuns();
     });
 
     expect(listResult.runs).toBeDefined();
@@ -43,14 +43,14 @@ test.describe('Agent Runs', () => {
     await page.waitForSelector('#root', { timeout: 10000 });
 
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({ goal: 'Get run test' });
+      return (window as any).api.agents.startRun({ goal: 'Get run test' });
     });
 
     const runId = runResult.run.id;
 
     // Get the run by ID
     const getResult = await page.evaluate(async (id) => {
-      return (window as any).api.agentRuns.get({ runId: id });
+      return (window as any).api.agents.getRun({ runId: id });
     }, runId);
 
     expect(getResult.run).toBeDefined();
@@ -62,14 +62,14 @@ test.describe('Agent Runs', () => {
     await page.waitForSelector('#root', { timeout: 10000 });
 
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({ goal: 'Cancel test' });
+      return (window as any).api.agents.startRun({ goal: 'Cancel test' });
     });
 
     const runId = runResult.run.id;
 
     // Cancel the run
     const cancelResult = await page.evaluate(async (id) => {
-      return (window as any).api.agentRuns.cancel({ runId: id, action: 'cancel' });
+      return (window as any).api.agents.cancelRun({ runId: id, action: 'cancel' });
     }, runId);
 
     expect(cancelResult.run).toBeDefined();
@@ -81,19 +81,19 @@ test.describe('Agent Runs', () => {
     await page.waitForSelector('#root', { timeout: 10000 });
 
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({ goal: 'Retry test' });
+      return (window as any).api.agents.startRun({ goal: 'Retry test' });
     });
 
     const runId = runResult.run.id;
 
     // Cancel first (to simulate a failed state)
     await page.evaluate(async (id) => {
-      return (window as any).api.agentRuns.cancel({ runId: id, action: 'cancel' });
+      return (window as any).api.agents.cancelRun({ runId: id, action: 'cancel' });
     }, runId);
 
     // Retry the run
     const retryResult = await page.evaluate(async (id) => {
-      return (window as any).api.agentRuns.retry({ runId: id, action: 'retry' });
+      return (window as any).api.agents.retryRun({ runId: id, action: 'retry' });
     }, runId);
 
     expect(retryResult.run).toBeDefined();
@@ -105,14 +105,14 @@ test.describe('Agent Runs', () => {
     await page.waitForSelector('#root', { timeout: 10000 });
 
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({ goal: 'Trace test' });
+      return (window as any).api.agents.startRun({ goal: 'Trace test' });
     });
 
     const runId = runResult.run.id;
 
     // List trace events for the run
     const traceResult = await page.evaluate(async (id) => {
-      return (window as any).api.agentTrace.list({ runId: id, limit: 100 });
+      return (window as any).api.agents.listTrace({ runId: id, limit: 100 });
     }, runId);
 
     expect(traceResult.events).toBeDefined();
@@ -131,7 +131,7 @@ test.describe('Agent Runs', () => {
     await page.waitForSelector('#root', { timeout: 10000 });
 
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({
+      return (window as any).api.agents.startRun({
         goal: 'Secret redaction test',
       });
     });
@@ -140,7 +140,7 @@ test.describe('Agent Runs', () => {
 
     // List trace events
     const traceResult = await page.evaluate(async (id) => {
-      return (window as any).api.agentTrace.list({ runId: id, limit: 100 });
+      return (window as any).api.agents.listTrace({ runId: id, limit: 100 });
     }, runId);
 
     // Verify no event contains secret-like fields
@@ -160,7 +160,7 @@ test.describe('Agent Runs', () => {
     await page.waitForSelector('#root', { timeout: 10000 });
 
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({ goal: 'Audit log test' });
+      return (window as any).api.agents.startRun({ goal: 'Audit log test' });
     });
 
     const runId = runResult.run.id;
@@ -190,13 +190,13 @@ test.describe('Agent Tool Calls', () => {
     // This test verifies the event stream structure is correct.
 
     const runResult = await page.evaluate(async () => {
-      return (window as any).api.agentRuns.start({ goal: 'Tool call ordering test' });
+      return (window as any).api.agents.startRun({ goal: 'Tool call ordering test' });
     });
 
     const runId = runResult.run.id;
 
     const traceResult = await page.evaluate(async (id) => {
-      return (window as any).api.agentTrace.list({ runId: id, limit: 100 });
+      return (window as any).api.agents.listTrace({ runId: id, limit: 100 });
     }, runId);
 
     // Verify events have timestamps and are ordered
@@ -226,9 +226,9 @@ test.describe('VFS Tool Operations', () => {
     // Verify the preload API exposes agent run controls
     const hasAgentApis = await page.evaluate(() => {
       return (
-        typeof (window as any).api?.agentRuns?.start === 'function' &&
-        typeof (window as any).api?.agentRuns?.cancel === 'function' &&
-        typeof (window as any).api?.agentTrace?.list === 'function'
+        typeof (window as any).api?.agents?.startRun === 'function' &&
+        typeof (window as any).api?.agents?.cancelRun === 'function' &&
+        typeof (window as any).api?.agents?.listTrace === 'function'
       );
     });
 

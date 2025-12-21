@@ -13,7 +13,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "deepagents": "^1.3.1",
+    "packages-agent-runtime": "workspace:*",
     "packages-api-contracts": "workspace:*"
   },
   "devDependencies": {

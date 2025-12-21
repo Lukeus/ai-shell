@@ -21,7 +21,7 @@ type AgentRunnerOptions = {
 
 /**
  * DeepAgentRunner - orchestrates agent runs with tool execution.
- * 
+ *
  * Note: This is a stub implementation prepared for future deepagentsjs integration.
  * Currently handles basic tool call orchestration and event emission.
  */

@@ -34,6 +34,24 @@ export const AgentPlanStepEventSchema = AgentEventBaseSchema.extend({
   status: AgentPlanStepStatusSchema,
 });
 
+const AgentPlanStepSchema = z.object({
+  stepId: z.string(),
+  title: z.string(),
+  status: AgentPlanStepStatusSchema.optional(),
+});
+
+export const AgentPlanEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('plan'),
+  steps: z.array(AgentPlanStepSchema),
+});
+
+export const AgentTodoUpdateEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('todo-update'),
+  todoId: z.string(),
+  title: z.string(),
+  status: AgentPlanStepStatusSchema,
+});
+
 export const AgentToolCallEventSchema = AgentEventBaseSchema.extend({
   type: z.literal('tool-call'),
   toolCall: ToolCallEnvelopeSchema,
@@ -58,7 +76,9 @@ export const AgentErrorEventSchema = AgentEventBaseSchema.extend({
 
 export const AgentEventSchema = z.discriminatedUnion('type', [
   AgentStatusEventSchema,
+  AgentPlanEventSchema,
   AgentPlanStepEventSchema,
+  AgentTodoUpdateEventSchema,
   AgentToolCallEventSchema,
   AgentToolResultEventSchema,
   AgentLogEventSchema,

@@ -1,7 +1,6 @@
 import { AgentRunStartRequestSchema, ToolCallEnvelopeSchema } from 'packages-api-contracts';
 import type { AgentEvent, AgentRunStartRequest, ToolCallEnvelope } from 'packages-api-contracts';
-import { DeepAgentRunner } from './runtime/DeepAgentRunner';
-import { ToolExecutor } from './runtime/ToolExecutor';
+import { DeepAgentRunner, ToolExecutor } from 'packages-agent-runtime';
 
 type StartRunMessage = {
   type: 'agent-host:start-run';
@@ -66,7 +65,7 @@ const parseStartRunMessage = (message: unknown): StartRunMessage | null => {
 const toolExecutor = new ToolExecutor();
 const runner = new DeepAgentRunner({
   toolExecutor,
-  onEvent: (event) => sendToMain({ type: 'agent-host:event', event }),
+  onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
 });
 
 process.on('message', async (message: unknown) => {

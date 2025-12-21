@@ -11,6 +11,9 @@ import { ExtensionViewService } from './services/extension-view-service';
 import { ExtensionToolService } from './services/extension-tool-service';
 import { PermissionService } from './services/permission-service';
 import { ExtensionStateManager } from './services/extension-state-manager';
+import { AgentHostManager } from './services/agent-host-manager';
+import { auditService } from './services/AuditService';
+import * as brokerMainModule from 'packages-broker-main';
 import { IPC_CHANNELS } from 'packages-api-contracts';
 // SettingsService is initialized lazily when first accessed via IPC handlers
 
@@ -31,6 +34,7 @@ let extensionViewService: ExtensionViewService | null = null;
 let extensionToolService: ExtensionToolService | null = null;
 let permissionService: PermissionService | null = null;
 let extensionStateManager: ExtensionStateManager | null = null;
+let agentHostManager: AgentHostManager | null = null;
 
 // Export for IPC handlers
 export function getExtensionCommandService(): ExtensionCommandService | null {
@@ -47,6 +51,10 @@ export function getExtensionViewService(): ExtensionViewService | null {
 
 export function getExtensionToolService(): ExtensionToolService | null {
   return extensionToolService;
+}
+
+export function getAgentHostManager(): AgentHostManager | null {
+  return agentHostManager;
 }
 
 const resolvePreloadPath = (): string => {
@@ -96,6 +104,31 @@ const resolveExtensionHostPath = (): string => {
   
   // Fallback to first candidate with warning
   console.warn('[Main] Extension Host not found, using fallback path:', candidates[0]);
+  return candidates[0];
+};
+
+const resolveAgentHostPath = (): string => {
+  const candidates = [
+    // Dev mode: from apps/electron-shell/.vite/build to apps/agent-host/dist
+    path.join(__dirname, '../../../agent-host/dist/index.js'),
+    // Production build: from packaged out/.../main to sibling agent-host
+    path.join(__dirname, '../../agent-host/dist/index.js'),
+    // Forge package structure
+    path.join(__dirname, '../../apps/agent-host/dist/index.js'),
+  ];
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        console.log('[Main] Found Agent Host at:', p);
+        return p;
+      }
+    } catch {
+      // Ignore fs errors, continue to next candidate
+    }
+  }
+
+  console.warn('[Main] Agent Host not found, using fallback path:', candidates[0]);
   return candidates[0];
 };
 
@@ -228,6 +261,25 @@ app.on('ready', () => {
   // Initialize Extension Tool Service
   // Task 8: Tool aggregation and execution for Agent Host
   extensionToolService = new ExtensionToolService(extensionHostManager);
+
+  const agentHostPath = resolveAgentHostPath();
+  const BrokerMain = brokerMainModule.BrokerMain;
+  const brokerMain = new BrokerMain({
+    auditLogger: {
+      logAgentToolAccess: (input) => {
+        auditService.logAgentToolAccess(input);
+      },
+    },
+  });
+  agentHostManager = new AgentHostManager({
+    agentHostPath,
+    brokerMain,
+    getExtensionToolService: () => extensionToolService,
+  });
+
+  agentHostManager.start().catch((error) => {
+    console.error('[Main] Failed to start Agent Host:', error);
+  });
   
   // Start Extension Host (will be lazy-loaded when needed)
   // For now, we start it on app launch. Later tasks will implement lazy loading.
@@ -249,6 +301,12 @@ app.on('window-all-closed', () => {
   if (extensionHostManager) {
     extensionHostManager.stop().catch((error) => {
       console.error('[Main] Error stopping Extension Host:', error);
+    });
+  }
+
+  if (agentHostManager) {
+    agentHostManager.stop().catch((error) => {
+      console.error('[Main] Error stopping Agent Host:', error);
     });
   }
   

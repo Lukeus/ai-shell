@@ -59,6 +59,37 @@ ai-shell uses Electron's multi-process architecture with strict security boundar
 └─────────────────────────────────────────┘
 ```
 
+### Agentic Flow (Mermaid)
+
+```mermaid
+sequenceDiagram
+  participant Renderer
+  participant Preload
+  participant Main
+  participant AgentHost
+  participant AgentRuntime
+
+  Renderer->>Preload: window.api.startRun(request)
+  Preload->>Main: IPC invoke startRun (contracts-first)
+  Main->>AgentHost: IPC start run
+  AgentHost->>AgentRuntime: start(request)
+  AgentRuntime-->>AgentHost: events (plan/todos, tool calls, status)
+  AgentHost-->>Main: agent events
+  Main-->>Renderer: event stream (sanitized)
+  AgentRuntime->>AgentHost: tool call
+  AgentHost->>Main: broker-client tool call
+  Main-->>AgentHost: tool result (policy/audit)
+  AgentHost-->>AgentRuntime: tool result
+```
+
+### Built-in Agent Tools
+
+Initial built-in tools registered via `packages/agent-tools`:
+- `repo.search` (ripgrep-based search scoped to the workspace)
+- `workspace.read`
+- `workspace.write`
+- `workspace.update`
+
 ## IPC Communication Flow
 
 ### Request/Response Pattern
@@ -325,7 +356,7 @@ ai-shell/
 │   │   ├── forge.config.ts      # Electron Forge config
 │   │   ├── vite.*.config.ts     # Vite configs
 │   │   └── package.json
-│   ├── agent-host/              # Future: Agent execution
+│   ├── agent-host/              # Agent host process (delegates to agent-runtime)
 │   └── extension-host/          # Future: Extension runtime
 │
 ├── packages/
@@ -336,6 +367,7 @@ ai-shell/
 │   │   │   └── types/
 │   │   ├── tsup.config.ts       # Dual CJS/ESM build
 │   │   └── package.json
+│   ├── agent-runtime/           # LangChain DeepAgents implementation
 │   ├── ui-kit/                  # Shared React components
 │   └── [other packages]/
 │
@@ -355,7 +387,10 @@ ai-shell/
 ```
 electron-shell → api-contracts
 ui-kit → api-contracts
-agent-host → api-contracts (future)
+agent-runtime → api-contracts
+agent-host → api-contracts + agent-runtime
+agent-tools → api-contracts
+broker-main → api-contracts + agent-tools
 extension-host → api-contracts (future)
 ```
 
@@ -393,9 +428,9 @@ pnpm -r build
 ### Planned Additions
 
 1. **Agent Host** (apps/agent-host):
-   - LangChain Deep Agents runtime
-   - Tool execution with audit trail
-   - Policy enforcement layer
+   - Thin host process boundary
+   - Delegates agent orchestration to `packages/agent-runtime`
+   - Tool execution via broker-main with audit trail and policy enforcement
 
 2. **Extension Host** (apps/extension-host):
    - Signed extension loader
