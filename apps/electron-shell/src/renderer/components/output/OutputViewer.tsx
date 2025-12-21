@@ -67,7 +67,7 @@ export function OutputViewer({
   }, [lines.length, autoScroll]);
   
   // Render a single output line
-  const renderLine = (line: OutputLine, index: number) => {
+  const renderLine = (line: OutputLine, _index: number) => {
     // Determine text color based on severity
     let severityClass = 'text-primary';
     if (line.severity === 'error') {
@@ -112,7 +112,7 @@ export function OutputViewer({
   }
   
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
       <VirtualizedList
         items={lines}
         renderItem={renderLine}
@@ -120,6 +120,8 @@ export function OutputViewer({
         getItemKey={(line: OutputLine) => `${line.lineNumber}`}
         height={height}
         scrollClassName="bg-surface"
+        onScroll={handleScroll}
+        scrollRef={containerRef}
       />
       
       {/* Auto-scroll indicator */}

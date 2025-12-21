@@ -1,12 +1,27 @@
 {
   "name": "apps-extension-host",
+  "version": "0.0.1",
   "private": true,
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "echo dev not wired yet",
-    "build": "echo build not wired yet",
-    "typecheck": "echo typecheck not wired yet",
-    "lint": "echo lint not wired yet",
-    "test": "echo test not wired yet",
-    "clean": "echo clean not wired yet"
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "packages-api-contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

@@ -31,14 +31,15 @@ describe('ActivityBar', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
     const explorerButton = screen.getByRole('button', { name: 'Explorer' });
-    expect(explorerButton).toHaveClass('bg-accent');
+    expect(explorerButton).toHaveClass('border-accent');
+    expect(explorerButton).toHaveClass('text-primary');
   });
 
   it('does not apply active class to inactive icons', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
     const searchButton = screen.getByRole('button', { name: 'Search' });
-    expect(searchButton).not.toHaveClass('bg-accent');
+    expect(searchButton).not.toHaveClass('border-accent');
     expect(searchButton).toHaveClass('text-secondary');
   });
 

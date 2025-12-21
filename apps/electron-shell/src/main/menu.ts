@@ -1,4 +1,5 @@
 import { app, Menu, BrowserWindow, MenuItemConstructorOptions } from 'electron';
+import { IPC_CHANNELS } from 'packages-api-contracts';
 
 /**
  * Application menu template with workspace operations.
@@ -19,6 +20,11 @@ import { app, Menu, BrowserWindow, MenuItemConstructorOptions } from 'electron';
  */
 export function buildApplicationMenu(hasWorkspace = false): void {
   const isMac = process.platform === 'darwin';
+
+  if (!isMac) {
+    Menu.setApplicationMenu(null);
+    return;
+  }
   
   const template: MenuItemConstructorOptions[] = [
     // App menu (macOS only)
@@ -48,7 +54,7 @@ export function buildApplicationMenu(hasWorkspace = false): void {
             const focusedWindow = BrowserWindow.getFocusedWindow();
             if (focusedWindow) {
               // P1: Trigger workspace open via IPC to renderer
-              focusedWindow.webContents.send('menu:workspace-open');
+              focusedWindow.webContents.send(IPC_CHANNELS.MENU_WORKSPACE_OPEN);
             }
           },
         },
@@ -59,7 +65,7 @@ export function buildApplicationMenu(hasWorkspace = false): void {
             const focusedWindow = BrowserWindow.getFocusedWindow();
             if (focusedWindow) {
               // P1: Trigger workspace close via IPC to renderer
-              focusedWindow.webContents.send('menu:workspace-close');
+              focusedWindow.webContents.send(IPC_CHANNELS.MENU_WORKSPACE_CLOSE);
             }
           },
         },
@@ -71,7 +77,7 @@ export function buildApplicationMenu(hasWorkspace = false): void {
             const focusedWindow = BrowserWindow.getFocusedWindow();
             if (focusedWindow) {
               // P1: Trigger explorer refresh via IPC to renderer
-              focusedWindow.webContents.send('menu:refresh-explorer');
+              focusedWindow.webContents.send(IPC_CHANNELS.MENU_REFRESH_EXPLORER);
             }
           },
         },
@@ -121,6 +127,17 @@ export function buildApplicationMenu(hasWorkspace = false): void {
         { role: 'resetZoom' as const },
         { role: 'zoomIn' as const },
         { role: 'zoomOut' as const },
+        { type: 'separator' as const },
+        {
+          label: 'Toggle Secondary Side Bar',
+          accelerator: isMac ? 'Cmd+Alt+B' : 'Ctrl+Alt+B',
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send(IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR);
+            }
+          },
+        },
         { type: 'separator' as const },
         { role: 'togglefullscreen' as const },
       ],

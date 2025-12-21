@@ -3,6 +3,8 @@ import type { Settings, Theme } from 'packages-api-contracts';
 import { SearchBar } from './SearchBar';
 import { SettingsCategoryNav, type SettingsCategory } from './SettingsCategoryNav';
 import { SettingItem, type SettingType } from './SettingItem';
+import { ConnectionsPanel } from './connections/ConnectionsPanel';
+import { useTheme } from '../ThemeProvider';
 
 /**
  * Setting definition for rendering.
@@ -26,6 +28,7 @@ interface SettingDefinition {
 const CATEGORIES: SettingsCategory[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'editor', label: 'Editor' },
+  { id: 'connections', label: 'Connections' },
   { id: 'extensions', label: 'Extensions' },
 ];
 
@@ -89,6 +92,20 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
       { value: 'minimal', label: 'Minimal' },
     ],
   },
+  {
+    key: 'appearance.menuBarVisible',
+    category: 'appearance',
+    label: 'Show Menu Bar',
+    description: 'Display the top menu bar',
+    type: 'boolean',
+    getValue: (settings) => settings.appearance.menuBarVisible,
+    setValue: (settings, value) => ({
+      appearance: {
+        ...settings.appearance,
+        menuBarVisible: Boolean(value),
+      },
+    }),
+  },
   
   // Editor settings
   {
@@ -130,6 +147,20 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
       editor: {
         ...settings.editor,
         minimap: Boolean(value),
+      },
+    }),
+  },
+  {
+    key: 'editor.breadcrumbsEnabled',
+    category: 'editor',
+    label: 'Show Breadcrumbs',
+    description: 'Display file and symbol breadcrumbs below tabs',
+    type: 'boolean',
+    getValue: (settings) => settings.editor.breadcrumbsEnabled,
+    setValue: (settings, value) => ({
+      editor: {
+        ...settings.editor,
+        breadcrumbsEnabled: Boolean(value),
       },
     }),
   },
@@ -184,11 +215,13 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
  * ```
  */
 export function SettingsPanel() {
+  const { setTheme } = useTheme();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [activeCategory, setActiveCategory] = useState('appearance');
   const [searchQuery, setSearchQuery] = useState('');
   // eslint-disable-next-line no-undef
   const [updateTimeoutId, setUpdateTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const isConnectionsCategory = activeCategory === 'connections';
 
   /**
    * Fetch settings on mount
@@ -232,10 +265,17 @@ export function SettingsPanel() {
       extensions: { ...settings.extensions, ...updates.extensions },
     };
     setSettings(newSettings);
+    // Notify other UI consumers (menu bar, breadcrumbs) of setting updates.
+    window.dispatchEvent(new window.CustomEvent('ai-shell:settings-updated', { detail: newSettings }));
 
     // Clear previous timeout
     if (updateTimeoutId) {
       clearTimeout(updateTimeoutId);
+    }
+
+    if (key === 'appearance.theme') {
+      void setTheme(value as Theme);
+      return;
     }
 
     // Debounce API call
@@ -248,13 +288,14 @@ export function SettingsPanel() {
     }, 300);
 
     setUpdateTimeoutId(timeoutId);
-  }, [settings, updateTimeoutId]);
+  }, [settings, updateTimeoutId, setTheme]);
 
   /**
    * Filter settings by category and search query (memoized for performance)
    */
   const filteredSettings = useMemo(() => {
     if (!settings) return [];
+    if (isConnectionsCategory) return [];
 
     let filtered = SETTINGS_DEFINITIONS;
 
@@ -272,7 +313,7 @@ export function SettingsPanel() {
     }
 
     return filtered;
-  }, [settings, activeCategory, searchQuery]);
+  }, [settings, activeCategory, searchQuery, isConnectionsCategory]);
 
   if (!settings) {
     return (
@@ -283,12 +324,32 @@ export function SettingsPanel() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full bg-surface">
       {/* Left sidebar - Categories */}
-      <div className="w-48 flex-shrink-0 p-4 border-r border-border">
-        <h2 className="text-sm font-semibold text-primary mb-4 uppercase tracking-wide">
-          Settings
-        </h2>
+      <div
+        className="flex-shrink-0 border-r border-border-subtle bg-surface-secondary"
+        style={{ width: '220px' }}
+      >
+        <div
+          className="flex items-center"
+          style={{
+            height: 'var(--vscode-panelHeader-height)',
+            paddingLeft: 'var(--vscode-space-3)',
+            paddingRight: 'var(--vscode-space-3)',
+            borderBottom: '1px solid var(--vscode-border-subtle)',
+          }}
+        >
+          <h2
+            className="text-primary uppercase"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              letterSpacing: '0.08em',
+              fontWeight: 600,
+            }}
+          >
+            Settings
+          </h2>
+        </div>
         <SettingsCategoryNav
           categories={CATEGORIES}
           activeCategory={activeCategory}
@@ -296,41 +357,70 @@ export function SettingsPanel() {
         />
       </div>
 
-      {/* Right content - Settings list */}
-      <div className="flex-1 overflow-auto p-6">
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search settings..."
-        />
-
-        {/* Category title (hidden when searching) */}
-        {!searchQuery && (
-          <h3 className="text-lg font-semibold text-primary mb-4">
-            {CATEGORIES.find((cat) => cat.id === activeCategory)?.label}
-          </h3>
-        )}
-
-        {/* Settings list */}
-        {filteredSettings.length === 0 ? (
-          <p className="text-secondary text-sm">
-            {searchQuery ? 'No settings match your search.' : 'No settings in this category.'}
-          </p>
+      {/* Right content - Settings list or Connections panel */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div
+          className="flex items-center border-b border-border-subtle bg-surface-secondary"
+          style={{
+            height: 'var(--vscode-panelHeader-height)',
+            paddingLeft: 'var(--vscode-space-3)',
+            paddingRight: 'var(--vscode-space-3)',
+          }}
+        >
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search settings..."
+          />
+        </div>
+        {isConnectionsCategory ? (
+          <ConnectionsPanel />
         ) : (
-          <div>
-            {filteredSettings.map((def) => (
-              <SettingItem
-                key={def.key}
-                label={def.label}
-                description={def.description}
-                value={def.getValue(settings)}
-                type={def.type}
-                options={def.options}
-                onChange={(value) => handleSettingChange(def.key, value)}
-                min={def.min}
-                max={def.max}
-              />
-            ))}
+          <div
+            className="flex-1 overflow-auto"
+            style={{
+              paddingLeft: 'var(--vscode-space-4)',
+              paddingRight: 'var(--vscode-space-4)',
+              paddingTop: 'var(--vscode-space-3)',
+              paddingBottom: 'var(--vscode-space-4)',
+            }}
+          >
+            {/* Category title (hidden when searching) */}
+            {!searchQuery && (
+              <h3
+                className="text-primary"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  marginBottom: 'var(--vscode-space-3)',
+                }}
+              >
+                {CATEGORIES.find((cat) => cat.id === activeCategory)?.label}
+              </h3>
+            )}
+
+            {/* Settings list */}
+            {filteredSettings.length === 0 ? (
+              <p className="text-secondary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
+                {searchQuery ? 'No settings match your search.' : 'No settings in this category.'}
+              </p>
+            ) : (
+              <div>
+                {filteredSettings.map((def) => (
+                  <SettingItem
+                    key={def.key}
+                    label={def.label}
+                    description={def.description}
+                    value={def.getValue(settings)}
+                    type={def.type}
+                    options={def.options}
+                    onChange={(value) => handleSettingChange(def.key, value)}
+                    min={def.min}
+                    max={def.max}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -13,6 +13,7 @@ Without this, users cannot customize the app to their preferences, and the hardc
 ## Goals
 
 - Implement a theme system using Tailwind 4 CSS variables that supports light, dark, and high-contrast themes
+- Align the default dark theme and core layout styling to VS Code Dark+ tokens (colors, sizing, spacing)
 - Create a Settings UI with categories (Appearance, Editor, Extensions, Keyboard Shortcuts) accessible via Activity Bar
 - Persist theme and settings to main process storage (not localStorage) for durability and workspace isolation
 - Define settings schema in `packages/api-contracts` with Zod validation
@@ -94,6 +95,15 @@ All Tailwind 4 colors replaced with CSS variables:
 - `--color-status-info`, `--color-status-success`, `--color-status-warning`, `--color-status-error`
 
 Themes override these variables under `[data-theme="light"]`, `[data-theme="dark"]`, etc.
+
+### VS Code Alignment
+
+1. Default dark theme colors map to VS Code Dark+ tokens (editor, sidebar, activity bar, status bar).
+2. Core layout sizing matches VS Code defaults:
+   - Activity Bar width: 48px
+   - Tab height: 35px
+   - Status Bar height: 22px
+3. Corners remain square (no global rounding) to match VS Code layout language.
 
 ## Functional requirements
 
@@ -235,6 +245,8 @@ Use Electron `app.getPath('userData')` + `/settings.json`
 22. ✅ Unit tests for settings IPC handlers (main process)
 23. ✅ Unit tests for theme switching logic (renderer)
 24. ✅ Playwright E2E test: change theme, verify CSS variables update, restart app, verify persistence
+
+25. ? Default dark theme surfaces and layout sizing match VS Code Dark+ tokens
 
 ## Out of scope / Future work
 

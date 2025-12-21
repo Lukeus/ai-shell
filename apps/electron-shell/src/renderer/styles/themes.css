@@ -21,34 +21,34 @@
    =================================================================== */
 :root {
   /* Surface colors - backgrounds for different UI elements */
-  --color-surface-default: #0d1117;      /* Main background - deeper, richer dark */
-  --color-surface-secondary: #161b22;    /* Sidebars, secondary panels */
-  --color-surface-elevated: #1f2937;     /* Elevated components (modals, dropdowns) */
-  --color-surface-hover: #21262d;        /* Hover state for surfaces */
+  --color-surface-default: var(--vscode-editor-background);      /* Editor background */
+  --color-surface-secondary: var(--vscode-sidebar-background);    /* Sidebars, panels */
+  --color-surface-elevated: var(--vscode-activityBar-background); /* Activity bar, raised surfaces */
+  --color-surface-hover: var(--vscode-hover-background);          /* Hover state for surfaces */
   
   /* Border colors */
-  --color-border-default: #30363d;       /* Default border color */
-  --color-border-subtle: #21262d;        /* Subtle borders */
-  --color-border-focus: #58a6ff;         /* Focus borders */
+  --color-border-default: var(--vscode-border);       /* Default border color */
+  --color-border-subtle: var(--vscode-border-subtle); /* Subtle borders */
+  --color-border-focus: var(--vscode-focus-border);   /* Focus borders */
   
   /* Text colors */
-  --color-text-primary: #e6edf3;         /* Primary text color - brighter */
-  --color-text-secondary: #7d8590;       /* Muted/secondary text */
-  --color-text-tertiary: #6e7681;        /* Tertiary text (hints) */
-  --color-text-link: #58a6ff;            /* Links */
+  --color-text-primary: var(--vscode-foreground);             /* Primary text */
+  --color-text-secondary: var(--vscode-foreground-secondary); /* Muted/secondary text */
+  --color-text-tertiary: var(--vscode-foreground-muted);      /* Tertiary text */
+  --color-text-link: var(--vscode-accent);                    /* Links */
   
-  /* Accent colors - interactive elements with gradients */
-  --color-accent-primary: #3b82f6;       /* Primary accent (blue-500) */
-  --color-accent-secondary: #1d4ed8;     /* Secondary accent (blue-700) */
-  --color-accent-hover: #2563eb;         /* Accent hover state (blue-600) */
-  --color-accent-gradient-from: #3b82f6; /* Gradient start */
-  --color-accent-gradient-to: #8b5cf6;   /* Gradient end (purple-500) */
+  /* Accent colors - interactive elements */
+  --color-accent-primary: var(--vscode-accent);      /* Primary accent */
+  --color-accent-secondary: var(--vscode-accent);    /* Secondary accent */
+  --color-accent-hover: var(--vscode-focus-border);  /* Accent hover state */
+  --color-accent-gradient-from: var(--vscode-accent);
+  --color-accent-gradient-to: var(--vscode-accent);
   
   /* Status colors - feedback and notifications */
-  --color-status-info: #58a6ff;          /* Info messages */
-  --color-status-success: #3fb950;       /* Success messages */
-  --color-status-warning: #d29922;       /* Warning messages */
-  --color-status-error: #f85149;         /* Error messages */
+  --color-status-info: var(--vscode-statusBar-background); /* Info messages */
+  --color-status-success: #4ec9b0;       /* Success messages */
+  --color-status-warning: #d7ba7d;       /* Warning messages */
+  --color-status-error: #f48771;         /* Error messages */
   
   /* Shadow colors for depth */
   --color-shadow-small: rgba(0, 0, 0, 0.2);
@@ -56,17 +56,23 @@
   --color-shadow-large: rgba(0, 0, 0, 0.4);
   
   /* Overlay/backdrop colors */
-  --color-overlay: rgba(13, 17, 23, 0.8);
-  --color-backdrop-blur: rgba(13, 17, 23, 0.6);
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-backdrop-blur: rgba(30, 30, 30, 0.6);
   
   /* Selection colors */
-  --color-selection-bg: rgba(58, 130, 246, 0.3);
-  --color-selection-text: #e6edf3;
+  --color-selection-bg: var(--vscode-selection-background);
+  --color-selection-text: var(--vscode-foreground);
+
+  /* Tailwind token aliases (used by @theme) */
+  --color-surface: var(--color-surface-default);
+  --color-border: var(--color-border-default);
+  --color-accent: var(--color-accent-primary);
+  --color-selection: var(--color-selection-bg);
   
   /* Glow effects */
-  --color-glow-accent: rgba(58, 130, 246, 0.4);
-  --color-glow-success: rgba(63, 185, 80, 0.3);
-  --color-glow-error: rgba(248, 81, 73, 0.3);
+  --color-glow-accent: rgba(0, 122, 204, 0.35);
+  --color-glow-success: rgba(78, 201, 176, 0.25);
+  --color-glow-error: rgba(244, 135, 113, 0.25);
 }
 
 /* ===================================================================

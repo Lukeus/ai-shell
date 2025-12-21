@@ -28,12 +28,14 @@
 - Define 14 CSS variables at `:root` (dark theme defaults)
 - Override variables for 4 additional themes: `[data-theme="light"]`, `[data-theme="high-contrast-dark"]`, `[data-theme="high-contrast-light"]`
 - System theme uses conditional CSS: `@media (prefers-color-scheme: light) { [data-theme="system"] { ... } }`
+- Default dark values align to VS Code Dark+ tokens for surfaces, borders, text, and accent
 
 ### Tailwind 4 integration changes
 **File**: `apps/electron-shell/tailwind.config.ts`
 - Map CSS variables to Tailwind tokens: `colors: { surface: { DEFAULT: 'var(--color-surface-default)' } }`
 - Remove hardcoded color values; all colors reference CSS variables
 - Ensures theme switching works without Tailwind rebuild
+ - Ensure layout sizing uses VS Code tokens (activity bar width, tab height, status bar height)
 
 ### Settings UI components
 **Directory**: `apps/electron-shell/src/renderer/components/settings/`

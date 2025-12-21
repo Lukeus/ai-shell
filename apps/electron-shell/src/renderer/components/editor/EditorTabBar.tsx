@@ -133,13 +133,24 @@ export function EditorTabBar() {
       />
       {contextMenu && (
         <ul
-          className="fixed z-50 bg-surface-elevated border border-border rounded-sm shadow-lg text-sm"
-          style={{ top: contextMenu.y, left: contextMenu.x, minWidth: '180px' }}
+          className="fixed z-50 bg-surface-elevated border border-border-subtle rounded-sm shadow-lg"
+          style={{
+            top: contextMenu.y,
+            left: contextMenu.x,
+            minWidth: '180px',
+            fontSize: 'var(--vscode-font-size-ui)',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           <li>
             <button
-              className="w-full text-left px-3 py-2 hover:bg-surface-hover"
+              className="w-full text-left hover:bg-surface-hover"
+              style={{
+                paddingLeft: 'var(--vscode-space-3)',
+                paddingRight: 'var(--vscode-space-3)',
+                paddingTop: 'var(--vscode-space-2)',
+                paddingBottom: 'var(--vscode-space-2)',
+              }}
               onClick={() => runMenuAction('close')}
             >
               Close
@@ -147,7 +158,13 @@ export function EditorTabBar() {
           </li>
           <li>
             <button
-              className="w-full text-left px-3 py-2 hover:bg-surface-hover"
+              className="w-full text-left hover:bg-surface-hover"
+              style={{
+                paddingLeft: 'var(--vscode-space-3)',
+                paddingRight: 'var(--vscode-space-3)',
+                paddingTop: 'var(--vscode-space-2)',
+                paddingBottom: 'var(--vscode-space-2)',
+              }}
               onClick={() => runMenuAction('close-others')}
             >
               Close Others
@@ -155,7 +172,13 @@ export function EditorTabBar() {
           </li>
           <li>
             <button
-              className="w-full text-left px-3 py-2 hover:bg-surface-hover"
+              className="w-full text-left hover:bg-surface-hover"
+              style={{
+                paddingLeft: 'var(--vscode-space-3)',
+                paddingRight: 'var(--vscode-space-3)',
+                paddingTop: 'var(--vscode-space-2)',
+                paddingBottom: 'var(--vscode-space-2)',
+              }}
               onClick={() => runMenuAction('close-right')}
             >
               Close Tabs to the Right

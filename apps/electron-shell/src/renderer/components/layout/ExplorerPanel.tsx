@@ -121,12 +121,34 @@ export function ExplorerPanel() {
     return (
       <div className="flex flex-col h-full bg-surface">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-surface-secondary">
-          <h2 className="text-xs font-bold text-primary uppercase tracking-wider">EXPLORER</h2>
+        <div
+          className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
+          style={{
+            paddingLeft: 'var(--vscode-space-2)',
+            paddingRight: 'var(--vscode-space-2)',
+            height: 'var(--vscode-panelHeader-height)',
+          }}
+        >
+          <h2
+            className="text-primary uppercase"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              letterSpacing: '0.08em',
+              fontWeight: 600,
+            }}
+          >
+            EXPLORER
+          </h2>
         </div>
 
         {/* Empty state */}
-        <div className="flex flex-col items-center justify-center flex-1 px-4 text-center text-secondary animate-fade-in">
+        <div
+          className="flex flex-col items-center justify-center flex-1 text-center text-secondary animate-fade-in"
+          style={{
+            paddingLeft: 'var(--vscode-space-4)',
+            paddingRight: 'var(--vscode-space-4)',
+          }}
+        >
           <svg
             width="64"
             height="64"
@@ -138,18 +160,31 @@ export function ExplorerPanel() {
           >
             <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z" />
           </svg>
-          <p className="text-sm mb-6 text-tertiary">No folder open</p>
+          <p
+            className="text-tertiary"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              marginBottom: 'var(--vscode-space-4)',
+            }}
+          >
+            No folder open
+          </p>
           <button
             onClick={openWorkspace}
             className="
-              px-5 py-2.5 text-sm font-medium rounded-lg
+              rounded-sm
               bg-accent text-primary
-              hover:bg-accent-hover hover:scale-105
-              active:scale-95
-              transition-all duration-200
-              shadow-lg
+              hover:bg-accent-hover
+              active:opacity-90
+              transition-colors duration-150
             "
-            style={{ boxShadow: '0 4px 12px var(--color-glow-accent)' }}
+            style={{
+              paddingLeft: 'var(--vscode-space-4)',
+              paddingRight: 'var(--vscode-space-4)',
+              paddingTop: 'var(--vscode-space-2)',
+              paddingBottom: 'var(--vscode-space-2)',
+              fontSize: 'var(--vscode-font-size-ui)',
+            }}
           >
             Open Folder
           </button>
@@ -163,12 +198,34 @@ export function ExplorerPanel() {
     return (
       <div className="flex flex-col h-full bg-surface">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-surface-secondary">
-          <h2 className="text-xs font-bold text-primary uppercase tracking-wider">{workspace.name}</h2>
+        <div
+          className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
+          style={{
+            paddingLeft: 'var(--vscode-space-2)',
+            paddingRight: 'var(--vscode-space-2)',
+            height: 'var(--vscode-panelHeader-height)',
+          }}
+        >
+          <h2
+            className="text-primary uppercase truncate"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              letterSpacing: '0.08em',
+              fontWeight: 600,
+            }}
+          >
+            {workspace.name}
+          </h2>
         </div>
 
         {/* Error state */}
-        <div className="flex flex-col items-center justify-center flex-1 px-4 text-center text-status-error animate-fade-in">
+        <div
+          className="flex flex-col items-center justify-center flex-1 text-center text-status-error animate-fade-in"
+          style={{
+            paddingLeft: 'var(--vscode-space-4)',
+            paddingRight: 'var(--vscode-space-4)',
+          }}
+        >
           <svg
             width="64"
             height="64"
@@ -182,17 +239,40 @@ export function ExplorerPanel() {
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
-          <p className="text-sm font-semibold mb-2">Error loading files</p>
-          <p className="text-xs mb-6 text-secondary">{error}</p>
+          <p
+            className="font-semibold"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              marginBottom: 'var(--vscode-space-2)',
+            }}
+          >
+            Error loading files
+          </p>
+          <p
+            className="text-secondary"
+            style={{
+              fontSize: 'var(--vscode-font-size-ui)',
+              marginBottom: 'var(--vscode-space-4)',
+            }}
+          >
+            {error}
+          </p>
           <button
             onClick={handleRetry}
             className="
-              px-5 py-2.5 text-sm font-medium rounded-lg
+              rounded-sm
               bg-accent text-primary
-              hover:bg-accent-hover hover:scale-105
-              active:scale-95
-              transition-all duration-200
+              hover:bg-accent-hover
+              active:opacity-90
+              transition-colors duration-150
             "
+            style={{
+              paddingLeft: 'var(--vscode-space-4)',
+              paddingRight: 'var(--vscode-space-4)',
+              paddingTop: 'var(--vscode-space-2)',
+              paddingBottom: 'var(--vscode-space-2)',
+              fontSize: 'var(--vscode-font-size-ui)',
+            }}
           >
             Retry
           </button>
@@ -205,8 +285,22 @@ export function ExplorerPanel() {
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Header with actions */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border-subtle bg-surface-secondary">
-        <h2 className="flex-1 text-xs font-bold text-primary uppercase tracking-wider truncate">
+      <div
+        className="flex items-center gap-2 border-b border-border-subtle bg-surface-secondary"
+        style={{
+          paddingLeft: 'var(--vscode-space-2)',
+          paddingRight: 'var(--vscode-space-2)',
+          height: 'var(--vscode-panelHeader-height)',
+        }}
+      >
+        <h2
+          className="flex-1 text-primary uppercase truncate"
+          style={{
+            fontSize: 'var(--vscode-font-size-small)',
+            letterSpacing: '0.08em',
+            fontWeight: 600,
+          }}
+        >
           {workspace.name}
         </h2>
 
@@ -215,7 +309,7 @@ export function ExplorerPanel() {
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="
-              w-6 h-6 flex items-center justify-center rounded
+              w-6 h-6 flex items-center justify-center rounded-sm
               hover:bg-surface-hover
               active:scale-95 disabled:opacity-50
               text-secondary hover:text-primary
@@ -229,7 +323,7 @@ export function ExplorerPanel() {
           <button
             onClick={handleNewFile}
             className="
-              w-6 h-6 flex items-center justify-center rounded
+              w-6 h-6 flex items-center justify-center rounded-sm
               hover:bg-surface-hover
               active:scale-95
               text-secondary hover:text-primary
@@ -243,7 +337,7 @@ export function ExplorerPanel() {
           <button
             onClick={handleNewFolder}
             className="
-              w-6 h-6 flex items-center justify-center rounded
+              w-6 h-6 flex items-center justify-center rounded-sm
               hover:bg-surface-hover
               active:scale-95
               text-secondary hover:text-primary
@@ -257,7 +351,7 @@ export function ExplorerPanel() {
           <button
             onClick={handleCollapseAll}
             className="
-              w-6 h-6 flex items-center justify-center rounded
+              w-6 h-6 flex items-center justify-center rounded-sm
               hover:bg-surface-hover
               active:scale-95
               text-secondary hover:text-primary

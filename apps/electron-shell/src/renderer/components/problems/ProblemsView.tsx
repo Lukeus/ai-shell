@@ -154,7 +154,12 @@ export function ProblemsView({ className = '' }: ProblemsViewProps) {
 
   return (
     <div className={`flex flex-col h-full bg-surface ${className}`}>
-      <div className="flex items-center gap-4 px-4 py-2 border-b border-border bg-surface-elevated text-xs">
+      <div
+        className="flex items-center gap-3 px-2 border-b border-border bg-surface-elevated text-[12px]"
+        style={{ height: 'var(--vscode-panelHeader-height)' }}
+      >
+        <span className="codicon codicon-warning text-[13px] text-secondary" aria-hidden="true" />
+        <span className="text-secondary uppercase tracking-wide">Problems</span>
         <span className="text-error font-semibold">
           {formatCount(summary.errorCount, 'error', 'errors')}
         </span>

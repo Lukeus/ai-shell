@@ -126,7 +126,7 @@ export function TabBar({
   return (
     <div
       role="tablist"
-      className={`flex items-center border-b border-border bg-surface-secondary overflow-x-auto scrollbar-thin ${className}`}
+      className={`flex items-center min-w-0 border-b border-[var(--vscode-tab-border)] bg-[var(--vscode-tab-inactiveBackground)] overflow-x-auto overflow-y-hidden hide-scrollbar ${className}`}
       style={{ height: tabHeight }}
     >
       {tabs.map((tab, index) => {
@@ -154,26 +154,28 @@ export function TabBar({
             }}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={`
-              relative flex items-center gap-2 px-3
-              text-xs font-medium transition-colors
+              relative flex items-center gap-2 box-border
+              text-[13px] font-normal transition-colors
               focus:outline-none focus:ring-1 focus:ring-accent focus:ring-inset
-              ${isActive
-                ? 'text-primary border-t-2 border-accent'
-                : 'text-secondary hover:text-primary'
-              }
+              ${isActive ? 'text-primary z-10' : 'text-secondary hover:text-primary'}
               ${isDisabled
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer'
               }
             `}
             style={{
-              height: `calc(${tabHeight} - 2px)`,
+              height: tabHeight,
               minWidth: tabMinWidth,
               maxWidth: tabMaxWidth,
               backgroundColor: isActive
                 ? 'var(--vscode-tab-activeBackground)'
                 : 'var(--vscode-tab-inactiveBackground)',
               borderRight: '1px solid var(--vscode-tab-border)',
+              borderTop: isActive ? 'var(--vscode-border-width) solid var(--vscode-tab-activeBorderTop)' : 'var(--vscode-border-width) solid transparent',
+              borderBottom: isActive ? '1px solid var(--vscode-tab-activeBackground)' : '1px solid var(--vscode-tab-border)',
+              marginBottom: isActive ? '-1px' : '0',
+              paddingLeft: 'var(--vscode-space-2)',
+              paddingRight: 'var(--vscode-space-2)',
             }}
           >
             {tab.icon && (

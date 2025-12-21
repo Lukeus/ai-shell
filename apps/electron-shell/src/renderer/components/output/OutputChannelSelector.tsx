@@ -39,7 +39,7 @@ export function OutputChannelSelector({
       <select
         value={selectedChannelId || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-surface border border-border text-primary rounded focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
+        className="w-full h-6 px-2 bg-surface border border-border text-primary text-[12px] rounded-sm focus:outline-none focus:ring-1 focus:ring-primary appearance-none"
         disabled={channels.length === 0}
       >
         {channels.length === 0 && (
@@ -54,19 +54,7 @@ export function OutputChannelSelector({
       
       {/* Dropdown arrow icon */}
       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-secondary">
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
+        <span className="codicon codicon-chevron-down text-[12px]" aria-hidden="true" />
       </div>
     </div>
   );

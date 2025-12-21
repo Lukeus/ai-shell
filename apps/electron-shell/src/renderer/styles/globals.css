@@ -129,6 +129,16 @@ body,
   background: transparent;
 }
 
+/* Hide scrollbars where needed (used for tab strips). */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Firefox scrollbar styling */
 * {
   scrollbar-width: thin;
@@ -249,6 +259,19 @@ body,
 
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
+}
+
+/* Screen reader only utility (ensure SR labels stay hidden visually). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ===================================================================

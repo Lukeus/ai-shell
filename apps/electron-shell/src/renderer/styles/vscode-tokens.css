@@ -17,7 +17,11 @@
   --vscode-sidebar-background: #252526;
   --vscode-activityBar-background: #333333;
   --vscode-statusBar-background: #007acc;
+  --vscode-statusBar-foreground: #ffffff;
+  --vscode-statusBar-hoverBackground: #1f8ad6;
   --vscode-titleBar-activeBackground: #3c3c3c;
+  --vscode-titleBar-activeForeground: #cccccc;
+  --vscode-titleBar-inactiveForeground: #969696;
   
   /* Tab colors */
   --vscode-tab-activeBackground: #1e1e1e;
@@ -50,6 +54,11 @@
   /* Input colors */
   --vscode-input-background: #3c3c3c;
   --vscode-input-border: #3c3c3c;
+
+  /* Menubar colors */
+  --vscode-menubar-selectionBackground: #2a2d2e;
+  --vscode-menubar-selectionForeground: #ffffff;
+  --vscode-menubar-selectionBorder: #007acc;
   
   /* ===================================================================
      SPACING TOKENS - 4px base scale
@@ -88,9 +97,11 @@
   --vscode-activityBar-width: 48px;
   --vscode-activityBar-iconSize: 24px;
   --vscode-tab-height: 35px;
-  --vscode-statusBar-height: 22px;
+  --vscode-breadcrumbs-height: var(--vscode-list-rowHeight);
+  --vscode-statusBar-height: 24px;
   --vscode-titleBar-height: 35px;
-  --vscode-list-rowHeight: 22px;
+  --vscode-menuBar-height: var(--vscode-titleBar-height);
+  --vscode-list-rowHeight: 25px;
   --vscode-panelHeader-height: 35px;
   
   /* ===================================================================

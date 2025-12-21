@@ -133,7 +133,7 @@ export function InlineInput({
         onBlur={handleBlur}
         placeholder={placeholder}
         className={`
-          w-full px-2 py-1 text-sm rounded
+          w-full px-2 py-1 text-md rounded
           bg-[var(--input-bg)] 
           text-[var(--input-fg)]
           border border-[var(--input-border)]
@@ -147,7 +147,7 @@ export function InlineInput({
       {error && (
         <div
           id="inline-input-error"
-          className="mt-1 text-xs text-[var(--error-fg)]"
+          className="mt-1 text-md text-[var(--error-fg)]"
           role="alert"
         >
           {error}

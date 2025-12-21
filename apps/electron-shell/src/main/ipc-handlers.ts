@@ -1,4 +1,5 @@
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, BrowserWindow, type WebContents } from 'electron';
+import { randomUUID } from 'crypto';
 import {
   IPC_CHANNELS,
   AppInfo,
@@ -19,11 +20,99 @@ import {
   TerminalResizeRequestSchema,
   TerminalCloseRequestSchema,
   ListTerminalsResponse,
+  AgentRunStartRequestSchema,
+  AgentRunStartResponse,
+  AgentRunControlRequestSchema,
+  AgentRunControlResponse,
+  ListAgentRunsResponse,
+  GetAgentRunRequestSchema,
+  GetAgentRunResponse,
+  AgentEventSchema,
+  AgentEventSubscriptionRequestSchema,
+  ListAgentTraceRequestSchema,
+  ListAgentTraceResponse,
+  type AgentEvent,
+  type AgentRunStatus,
+  CreateConnectionRequestSchema,
+  CreateConnectionResponse,
+  UpdateConnectionRequestSchema,
+  UpdateConnectionResponse,
+  DeleteConnectionRequestSchema,
+  ListConnectionsResponse,
+  SetSecretRequestSchema,
+  SetSecretResponse,
+  ReplaceSecretRequestSchema,
+  ReplaceSecretResponse,
+  SecretAccessRequestSchema,
+  SecretAccessResponse,
+  ListAuditEventsRequestSchema,
+  ListAuditEventsResponse,
+  WindowStateSchema,
 } from 'packages-api-contracts';
 import { settingsService } from './services/SettingsService';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
 import { terminalService } from './services/TerminalService';
+import { connectionsService } from './services/ConnectionsService';
+import { secretsService } from './services/SecretsService';
+import { consentService } from './services/ConsentService';
+import { auditService } from './services/AuditService';
+import { agentRunStore } from './services/AgentRunStore';
+import { getExtensionCommandService, getExtensionViewService, getExtensionToolService, getPermissionService } from './index';
+
+type AgentSubscriber = {
+  sender: WebContents;
+  runId?: string;
+};
+
+const agentSubscribers = new Map<number, AgentSubscriber>();
+
+const registerAgentSubscriber = (sender: WebContents, runId?: string): void => {
+  const existing = agentSubscribers.get(sender.id);
+  agentSubscribers.set(sender.id, { sender, runId });
+  if (!existing) {
+    sender.once('destroyed', () => {
+      agentSubscribers.delete(sender.id);
+    });
+  }
+};
+
+const unregisterAgentSubscriber = (sender: WebContents): void => {
+  agentSubscribers.delete(sender.id);
+};
+
+const publishAgentEvent = (event: AgentEvent): void => {
+  const validated = AgentEventSchema.parse(event);
+  for (const subscriber of agentSubscribers.values()) {
+    if (subscriber.sender.isDestroyed()) {
+      agentSubscribers.delete(subscriber.sender.id);
+      continue;
+    }
+    if (subscriber.runId && subscriber.runId !== validated.runId) {
+      continue;
+    }
+    subscriber.sender.send(IPC_CHANNELS.AGENT_EVENTS_ON_EVENT, validated);
+  }
+};
+
+const appendAndPublish = (event: AgentEvent): void => {
+  agentRunStore.appendEvent(event);
+  publishAgentEvent(event);
+};
+
+const getWindowFromEvent = (event: Electron.IpcMainInvokeEvent): BrowserWindow | null => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  return window ?? null;
+};
+
+const buildStatusEvent = (runId: string, status: AgentRunStatus): AgentEvent =>
+  AgentEventSchema.parse({
+    id: randomUUID(),
+    runId,
+    timestamp: new Date().toISOString(),
+    type: 'status',
+    status,
+  });
 
 /**
  * Register all IPC handlers for main process.
@@ -93,6 +182,38 @@ export function registerIPCHandlers(): void {
    */
   ipcMain.handle(IPC_CHANNELS.WORKSPACE_CLOSE, async (): Promise<void> => {
     workspaceService.clearWorkspace();
+  });
+
+  // ========================================
+  // Window Controls IPC Handlers
+  // ========================================
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MINIMIZE, async (event): Promise<void> => {
+    const window = getWindowFromEvent(event);
+    window?.minimize();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_TOGGLE_MAXIMIZE, async (event): Promise<void> => {
+    const window = getWindowFromEvent(event);
+    if (!window) return;
+    if (window.isMaximized()) {
+      window.unmaximize();
+    } else {
+      window.maximize();
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_CLOSE, async (event): Promise<void> => {
+    const window = getWindowFromEvent(event);
+    window?.close();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_STATE, async (event) => {
+    const window = getWindowFromEvent(event);
+    const state = WindowStateSchema.parse({
+      isMaximized: window?.isMaximized() ?? false,
+    });
+    return state;
   });
 
   // ========================================
@@ -292,6 +413,345 @@ export function registerIPCHandlers(): void {
     async (): Promise<ListTerminalsResponse> => {
       const sessions = terminalService.listSessions();
       return { sessions };
+    }
+  );
+
+  // ========================================
+  // Agent Runs + Events IPC Handlers
+  // P6 (Contracts-first): Validate all requests with Zod before processing
+  // P1 (Process isolation): Agent Host/renderer communicate through main
+  // ========================================
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_RUNS_LIST,
+    async (): Promise<ListAgentRunsResponse> => {
+      const runs = agentRunStore.listRuns();
+      return { runs };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_RUNS_GET,
+    async (_event, request: unknown): Promise<GetAgentRunResponse> => {
+      const validated = GetAgentRunRequestSchema.parse(request);
+      const run = agentRunStore.getRun(validated.runId);
+      if (!run) {
+        throw new Error(`Agent run not found: ${validated.runId}`);
+      }
+      return { run };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_RUNS_START,
+    async (_event, request: unknown): Promise<AgentRunStartResponse> => {
+      AgentRunStartRequestSchema.parse(request);
+      const run = agentRunStore.createRun('user');
+      appendAndPublish(buildStatusEvent(run.id, run.status));
+      return { run };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_RUNS_CANCEL,
+    async (_event, request: unknown): Promise<AgentRunControlResponse> => {
+      const validated = AgentRunControlRequestSchema.parse(request);
+      const run = agentRunStore.updateRunStatus(validated.runId, 'canceled');
+      appendAndPublish(buildStatusEvent(run.id, run.status));
+      return { run };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_RUNS_RETRY,
+    async (_event, request: unknown): Promise<AgentRunControlResponse> => {
+      const validated = AgentRunControlRequestSchema.parse(request);
+      const run = agentRunStore.updateRunStatus(validated.runId, 'queued');
+      appendAndPublish(buildStatusEvent(run.id, run.status));
+      return { run };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_TRACE_LIST,
+    async (_event, request: unknown): Promise<ListAgentTraceResponse> => {
+      const validated = ListAgentTraceRequestSchema.parse(request);
+      return agentRunStore.listEvents(validated);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_EVENTS_SUBSCRIBE,
+    async (event, request: unknown): Promise<void> => {
+      const validated = AgentEventSubscriptionRequestSchema.parse(request ?? {});
+      if (!event?.sender) {
+        return;
+      }
+      registerAgentSubscriber(event.sender, validated.runId);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_EVENTS_UNSUBSCRIBE,
+    async (event, request: unknown): Promise<void> => {
+      AgentEventSubscriptionRequestSchema.parse(request ?? {});
+      if (!event?.sender) {
+        return;
+      }
+      unregisterAgentSubscriber(event.sender);
+    }
+  );
+
+  // ========================================
+  // Connections + Secrets IPC Handlers
+  // P6 (Contracts-first): Validate all requests with Zod before processing
+  // P1 (Process isolation): Secret storage via main process only
+  // P3 (Secrets): Never log secret values
+  // ========================================
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_LIST,
+    async (): Promise<ListConnectionsResponse> => {
+      const connections = connectionsService.listConnections();
+      return { connections };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_CREATE,
+    async (_event, request: unknown): Promise<CreateConnectionResponse> => {
+      const validated = CreateConnectionRequestSchema.parse(request);
+      const connection = connectionsService.createConnection(validated);
+      return { connection };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_UPDATE,
+    async (_event, request: unknown): Promise<UpdateConnectionResponse> => {
+      const validated = UpdateConnectionRequestSchema.parse(request);
+      const connection = connectionsService.updateConnection(validated);
+      return { connection };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_DELETE,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = DeleteConnectionRequestSchema.parse(request);
+      connectionsService.deleteConnection(validated.id);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_SET_SECRET,
+    async (_event, request: unknown): Promise<SetSecretResponse> => {
+      const validated = SetSecretRequestSchema.parse(request);
+      const connection = connectionsService
+        .listConnections()
+        .find((item) => item.metadata.id === validated.connectionId);
+      if (!connection) {
+        throw new Error(`Connection not found: ${validated.connectionId}`);
+      }
+
+      const secretRef = secretsService.setSecret(validated.connectionId, validated.secretValue);
+      connectionsService.setSecretRef(validated.connectionId, secretRef);
+      return { secretRef };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_REPLACE_SECRET,
+    async (_event, request: unknown): Promise<ReplaceSecretResponse> => {
+      const validated = ReplaceSecretRequestSchema.parse(request);
+      const connection = connectionsService
+        .listConnections()
+        .find((item) => item.metadata.id === validated.connectionId);
+      if (!connection) {
+        throw new Error(`Connection not found: ${validated.connectionId}`);
+      }
+
+      const secretRef = secretsService.replaceSecret(validated.connectionId, validated.secretValue);
+      connectionsService.setSecretRef(validated.connectionId, secretRef);
+      return { secretRef };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_REQUEST_SECRET_ACCESS,
+    async (_event, request: unknown): Promise<SecretAccessResponse> => {
+      const validated = SecretAccessRequestSchema.parse(request);
+      if (validated.decision) {
+        consentService.recordDecision(
+          validated.connectionId,
+          validated.requesterId,
+          validated.decision
+        );
+      }
+      const decision = consentService.evaluateAccess(
+        validated.connectionId,
+        validated.requesterId
+      );
+
+      if (decision === null) {
+        auditService.logSecretAccess({
+          connectionId: validated.connectionId,
+          requesterId: validated.requesterId,
+          reason: validated.reason,
+          allowed: false,
+        });
+        return { granted: false };
+      }
+
+      const connection = connectionsService
+        .listConnections()
+        .find((item) => item.metadata.id === validated.connectionId);
+
+      const secretRef = decision ? connection?.metadata.secretRef : undefined;
+      const granted = Boolean(decision && secretRef);
+
+      auditService.logSecretAccess({
+        connectionId: validated.connectionId,
+        requesterId: validated.requesterId,
+        reason: validated.reason,
+        allowed: granted,
+      });
+
+      return {
+        granted,
+        secretRef: granted ? secretRef : undefined,
+      };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_AUDIT_LIST,
+    async (_event, request: unknown): Promise<ListAuditEventsResponse> => {
+      const validated = ListAuditEventsRequestSchema.parse(request ?? {});
+      return auditService.listEvents(validated);
+    }
+  );
+
+  // ========================================
+  // Extension IPC Handlers
+  // P1 (Process isolation): Renderer never talks directly to Extension Host
+  // P2 (Security): All operations go through main process
+  // ========================================
+
+  /**
+   * Handler for EXTENSIONS_EXECUTE_COMMAND channel.
+   * Executes a command from an extension.
+   * 
+   * @param commandId - Command ID to execute
+   * @param args - Command arguments
+   * @returns Command execution result
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_EXECUTE_COMMAND,
+    async (_event, commandId: string, args?: unknown[]) => {
+      const commandService = getExtensionCommandService();
+      if (!commandService) {
+        throw new Error('Extension command service not initialized');
+      }
+
+      return await commandService.executeCommand(commandId, args);
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_LIST_COMMANDS channel.
+   * Lists all registered extension commands.
+   */
+  ipcMain.handle(IPC_CHANNELS.EXTENSIONS_LIST_COMMANDS, async () => {
+    const commandService = getExtensionCommandService();
+    if (!commandService) {
+      return [];
+    }
+
+    return commandService.listCommands();
+  });
+
+  /**
+   * Handler for EXTENSIONS_REQUEST_PERMISSION channel.
+   * Request a permission for an extension.
+   * Returns result if already granted/denied, or null if user decision needed.
+   * 
+   * P1: Permission checks enforced in main process only
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_REQUEST_PERMISSION,
+    async (_event, extensionId: string, scope: string, reason?: string) => {
+      const permService = getPermissionService();
+      if (!permService) {
+        throw new Error('Permission service not initialized');
+      }
+
+      const result = await permService.requestPermission(extensionId, scope as any, reason);
+      return result;
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_LIST_PERMISSIONS channel.
+   * List all permissions for an extension.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_LIST_PERMISSIONS,
+    async (_event, extensionId: string) => {
+      const permService = getPermissionService();
+      if (!permService) {
+        return [];
+      }
+
+      return permService.getAllPermissions(extensionId);
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_REVOKE_PERMISSION channel.
+   * Revoke a specific permission for an extension.
+   * Note: For now, this revokes ALL permissions. Individual revocation in future task.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_REVOKE_PERMISSION,
+    async (_event, extensionId: string) => {
+      const permService = getPermissionService();
+      if (!permService) {
+        throw new Error('Permission service not initialized');
+      }
+
+      await permService.revokeAllPermissions(extensionId);
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_LIST_VIEWS channel.
+   * Lists all registered extension views.
+   * Task 8: View contribution points
+   */
+  ipcMain.handle(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS, async () => {
+    const viewService = getExtensionViewService();
+    if (!viewService) {
+      return [];
+    }
+
+    return viewService.listViews();
+  });
+
+  /**
+   * Handler for EXTENSIONS_RENDER_VIEW channel.
+   * Renders an extension view and returns content.
+   * Task 8: View content sanitized before rendering in renderer (P1)
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_RENDER_VIEW,
+    async (_event, viewId: string) => {
+      const viewService = getExtensionViewService();
+      if (!viewService) {
+        throw new Error('Extension view service not initialized');
+      }
+
+      return await viewService.renderView(viewId);
     }
   );
 }
