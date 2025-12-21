@@ -48,13 +48,19 @@ export function SearchBar({ value, onChange, placeholder = 'Search settings...' 
         onChange={handleChange}
         placeholder={placeholder}
         className="
-          w-full px-3 py-1.5 rounded-sm
-          bg-surface-elevated border border-border
-          text-primary text-xs
-          placeholder:text-secondary
+          w-full rounded-sm
+          bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)]
+          text-primary
+          placeholder:text-tertiary
           focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent
           transition-colors duration-150
         "
+        style={{
+          height: 'var(--vscode-list-rowHeight)',
+          paddingLeft: 'var(--vscode-space-2)',
+          paddingRight: 'var(--vscode-space-2)',
+          fontSize: 'var(--vscode-font-size-ui)',
+        }}
       />
     </div>
   );

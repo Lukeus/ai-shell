@@ -92,7 +92,13 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
       }}
     >
       {/* Top section - main icons */}
-      <div className="flex flex-col items-center pt-1 gap-0.5">
+      <div
+        className="flex flex-col items-center"
+        style={{
+          paddingTop: 'var(--vscode-space-1)',
+          gap: 'var(--vscode-space-1)',
+        }}
+      >
         {topIcons.map((icon) => {
           const isActive = icon.id === activeIcon;
           
@@ -130,7 +136,14 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
       <div className="flex-1" />
       
       {/* Bottom section - settings and other bottom icons */}
-      <div className="flex flex-col items-center pb-2 gap-0.5 border-t border-border-subtle pt-2">
+      <div
+        className="flex flex-col items-center border-t border-border-subtle"
+        style={{
+          paddingTop: 'var(--vscode-space-2)',
+          paddingBottom: 'var(--vscode-space-2)',
+          gap: 'var(--vscode-space-1)',
+        }}
+      >
         {bottomIcons.map((icon) => {
           const isActive = icon.id === activeIcon;
           

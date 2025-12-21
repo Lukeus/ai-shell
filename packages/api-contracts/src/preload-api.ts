@@ -73,6 +73,20 @@ import type {
   ListAuditEventsRequest,
   ListAuditEventsResponse,
 } from './types/audit';
+import type {
+  ExtensionManifest,
+} from './types/extension-manifest';
+import type {
+  ExtensionStateChangeEvent,
+} from './types/extension-events';
+import type {
+  CommandContribution,
+  ViewContribution,
+} from './types/extension-contributions';
+import type {
+  PermissionScope,
+} from './types/extension-permissions';
+import type { WindowState } from './types/window-state';
 
 /**
  * Preload API surface exposed to the renderer process via contextBridge.
@@ -553,6 +567,110 @@ export interface PreloadAPI {
      * Lists audit events.
      */
     list(request: ListAuditEventsRequest): Promise<ListAuditEventsResponse>;
+  };
+
+  /**
+   * Extensions APIs.
+   * 
+   * Security: renderer can list and execute extension commands,
+   * but cannot directly load or execute extension code.
+   * All extension operations go through main process (P1: Process Isolation).
+   */
+  extensions: {
+    /**
+     * Lists all installed extensions.
+     * 
+     * @returns Promise resolving to array of extension manifests
+     */
+    list(): Promise<ExtensionManifest[]>;
+
+    /**
+     * Gets a specific extension by ID.
+     * 
+     * @param extensionId - Extension identifier
+     * @returns Promise resolving to extension manifest, or null if not found
+     */
+    get(extensionId: string): Promise<ExtensionManifest | null>;
+
+    /**
+     * Executes an extension command.
+     * 
+     * Main process routes to Extension Host, which executes the command
+     * and returns the result.
+     * 
+     * @param command - Command identifier (e.g., "extension.commandName")
+     * @param args - Optional command arguments
+     * @returns Promise resolving to command result (type depends on command)
+     * @throws Error if command not found, extension not active, or execution fails
+     */
+    executeCommand(command: string, args?: unknown[]): Promise<unknown>;
+
+    /**
+     * Lists all available extension commands.
+     * 
+     * @returns Promise resolving to array of command contributions
+     */
+    listCommands(): Promise<CommandContribution[]>;
+
+    /**
+     * Lists all extension views.
+     * 
+     * @returns Promise resolving to array of view contributions
+     */
+    listViews(): Promise<ViewContribution[]>;
+
+    /**
+     * Requests a permission for an extension.
+     * 
+     * Shows permission consent dialog to user.
+     * 
+     * @param extensionId - Extension requesting permission
+     * @param scope - Permission scope to request
+     * @returns Promise resolving to true if granted, false if denied
+     */
+    requestPermission(extensionId: string, scope: PermissionScope): Promise<boolean>;
+
+    /**
+     * Subscribes to extension state change events.
+     * 
+     * Callback is invoked when any extension changes state
+     * (e.g., inactive → activating → active).
+     * Returns unsubscribe function to clean up listener.
+     * 
+     * @param callback - Function to call when state change event occurs
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onStateChange(callback: (event: ExtensionStateChangeEvent) => void): () => void;
+  };
+
+  /**
+   * Window control APIs (main process only).
+   */
+  windowControls: {
+    /**
+     * Minimize the current window.
+     */
+    minimize(): Promise<void>;
+
+    /**
+     * Toggle maximize/restore on the current window.
+     */
+    toggleMaximize(): Promise<void>;
+
+    /**
+     * Close the current window.
+     */
+    close(): Promise<void>;
+
+    /**
+     * Get current window state.
+     */
+    getState(): Promise<WindowState>;
+
+    /**
+     * Subscribe to window state changes.
+     */
+    onStateChange(callback: (state: WindowState) => void): () => void;
   };
   
   // Future expansion:

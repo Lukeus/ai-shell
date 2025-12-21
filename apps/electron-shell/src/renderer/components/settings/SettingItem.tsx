@@ -126,14 +126,30 @@ export function SettingItem({
   };
 
   return (
-    <div className="px-4 py-3 border-b border-border-subtle last:border-b-0">
+    <div
+      className="border-b border-border-subtle last:border-b-0"
+      style={{
+        paddingTop: 'var(--vscode-space-2)',
+        paddingBottom: 'var(--vscode-space-2)',
+      }}
+    >
       <div className="flex items-start justify-between gap-6">
         {/* Label and description */}
         <div className="flex-1 min-w-0">
-          <label className="block text-[13px] font-medium text-primary mb-1">
+          <label
+            className="block text-primary"
+            style={{
+              fontSize: 'var(--vscode-font-size-ui)',
+              fontWeight: 500,
+              marginBottom: '2px',
+            }}
+          >
             {label}
           </label>
-          <p className="text-xs text-secondary leading-snug">
+          <p
+            className="text-secondary leading-snug"
+            style={{ fontSize: 'var(--vscode-font-size-small)' }}
+          >
             {description}
           </p>
         </div>

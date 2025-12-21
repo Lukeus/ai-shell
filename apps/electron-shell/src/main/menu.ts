@@ -20,6 +20,11 @@ import { IPC_CHANNELS } from 'packages-api-contracts';
  */
 export function buildApplicationMenu(hasWorkspace = false): void {
   const isMac = process.platform === 'darwin';
+
+  if (!isMac) {
+    Menu.setApplicationMenu(null);
+    return;
+  }
   
   const template: MenuItemConstructorOptions[] = [
     // App menu (macOS only)

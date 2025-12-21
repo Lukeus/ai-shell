@@ -1,8 +1,11 @@
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
+import { SETTINGS_DEFAULTS, type Settings } from 'packages-api-contracts';
 import { useFileTree } from '../explorer/FileTreeContext';
 import { EditorTabBar } from './EditorTabBar';
 import { EditorPlaceholder } from './EditorPlaceholder';
 import { EditorLoader } from './EditorLoader';
+import { BreadcrumbsBar, type BreadcrumbSegment } from './BreadcrumbsBar';
+import type { BreadcrumbPosition, BreadcrumbSymbol, MonacoEditorHandle } from './MonacoEditor';
 
 /**
  * EditorArea - Main editor container component with Monaco Editor integration.
@@ -20,15 +23,85 @@ import { EditorLoader } from './EditorLoader';
  * - Infers language from file extension for syntax highlighting
  */
 
+type SettingsUpdateListener = (event: { detail?: Settings }) => void;
+
 export function EditorArea() {
-  const { openTabs, activeTabIndex } = useFileTree();
+  const { openTabs, activeTabIndex, workspace, toggleFolder, openFile } = useFileTree();
   const [fileContent, setFileContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [breadcrumbsEnabled, setBreadcrumbsEnabled] = useState(
+    SETTINGS_DEFAULTS.editor.breadcrumbsEnabled
+  );
+  const [symbols, setSymbols] = useState<BreadcrumbSymbol[]>([]);
+  const [cursorPosition, setCursorPosition] = useState<BreadcrumbPosition | null>(null);
+  const [editorHandle, setEditorHandle] = useState<MonacoEditorHandle | null>(null);
 
   // Determine active file path
   const activeFilePath =
     activeTabIndex >= 0 && activeTabIndex < openTabs.length ? openTabs[activeTabIndex] : null;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBreadcrumbSetting = async () => {
+      try {
+        const settings = await window.api.getSettings();
+        if (isMounted) {
+          setBreadcrumbsEnabled(settings.editor.breadcrumbsEnabled);
+        }
+      } catch (error) {
+        console.error('Failed to load breadcrumbs setting:', error);
+      }
+    };
+
+    const settingsEventTarget = window as unknown as {
+      addEventListener: (type: string, listener: SettingsUpdateListener) => void;
+      removeEventListener: (type: string, listener: SettingsUpdateListener) => void;
+    };
+
+    const handleSettingsUpdated: SettingsUpdateListener = (event) => {
+      const updated = event.detail;
+      if (updated?.editor) {
+        setBreadcrumbsEnabled(updated.editor.breadcrumbsEnabled);
+      }
+    };
+
+    void loadBreadcrumbSetting();
+    settingsEventTarget.addEventListener('ai-shell:settings-updated', handleSettingsUpdated);
+
+    return () => {
+      isMounted = false;
+      settingsEventTarget.removeEventListener('ai-shell:settings-updated', handleSettingsUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeFilePath) {
+      const timer = setTimeout(() => {
+        setSymbols([]);
+        setCursorPosition(null);
+        setEditorHandle(null);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => {
+      setSymbols([]);
+      setCursorPosition(null);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [activeFilePath]);
+
+  useEffect(() => {
+    if (!breadcrumbsEnabled) {
+      const timer = setTimeout(() => {
+        setSymbols([]);
+        setCursorPosition(null);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [breadcrumbsEnabled]);
 
   // P1 (Process isolation): Fetch file content via IPC when active file changes
   useEffect(() => {
@@ -158,10 +231,180 @@ export function EditorArea() {
     }
   };
 
+  const handleSymbolsChange = useCallback((nextSymbols: BreadcrumbSymbol[]) => {
+    setSymbols(nextSymbols);
+  }, []);
+
+  const handleCursorChange = useCallback((position: BreadcrumbPosition) => {
+    setCursorPosition(position);
+  }, []);
+
+  const handleEditorReady = useCallback((handle: MonacoEditorHandle) => {
+    setEditorHandle(handle);
+  }, []);
+
+  const handleSymbolNavigate = useCallback(
+    (symbol: BreadcrumbSymbol) => {
+      if (!editorHandle) {
+        return;
+      }
+
+      const targetRange = symbol.selectionRange ?? symbol.range;
+      editorHandle.setPosition({
+        lineNumber: targetRange.startLineNumber,
+        column: targetRange.startColumn,
+      });
+      editorHandle.revealRangeInCenter(targetRange);
+      editorHandle.focus();
+    },
+    [editorHandle]
+  );
+
+  const fileSegments = useMemo<BreadcrumbSegment[]>(() => {
+    if (!activeFilePath) {
+      return [];
+    }
+
+    const separator =
+      activeFilePath.includes('\\') || workspace?.path.includes('\\') ? '\\' : '/';
+    const normalizePath = (value: string) => value.replace(/\\/g, '/').replace(/\/+$/, '');
+    const normalizedFilePath = normalizePath(activeFilePath);
+    const normalizedWorkspacePath = workspace ? normalizePath(workspace.path) : '';
+    const fileParts = normalizedFilePath.split('/').filter(Boolean);
+    const isInsideWorkspace =
+      Boolean(normalizedWorkspacePath) &&
+      normalizedFilePath.toLowerCase().startsWith(`${normalizedWorkspacePath.toLowerCase()}/`);
+    const relativeParts = isInsideWorkspace
+      ? normalizedFilePath.slice(normalizedWorkspacePath.length + 1).split('/').filter(Boolean)
+      : fileParts;
+
+    const buildWorkspacePath = (parts: string[]) => {
+      if (!workspace) {
+        return '';
+      }
+      const trimmedRoot = workspace.path.replace(/[\\/]+$/, '');
+      return parts.length ? `${trimmedRoot}${separator}${parts.join(separator)}` : trimmedRoot;
+    };
+
+    const isAbsolutePath = normalizedFilePath.startsWith('/');
+    const buildAbsolutePath = (parts: string[]) => {
+      if (parts.length === 0) {
+        return isAbsolutePath ? separator : '';
+      }
+      if (parts[0].endsWith(':')) {
+        return parts.length > 1
+          ? `${parts[0]}${separator}${parts.slice(1).join(separator)}`
+          : parts[0];
+      }
+      const joined = parts.join(separator);
+      return isAbsolutePath ? `${separator}${joined}` : joined;
+    };
+
+    const segments: BreadcrumbSegment[] = [];
+    const canNavigateFolders = Boolean(workspace && isInsideWorkspace);
+
+    if (workspace && isInsideWorkspace) {
+      const workspaceLabel =
+        workspace.name || normalizedWorkspacePath.split('/').filter(Boolean).pop() || workspace.path;
+      segments.push({
+        id: workspace.path,
+        label: workspaceLabel,
+        title: workspace.path,
+        icon: <span className="codicon codicon-root-folder" aria-hidden="true" />,
+        onClick: () => {
+          void toggleFolder(workspace.path);
+        },
+      });
+    }
+
+    relativeParts.forEach((part, index) => {
+      const isLast = index === relativeParts.length - 1;
+      const fullPath = isInsideWorkspace
+        ? buildWorkspacePath(relativeParts.slice(0, index + 1))
+        : buildAbsolutePath(relativeParts.slice(0, index + 1));
+
+      segments.push({
+        id: fullPath,
+        label: part,
+        title: fullPath,
+        icon: (
+          <span
+            className={`codicon ${isLast ? 'codicon-file' : 'codicon-folder'}`}
+            aria-hidden="true"
+          />
+        ),
+        onClick: isLast
+          ? () => openFile(activeFilePath)
+          : canNavigateFolders
+            ? () => {
+                void toggleFolder(fullPath);
+              }
+            : undefined,
+      });
+    });
+
+    return segments;
+  }, [activeFilePath, openFile, toggleFolder, workspace]);
+
+  const symbolPath = useMemo(() => {
+    if (!cursorPosition || symbols.length === 0) {
+      return [];
+    }
+
+    const containsPosition = (range: BreadcrumbSymbol['range']) => {
+      const startsBefore =
+        cursorPosition.lineNumber > range.startLineNumber ||
+        (cursorPosition.lineNumber === range.startLineNumber &&
+          cursorPosition.column >= range.startColumn);
+      const endsAfter =
+        cursorPosition.lineNumber < range.endLineNumber ||
+        (cursorPosition.lineNumber === range.endLineNumber &&
+          cursorPosition.column <= range.endColumn);
+      return startsBefore && endsAfter;
+    };
+
+    const findPath = (entries: BreadcrumbSymbol[]): BreadcrumbSymbol[] => {
+      for (const symbol of entries) {
+        if (!containsPosition(symbol.range)) {
+          continue;
+        }
+
+        if (symbol.children && symbol.children.length > 0) {
+          const childPath = findPath(symbol.children);
+          return [symbol, ...childPath];
+        }
+
+        return [symbol];
+      }
+
+      return [];
+    };
+
+    return findPath(symbols);
+  }, [cursorPosition, symbols]);
+
+  const symbolSegments = useMemo<BreadcrumbSegment[]>(() => {
+    if (symbolPath.length === 0) {
+      return [];
+    }
+
+    return symbolPath.map((symbol, index) => ({
+      id: `${symbol.name}:${symbol.range.startLineNumber}:${symbol.range.startColumn}:${index}`,
+      label: symbol.name,
+      title: symbol.name,
+      onClick: editorHandle ? () => handleSymbolNavigate(symbol) : undefined,
+    }));
+  }, [editorHandle, handleSymbolNavigate, symbolPath]);
+
+  const breadcrumbsVisible = breadcrumbsEnabled && Boolean(activeFilePath);
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-surface">
       {/* Tab bar */}
       <EditorTabBar />
+      {breadcrumbsVisible && (
+        <BreadcrumbsBar fileSegments={fileSegments} symbolSegments={symbolSegments} />
+      )}
 
       {/* Editor content area - NO extra padding/margin */}
       <div className="flex-1 overflow-hidden min-h-0 bg-surface">
@@ -170,22 +413,25 @@ export function EditorArea() {
           <EditorPlaceholder filePath={null} />
         ) : error ? (
           // Error state: failed to load file
-          <div 
+          <div
             className="flex items-center justify-center h-full"
-            style={{ 
+            style={{
               backgroundColor: 'var(--editor-bg)',
               color: 'var(--error-fg)',
             }}
           >
-            <div className="text-center p-4">
+            <div
+              className="text-center"
+              style={{ padding: 'var(--vscode-space-4)' }}
+            >
               <p>{error}</p>
             </div>
           </div>
         ) : isLoading ? (
           // Loading state: fetching file content
-          <div 
+          <div
             className="flex items-center justify-center h-full"
-            style={{ 
+            style={{
               backgroundColor: 'var(--editor-bg)',
               color: 'var(--secondary-fg)',
             }}
@@ -195,7 +441,7 @@ export function EditorArea() {
                 className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" 
                 style={{ borderColor: 'var(--primary-fg)' }}
               />
-              <p className="text-sm">Loading file...</p>
+              <p style={{ fontSize: 'var(--vscode-font-size-ui)' }}>Loading file...</p>
             </div>
           </div>
         ) : (
@@ -203,9 +449,9 @@ export function EditorArea() {
           // Suspense boundary for lazy-loading Monaco Editor
           <Suspense
             fallback={
-              <div 
+              <div
                 className="flex items-center justify-center h-full"
-                style={{ 
+                style={{
                   backgroundColor: 'var(--editor-bg)',
                   color: 'var(--secondary-fg)',
                 }}
@@ -215,7 +461,7 @@ export function EditorArea() {
                     className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" 
                     style={{ borderColor: 'var(--primary-fg)' }}
                   />
-                  <p className="text-sm">Loading Editor...</p>
+                  <p style={{ fontSize: 'var(--vscode-font-size-ui)' }}>Loading Editor...</p>
                 </div>
               </div>
             }
@@ -224,6 +470,9 @@ export function EditorArea() {
               filePath={activeFilePath}
               content={fileContent}
               language={getLanguageFromPath(activeFilePath)}
+              onEditorReady={breadcrumbsEnabled ? handleEditorReady : undefined}
+              onCursorChange={breadcrumbsEnabled ? handleCursorChange : undefined}
+              onSymbolsChange={breadcrumbsEnabled ? handleSymbolsChange : undefined}
             />
           </Suspense>
         )}

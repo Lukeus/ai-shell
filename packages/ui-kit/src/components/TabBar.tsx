@@ -154,8 +154,8 @@ export function TabBar({
             }}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={`
-              relative flex items-center gap-2 px-3 box-border
-              text-xs font-medium transition-colors
+              relative flex items-center gap-2 box-border
+              text-[13px] font-normal transition-colors
               focus:outline-none focus:ring-1 focus:ring-accent focus:ring-inset
               ${isActive ? 'text-primary z-10' : 'text-secondary hover:text-primary'}
               ${isDisabled
@@ -171,9 +171,11 @@ export function TabBar({
                 ? 'var(--vscode-tab-activeBackground)'
                 : 'var(--vscode-tab-inactiveBackground)',
               borderRight: '1px solid var(--vscode-tab-border)',
-              borderTop: isActive ? '2px solid var(--vscode-tab-activeBorderTop)' : '2px solid transparent',
+              borderTop: isActive ? 'var(--vscode-border-width) solid var(--vscode-tab-activeBorderTop)' : 'var(--vscode-border-width) solid transparent',
               borderBottom: isActive ? '1px solid var(--vscode-tab-activeBackground)' : '1px solid var(--vscode-tab-border)',
               marginBottom: isActive ? '-1px' : '0',
+              paddingLeft: 'var(--vscode-space-2)',
+              paddingRight: 'var(--vscode-space-2)',
             }}
           >
             {tab.icon && (

@@ -9,19 +9,26 @@
  */
 
 // Export all types and schemas
-export * from './types/app-info';
-export * from './types/layout-state';
-export * from './types/settings';
-export * from './types/workspace';
-export * from './types/fs-broker';
-export * from './types/terminal';
-export * from './types/output';
-export * from './types/diagnostics';
-export * from './types/agent-runs';
 export * from './types/agent-events';
+export * from './types/agent-runs';
 export * from './types/agent-tools';
-export * from './types/connections';
-export * from './types/secrets';
+export * from './types/app-info';
 export * from './types/audit';
+export * from './types/connections';
+export * from './types/diagnostics';
+export * from './types/extension-api';
+export * from './types/extension-contributions';
+export * from './types/extension-events';
+export * from './types/extension-host-protocol';
+export * from './types/extension-manifest';
+export * from './types/extension-permissions';
+export * from './types/fs-broker';
+export * from './types/layout-state';
+export * from './types/output';
+export * from './types/secrets';
+export * from './types/settings';
+export * from './types/terminal';
+export * from './types/window-state';
+export * from './types/workspace';
 export * from './ipc-channels';
 export * from './preload-api';

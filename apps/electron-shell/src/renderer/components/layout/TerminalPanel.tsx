@@ -97,19 +97,19 @@ export function TerminalPanel() {
   ];
 
   const tabBarStyle = {
-    '--tab-height': '28px',
-    '--tab-min-width': '88px',
-    '--tab-max-width': '160px',
+    '--tab-height': 'var(--vscode-panelHeader-height)',
+    '--tab-min-width': '72px',
+    '--tab-max-width': '140px',
   } as CSSProperties;
   
   return (
-    <div className="flex flex-col h-full min-h-0 bg-surface" style={tabBarStyle}>
+    <div className="flex flex-col h-full min-h-0 bg-surface border-t border-border" style={tabBarStyle}>
       {/* Tab bar */}
       <TabBar
         tabs={tabs}
         activeTabId={activeTab}
         onTabChange={(tabId) => setActiveTab(tabId as PanelView)}
-        className="text-xs"
+        className="text-[12px]"
       />
       
       {/* Tab content */}
@@ -121,7 +121,7 @@ export function TerminalPanel() {
       >
         {activeTab === 'terminal' && (
           <div className="flex flex-col h-full min-h-0">
-            <TerminalSessionTabs className="shrink-0 text-xs" />
+            <TerminalSessionTabs className="shrink-0 text-[12px]" />
             <div className="flex-1 overflow-hidden min-h-0">
               {activeSessionId ? (
                 <TerminalView sessionId={activeSessionId} />
@@ -145,8 +145,8 @@ function EmptyTerminalState() {
   return (
     <div className="flex items-center justify-center h-full text-secondary bg-surface">
       <div className="text-center">
-        <span className="codicon codicon-terminal text-4xl mb-3 opacity-60" aria-hidden="true" />
-        <p className="text-sm text-tertiary">Terminal</p>
+        <span className="codicon codicon-terminal text-3xl mb-2 opacity-60" aria-hidden="true" />
+        <p className="text-xs text-tertiary uppercase tracking-wide">Terminal</p>
         <p className="text-xs text-tertiary mt-2">No terminal sessions. Click + to create one.</p>
       </div>
     </div>

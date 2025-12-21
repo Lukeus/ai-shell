@@ -147,8 +147,23 @@ export function AgentsPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-border-subtle px-4 py-3 space-y-3">
-        <div className="text-[11px] uppercase tracking-wide text-secondary">
+      <div
+        className="border-b border-border-subtle"
+        style={{
+          paddingLeft: 'var(--vscode-space-3)',
+          paddingRight: 'var(--vscode-space-3)',
+          paddingTop: 'var(--vscode-space-2)',
+          paddingBottom: 'var(--vscode-space-2)',
+        }}
+      >
+        <div
+          className="uppercase text-secondary"
+          style={{
+            fontSize: 'var(--vscode-font-size-small)',
+            letterSpacing: '0.08em',
+            marginBottom: 'var(--vscode-space-2)',
+          }}
+        >
           Start a run
         </div>
         <input
@@ -157,11 +172,18 @@ export function AgentsPanel() {
           onChange={(event) => setGoal(event.target.value)}
           placeholder="Describe the goal..."
           className="
-            w-full h-8 px-3 text-[13px] rounded-none
+            w-full rounded-none
             bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] text-primary
             placeholder:text-tertiary
             focus:outline-none focus:ring-1 focus:ring-accent
           "
+          style={{
+            height: 'var(--vscode-list-rowHeight)',
+            paddingLeft: 'var(--vscode-space-2)',
+            paddingRight: 'var(--vscode-space-2)',
+            fontSize: 'var(--vscode-font-size-ui)',
+            marginBottom: 'var(--vscode-space-2)',
+          }}
         />
         <div className="flex items-center gap-2">
           <button
@@ -169,10 +191,17 @@ export function AgentsPanel() {
             onClick={handleStartRun}
             disabled={isBusy}
             className="
-              px-3 py-1.5 text-[11px] uppercase tracking-wide rounded-none
+              rounded-none uppercase tracking-wide
               bg-accent text-white
               disabled:opacity-60
             "
+            style={{
+              paddingLeft: 'var(--vscode-space-3)',
+              paddingRight: 'var(--vscode-space-3)',
+              paddingTop: 'var(--vscode-space-1)',
+              paddingBottom: 'var(--vscode-space-1)',
+              fontSize: 'var(--vscode-font-size-small)',
+            }}
           >
             Start
           </button>
@@ -181,11 +210,18 @@ export function AgentsPanel() {
             onClick={handleCancelRun}
             disabled={!activeRunId || isBusy}
             className="
-              px-3 py-1.5 text-[11px] uppercase tracking-wide rounded-none
+              rounded-none uppercase tracking-wide
               border border-border-subtle text-secondary
               hover:text-primary hover:border-border
               disabled:opacity-60
             "
+            style={{
+              paddingLeft: 'var(--vscode-space-3)',
+              paddingRight: 'var(--vscode-space-3)',
+              paddingTop: 'var(--vscode-space-1)',
+              paddingBottom: 'var(--vscode-space-1)',
+              fontSize: 'var(--vscode-font-size-small)',
+            }}
           >
             Cancel
           </button>
@@ -194,17 +230,29 @@ export function AgentsPanel() {
             onClick={handleRetryRun}
             disabled={!activeRunId || isBusy}
             className="
-              px-3 py-1.5 text-[11px] uppercase tracking-wide rounded-none
+              rounded-none uppercase tracking-wide
               border border-border-subtle text-secondary
               hover:text-primary hover:border-border
               disabled:opacity-60
             "
+            style={{
+              paddingLeft: 'var(--vscode-space-3)',
+              paddingRight: 'var(--vscode-space-3)',
+              paddingTop: 'var(--vscode-space-1)',
+              paddingBottom: 'var(--vscode-space-1)',
+              fontSize: 'var(--vscode-font-size-small)',
+            }}
           >
             Retry
           </button>
         </div>
         {errorMessage ? (
-          <div className="text-xs text-error">{errorMessage}</div>
+          <div
+            className="text-error"
+            style={{ fontSize: 'var(--vscode-font-size-small)', marginTop: 'var(--vscode-space-2)' }}
+          >
+            {errorMessage}
+          </div>
         ) : null}
       </div>
 
@@ -216,10 +264,26 @@ export function AgentsPanel() {
 
       <AgentPlanTodos events={events} />
 
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
-        <div className="text-[11px] uppercase tracking-wide text-secondary">Events</div>
+      <div
+        className="flex items-center justify-between border-b border-border-subtle"
+        style={{
+          paddingLeft: 'var(--vscode-space-3)',
+          paddingRight: 'var(--vscode-space-3)',
+          paddingTop: 'var(--vscode-space-1)',
+          paddingBottom: 'var(--vscode-space-1)',
+        }}
+      >
+        <div
+          className="uppercase text-secondary"
+          style={{ fontSize: 'var(--vscode-font-size-small)', letterSpacing: '0.08em' }}
+        >
+          Events
+        </div>
         {activeRun ? (
-          <div className="text-[10px] uppercase tracking-wide text-secondary">
+          <div
+            className="uppercase text-secondary"
+            style={{ fontSize: '10px', letterSpacing: '0.08em' }}
+          >
             {activeRun.status}
           </div>
         ) : null}

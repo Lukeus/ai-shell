@@ -5,9 +5,10 @@ An enterprise-grade Electron application shell with secure process architecture,
 ## Features
 
 - **Secure Process Architecture**: Sandboxed renderer with contextIsolation, minimal preload API
-- **VS Code-like Layout**: 6 resizable regions with keyboard shortcuts and persistent state
+- **VS Code-like Layout**: 6 resizable regions, bottom panel tabs, and VS Code-style chrome
 - **Workspace Explorer**: File tree navigation with workspace persistence, secure filesystem operations
 - **Tailwind 4 Design System**: CSS-first tokens for consistent theming
+- **Custom Title Bar (Win/Linux)**: Custom menu bar + window controls, native title bar on macOS
 - **Monaco Editor**: Lazy-loaded via dynamic import (never in initial chunk)
 - **OS Keychain Integration**: Secure secrets via Electron safeStorage (no .env files)
 - **Extension System**: Signed, policy-governed extensions with marketplace
@@ -40,7 +41,7 @@ The application features a VS Code-like layout with 6 resizable regions:
 2. **Primary Sidebar** (left, resizable 200-600px): Context panel (Explorer by default)
 3. **Editor Area** (center, flexible): Main content area for Monaco editor
 4. **Secondary Sidebar** (right, resizable 200-600px): AI Assistant panel
-5. **Bottom Panel** (bottom, resizable 100-600px): Terminal panel
+5. **Bottom Panel** (bottom, resizable 100-600px): Terminal/Output/Problems tabs
 6. **Status Bar** (bottom, 24px fixed): Status information
 
 **Keyboard Shortcuts**:
@@ -69,6 +70,10 @@ The Workspace Explorer provides secure file system navigation and management:
 - **File → Open Folder...**: Opens native folder picker
 - **File → Close Folder**: Closes current workspace
 - **File → Refresh Explorer**: Refreshes file tree (F5)
+
+**Window Chrome**:
+- **Windows/Linux**: Custom title bar with menu row and window controls
+- **macOS**: Native menu bar and window controls
 
 **Architecture**:
 - **WorkspaceService**: Main process singleton managing workspace state and persistence

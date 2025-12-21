@@ -104,7 +104,7 @@ export function ShellLayout({
     >
       {/* Activity Bar - Leftmost vertical icon bar */}
       <div
-        className="bg-surface-secondary border-r border-border overflow-hidden min-h-0 min-w-0"
+        className="bg-surface-elevated border-r border-border-subtle overflow-hidden min-h-0 min-w-0"
         style={{ gridArea: 'activity-bar' }}
       >
         {activityBar}
@@ -113,7 +113,7 @@ export function ShellLayout({
       {/* Primary Sidebar - Left collapsible/resizable panel */}
       {!layoutState.primarySidebarCollapsed && (
         <div
-          className="bg-surface-secondary border-r border-border overflow-visible min-h-0 min-w-0"
+          className="bg-surface-secondary border-r border-border-subtle overflow-visible min-h-0 min-w-0"
           style={{ gridArea: 'primary-sidebar' }}
         >
           {primarySidebar}
@@ -131,7 +131,7 @@ export function ShellLayout({
       {/* Secondary Sidebar - Right collapsible/resizable panel */}
       {!layoutState.secondarySidebarCollapsed && (
         <div
-          className="bg-surface-secondary border-l border-border overflow-visible min-h-0 min-w-0"
+          className="bg-surface-secondary border-l border-border-subtle overflow-visible min-h-0 min-w-0"
           style={{ gridArea: 'secondary-sidebar' }}
         >
           {secondarySidebar}
@@ -141,7 +141,7 @@ export function ShellLayout({
       {/* Bottom Panel - Bottom horizontal collapsible/resizable panel */}
       {!layoutState.bottomPanelCollapsed && (
         <div
-          className="bg-surface-secondary border-t border-border overflow-visible min-h-0 min-w-0"
+          className="bg-surface-secondary border-t border-border-subtle overflow-visible min-h-0 min-w-0"
           style={{ gridArea: 'bottom-panel' }}
         >
           {bottomPanel}

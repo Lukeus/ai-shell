@@ -324,12 +324,32 @@ export function SettingsPanel() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full bg-surface">
       {/* Left sidebar - Categories */}
-      <div className="w-48 flex-shrink-0 p-4 border-r border-border">
-        <h2 className="text-sm font-semibold text-primary mb-4 uppercase tracking-wide">
-          Settings
-        </h2>
+      <div
+        className="flex-shrink-0 border-r border-border-subtle bg-surface-secondary"
+        style={{ width: '220px' }}
+      >
+        <div
+          className="flex items-center"
+          style={{
+            height: 'var(--vscode-panelHeader-height)',
+            paddingLeft: 'var(--vscode-space-3)',
+            paddingRight: 'var(--vscode-space-3)',
+            borderBottom: '1px solid var(--vscode-border-subtle)',
+          }}
+        >
+          <h2
+            className="text-primary uppercase"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              letterSpacing: '0.08em',
+              fontWeight: 600,
+            }}
+          >
+            Settings
+          </h2>
+        </div>
         <SettingsCategoryNav
           categories={CATEGORIES}
           activeCategory={activeCategory}
@@ -338,27 +358,50 @@ export function SettingsPanel() {
       </div>
 
       {/* Right content - Settings list or Connections panel */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div
+          className="flex items-center border-b border-border-subtle bg-surface-secondary"
+          style={{
+            height: 'var(--vscode-panelHeader-height)',
+            paddingLeft: 'var(--vscode-space-3)',
+            paddingRight: 'var(--vscode-space-3)',
+          }}
+        >
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search settings..."
+          />
+        </div>
         {isConnectionsCategory ? (
           <ConnectionsPanel />
         ) : (
-          <div className="flex-1 overflow-auto p-6">
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search settings..."
-            />
-
+          <div
+            className="flex-1 overflow-auto"
+            style={{
+              paddingLeft: 'var(--vscode-space-4)',
+              paddingRight: 'var(--vscode-space-4)',
+              paddingTop: 'var(--vscode-space-3)',
+              paddingBottom: 'var(--vscode-space-4)',
+            }}
+          >
             {/* Category title (hidden when searching) */}
             {!searchQuery && (
-              <h3 className="text-lg font-semibold text-primary mb-4">
+              <h3
+                className="text-primary"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  marginBottom: 'var(--vscode-space-3)',
+                }}
+              >
                 {CATEGORIES.find((cat) => cat.id === activeCategory)?.label}
               </h3>
             )}
 
             {/* Settings list */}
             {filteredSettings.length === 0 ? (
-              <p className="text-secondary text-sm">
+              <p className="text-secondary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
                 {searchQuery ? 'No settings match your search.' : 'No settings in this category.'}
               </p>
             ) : (

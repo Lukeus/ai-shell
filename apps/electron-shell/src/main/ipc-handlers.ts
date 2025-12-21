@@ -1,4 +1,4 @@
-import { ipcMain, app, type WebContents } from 'electron';
+import { ipcMain, app, BrowserWindow, type WebContents } from 'electron';
 import { randomUUID } from 'crypto';
 import {
   IPC_CHANNELS,
@@ -47,6 +47,7 @@ import {
   SecretAccessResponse,
   ListAuditEventsRequestSchema,
   ListAuditEventsResponse,
+  WindowStateSchema,
 } from 'packages-api-contracts';
 import { settingsService } from './services/SettingsService';
 import { workspaceService } from './services/WorkspaceService';
@@ -57,6 +58,7 @@ import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
 import { auditService } from './services/AuditService';
 import { agentRunStore } from './services/AgentRunStore';
+import { getExtensionCommandService, getExtensionViewService, getExtensionToolService, getPermissionService } from './index';
 
 type AgentSubscriber = {
   sender: WebContents;
@@ -96,6 +98,11 @@ const publishAgentEvent = (event: AgentEvent): void => {
 const appendAndPublish = (event: AgentEvent): void => {
   agentRunStore.appendEvent(event);
   publishAgentEvent(event);
+};
+
+const getWindowFromEvent = (event: Electron.IpcMainInvokeEvent): BrowserWindow | null => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  return window ?? null;
 };
 
 const buildStatusEvent = (runId: string, status: AgentRunStatus): AgentEvent =>
@@ -175,6 +182,38 @@ export function registerIPCHandlers(): void {
    */
   ipcMain.handle(IPC_CHANNELS.WORKSPACE_CLOSE, async (): Promise<void> => {
     workspaceService.clearWorkspace();
+  });
+
+  // ========================================
+  // Window Controls IPC Handlers
+  // ========================================
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MINIMIZE, async (event): Promise<void> => {
+    const window = getWindowFromEvent(event);
+    window?.minimize();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_TOGGLE_MAXIMIZE, async (event): Promise<void> => {
+    const window = getWindowFromEvent(event);
+    if (!window) return;
+    if (window.isMaximized()) {
+      window.unmaximize();
+    } else {
+      window.maximize();
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_CLOSE, async (event): Promise<void> => {
+    const window = getWindowFromEvent(event);
+    window?.close();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_STATE, async (event) => {
+    const window = getWindowFromEvent(event);
+    const state = WindowStateSchema.parse({
+      isMaximized: window?.isMaximized() ?? false,
+    });
+    return state;
   });
 
   // ========================================
@@ -590,6 +629,129 @@ export function registerIPCHandlers(): void {
     async (_event, request: unknown): Promise<ListAuditEventsResponse> => {
       const validated = ListAuditEventsRequestSchema.parse(request ?? {});
       return auditService.listEvents(validated);
+    }
+  );
+
+  // ========================================
+  // Extension IPC Handlers
+  // P1 (Process isolation): Renderer never talks directly to Extension Host
+  // P2 (Security): All operations go through main process
+  // ========================================
+
+  /**
+   * Handler for EXTENSIONS_EXECUTE_COMMAND channel.
+   * Executes a command from an extension.
+   * 
+   * @param commandId - Command ID to execute
+   * @param args - Command arguments
+   * @returns Command execution result
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_EXECUTE_COMMAND,
+    async (_event, commandId: string, args?: unknown[]) => {
+      const commandService = getExtensionCommandService();
+      if (!commandService) {
+        throw new Error('Extension command service not initialized');
+      }
+
+      return await commandService.executeCommand(commandId, args);
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_LIST_COMMANDS channel.
+   * Lists all registered extension commands.
+   */
+  ipcMain.handle(IPC_CHANNELS.EXTENSIONS_LIST_COMMANDS, async () => {
+    const commandService = getExtensionCommandService();
+    if (!commandService) {
+      return [];
+    }
+
+    return commandService.listCommands();
+  });
+
+  /**
+   * Handler for EXTENSIONS_REQUEST_PERMISSION channel.
+   * Request a permission for an extension.
+   * Returns result if already granted/denied, or null if user decision needed.
+   * 
+   * P1: Permission checks enforced in main process only
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_REQUEST_PERMISSION,
+    async (_event, extensionId: string, scope: string, reason?: string) => {
+      const permService = getPermissionService();
+      if (!permService) {
+        throw new Error('Permission service not initialized');
+      }
+
+      const result = await permService.requestPermission(extensionId, scope as any, reason);
+      return result;
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_LIST_PERMISSIONS channel.
+   * List all permissions for an extension.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_LIST_PERMISSIONS,
+    async (_event, extensionId: string) => {
+      const permService = getPermissionService();
+      if (!permService) {
+        return [];
+      }
+
+      return permService.getAllPermissions(extensionId);
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_REVOKE_PERMISSION channel.
+   * Revoke a specific permission for an extension.
+   * Note: For now, this revokes ALL permissions. Individual revocation in future task.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_REVOKE_PERMISSION,
+    async (_event, extensionId: string) => {
+      const permService = getPermissionService();
+      if (!permService) {
+        throw new Error('Permission service not initialized');
+      }
+
+      await permService.revokeAllPermissions(extensionId);
+    }
+  );
+
+  /**
+   * Handler for EXTENSIONS_LIST_VIEWS channel.
+   * Lists all registered extension views.
+   * Task 8: View contribution points
+   */
+  ipcMain.handle(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS, async () => {
+    const viewService = getExtensionViewService();
+    if (!viewService) {
+      return [];
+    }
+
+    return viewService.listViews();
+  });
+
+  /**
+   * Handler for EXTENSIONS_RENDER_VIEW channel.
+   * Renders an extension view and returns content.
+   * Task 8: View content sanitized before rendering in renderer (P1)
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.EXTENSIONS_RENDER_VIEW,
+    async (_event, viewId: string) => {
+      const viewService = getExtensionViewService();
+      if (!viewService) {
+        throw new Error('Extension view service not initialized');
+      }
+
+      return await viewService.renderView(viewId);
     }
   );
 }

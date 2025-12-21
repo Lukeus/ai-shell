@@ -76,7 +76,14 @@ export function FileTree({
   // Empty state: no workspace
   if (!workspace) {
     return (
-      <div className="flex flex-col items-center justify-center h-full px-4 text-center text-[var(--secondary-fg)]">
+      <div
+        className="flex flex-col items-center justify-center h-full text-center text-secondary"
+        style={{
+          paddingLeft: 'var(--vscode-space-4)',
+          paddingRight: 'var(--vscode-space-4)',
+          fontSize: 'var(--vscode-font-size-ui)',
+        }}
+      >
         <svg
           width="48"
           height="48"
@@ -86,8 +93,8 @@ export function FileTree({
         >
           <path d="M1 2h5l1 2h8v10H1V2z" />
         </svg>
-        <p className="text-sm">No folder open</p>
-        <p className="mt-2 text-xs">Open a folder to start exploring</p>
+        <p>No folder open</p>
+        <p style={{ marginTop: 'var(--vscode-space-2)' }}>Open a folder to start exploring</p>
       </div>
     );
   }
@@ -95,7 +102,15 @@ export function FileTree({
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full px-4 text-center text-[var(--error-fg)]">
+      <div
+        className="flex flex-col items-center justify-center h-full text-center"
+        style={{
+          paddingLeft: 'var(--vscode-space-4)',
+          paddingRight: 'var(--vscode-space-4)',
+          color: 'var(--error-fg)',
+          fontSize: 'var(--vscode-font-size-ui)',
+        }}
+      >
         <svg
           width="48"
           height="48"
@@ -105,8 +120,12 @@ export function FileTree({
         >
           <path d="M8 1L1 15h14L8 1zm0 3l4.5 10h-9L8 4zm0 3v3h1V7H8zm0 4v1h1v-1H8z" />
         </svg>
-        <p className="text-sm font-semibold">Error loading files</p>
-        <p className="mt-2 text-xs">{error}</p>
+        <p style={{ fontSize: 'var(--vscode-font-size-small)', fontWeight: 600 }}>
+          Error loading files
+        </p>
+        <p style={{ marginTop: 'var(--vscode-space-2)', fontSize: 'var(--vscode-font-size-small)' }}>
+          {error}
+        </p>
       </div>
     );
   }
@@ -114,7 +133,10 @@ export function FileTree({
   // Loading state (initial load)
   if (isLoading && rootEntries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-[var(--secondary-fg)]">
+      <div
+        className="flex flex-col items-center justify-center h-full text-secondary"
+        style={{ fontSize: 'var(--vscode-font-size-ui)' }}
+      >
         <svg
           className="animate-spin mb-4"
           width="32"
@@ -131,7 +153,7 @@ export function FileTree({
             strokeDasharray="10 26"
           />
         </svg>
-        <p className="text-sm">Loading files...</p>
+        <p style={{ fontSize: 'var(--vscode-font-size-small)' }}>Loading files...</p>
       </div>
     );
   }
@@ -139,7 +161,14 @@ export function FileTree({
   // Empty state: no files in workspace
   if (rootEntries.length === 0 && !inlineInputMode) {
     return (
-      <div className="flex flex-col items-center justify-center h-full px-4 text-center text-[var(--secondary-fg)]">
+      <div
+        className="flex flex-col items-center justify-center h-full text-center text-secondary"
+        style={{
+          paddingLeft: 'var(--vscode-space-4)',
+          paddingRight: 'var(--vscode-space-4)',
+          fontSize: 'var(--vscode-font-size-ui)',
+        }}
+      >
         <svg
           width="48"
           height="48"
@@ -149,17 +178,20 @@ export function FileTree({
         >
           <path d="M3 1h7l3 3v10a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" />
         </svg>
-        <p className="text-sm">No files in workspace</p>
-        <p className="mt-2 text-xs">Create a new file or folder to get started</p>
+        <p style={{ fontSize: 'var(--vscode-font-size-small)' }}>No files in workspace</p>
+        <p style={{ marginTop: 'var(--vscode-space-2)', fontSize: 'var(--vscode-font-size-small)' }}>
+          Create a new file or folder to get started
+        </p>
       </div>
     );
   }
 
   return (
     <div
-      className="overflow-y-auto h-full text-[var(--list-fg)]"
+      className="overflow-y-auto h-full text-primary"
       role="tree"
       aria-label="File explorer tree"
+      style={{ fontSize: 'var(--vscode-font-size-ui)' }}
     >
       {/* Inline input for new file/folder at root */}
       {inlineInputMode && (

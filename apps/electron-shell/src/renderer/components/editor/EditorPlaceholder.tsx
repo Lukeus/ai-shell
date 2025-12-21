@@ -54,7 +54,7 @@ export function EditorPlaceholder({ filePath }: EditorPlaceholderProps) {
 
         <h2 className="text-lg font-semibold mb-2">{filename}</h2>
         <p className="text-sm text-[var(--secondary-fg)] mb-4">
-          File: <code className="px-1 py-0.5 bg-[var(--input-bg)] rounded text-xs">{filePath}</code>
+          File: <code className="px-1 py-0.5 bg-[var(--input-bg)] rounded text-md">{filePath}</code>
         </p>
 
         <div className="mt-8 p-4 bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded">

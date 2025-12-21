@@ -166,7 +166,7 @@ export const ResizablePanel = memo(function ResizablePanel({
     <div
       className={`
         group relative flex items-center justify-center select-none shrink-0
-        ${direction === 'horizontal' ? 'w-3 cursor-col-resize' : 'h-3 cursor-row-resize'}
+        ${direction === 'horizontal' ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'}
         ${isDragging ? 'bg-accent/10' : 'hover:bg-surface-hover'}
       `}
       style={{

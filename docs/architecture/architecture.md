@@ -113,6 +113,13 @@ export const IPC_CHANNELS = {
 // src/preload-api.ts
 export interface PreloadAPI {
   getVersion(): Promise<AppInfo>;
+  windowControls: {
+    minimize(): Promise<void>;
+    toggleMaximize(): Promise<void>;
+    close(): Promise<void>;
+    getState(): Promise<{ isMaximized: boolean }>;
+    onStateChange(handler: (_event: Electron.IpcRendererEvent, state: { isMaximized: boolean }) => void): void;
+  };
 }
 
 declare global {
@@ -149,6 +156,13 @@ import { IPC_CHANNELS, PreloadAPI } from 'packages-api-contracts';
 
 const api: PreloadAPI = {
   getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.GET_VERSION),
+  windowControls: {
+    minimize: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_MINIMIZE),
+    toggleMaximize: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_TOGGLE_MAXIMIZE),
+    close: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_CLOSE),
+    getState: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_STATE),
+    onStateChange: (handler) => ipcRenderer.on(IPC_CHANNELS.WINDOW_STATE_CHANGED, handler),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

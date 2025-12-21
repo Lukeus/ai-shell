@@ -65,6 +65,9 @@ function AppContent() {
   const { workspace, openWorkspace, closeWorkspace, refresh, openTabs, activeTabIndex } = useFileTree();
   const isSettingsView = state.activeActivityBarIcon === 'settings';
   const [menuBarVisible, setMenuBarVisible] = useState(SETTINGS_DEFAULTS.appearance.menuBarVisible);
+  const isMac = typeof navigator !== 'undefined'
+    ? (navigator.platform || navigator.userAgent || '').toLowerCase().includes('mac')
+    : false;
 
   const settingsTabs: Tab[] = [
     {
@@ -161,7 +164,7 @@ function AppContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface text-primary">
-      {menuBarVisible && (
+      {!isMac && menuBarVisible && (
         <MenuBar
           hasWorkspace={Boolean(workspace)}
           onOpenFolder={openWorkspace}

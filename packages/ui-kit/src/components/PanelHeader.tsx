@@ -36,12 +36,22 @@ export interface PanelHeaderProps {
 export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderProps) {
   return (
     <div
-      className="flex items-center justify-between px-3 border-b border-border-subtle bg-surface-secondary"
-      style={{ height: 'var(--vscode-panelHeader-height)' }}
+      className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
+      style={{
+        height: 'var(--vscode-panelHeader-height)',
+        paddingLeft: 'var(--vscode-space-2)',
+        paddingRight: 'var(--vscode-space-2)',
+      }}
     >
       {/* Panel title with icon */}
       <div className="flex items-center gap-2">
-        <h2 className="text-[11px] font-semibold text-secondary uppercase tracking-wide">
+        <h2
+          className="font-semibold text-secondary uppercase"
+          style={{
+            fontSize: 'var(--vscode-font-size-small)',
+            letterSpacing: '0.08em',
+          }}
+        >
           {title}
         </h2>
       </div>

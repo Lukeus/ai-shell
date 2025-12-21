@@ -106,6 +106,7 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
   const indentStyle = {
     paddingLeft: `${depth * 16 + 8}px`,
     height: 'var(--size-list-row)',
+    lineHeight: 'var(--size-list-row)',
   };
 
   if (isRenaming) {
@@ -125,10 +126,9 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
     <>
       <div
         className={`
-          flex items-center px-2 cursor-pointer select-none
+          flex items-center cursor-pointer select-none
           hover:bg-[var(--vscode-list-hoverBackground)]
-          text-[var(--vscode-foreground)]
-          text-sm
+          text-primary
         `}
         style={indentStyle}
         onClick={handleClick}
@@ -158,7 +158,7 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
         {!isDirectory && <div className="w-5" />}
 
         {/* Icon */}
-        <div className="flex items-center justify-center w-4 h-4 mr-2 text-secondary">
+        <div className="flex items-center justify-center w-5 h-5 mr-2 text-secondary">
           {isDirectory ? (
             <span className={`codicon ${isExpanded ? 'codicon-folder-opened' : 'codicon-folder'}`} aria-hidden="true" />
           ) : (
@@ -167,7 +167,9 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
         </div>
 
         {/* Label */}
-        <span className="flex-1 truncate">{entry.name}</span>
+        <span className="flex-1 truncate" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
+          {entry.name}
+        </span>
 
         {/* Loading spinner for expanding folder */}
         {isDirectory && isLoading && isExpanded && (

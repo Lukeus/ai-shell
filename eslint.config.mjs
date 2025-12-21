@@ -128,4 +128,21 @@ export default [
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+
+  // Extension Host and Agent Host (pure Node.js environment)
+  {
+    files: ['apps/extension-host/**/*.ts', 'apps/agent-host/**/*.ts', 'packages/broker-main/**/*.ts'],
+    languageOptions: {
+      globals: {
+        // Node.js runtime globals
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setImmediate: 'readonly',
+        clearImmediate: 'readonly',
+        NodeJS: 'readonly',
+      },
+    },
+  },
 ];

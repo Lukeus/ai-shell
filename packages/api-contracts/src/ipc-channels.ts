@@ -37,6 +37,22 @@ export const IPC_CHANNELS = {
 
   /** Menu: toggle secondary sidebar */
   MENU_TOGGLE_SECONDARY_SIDEBAR: 'menu:toggle-secondary-sidebar',
+
+  // Window controls
+  /** Window: minimize */
+  WINDOW_MINIMIZE: 'window:minimize',
+
+  /** Window: toggle maximize/restore */
+  WINDOW_TOGGLE_MAXIMIZE: 'window:toggle-maximize',
+
+  /** Window: close */
+  WINDOW_CLOSE: 'window:close',
+
+  /** Window: get state */
+  WINDOW_GET_STATE: 'window:get-state',
+
+  /** Window: state changed (main -> renderer) */
+  WINDOW_STATE_CHANGED: 'window:state-changed',
   
   // File system broker (workspace-scoped)
   /** Read directory contents */
@@ -166,6 +182,53 @@ export const IPC_CHANNELS = {
   
   /** List audit events */
   CONNECTIONS_AUDIT_LIST: 'connections:audit:list',
+
+  // Extensions management (renderer/main)
+  /** List all installed extensions */
+  EXTENSIONS_LIST: 'extensions:list',
+  
+  /** Get a specific extension by ID */
+  EXTENSIONS_GET: 'extensions:get',
+  
+  /** Install an extension */
+  EXTENSIONS_INSTALL: 'extensions:install',
+  
+  /** Uninstall an extension */
+  EXTENSIONS_UNINSTALL: 'extensions:uninstall',
+  
+  /** Enable an extension */
+  EXTENSIONS_ENABLE: 'extensions:enable',
+  
+  /** Disable an extension */
+  EXTENSIONS_DISABLE: 'extensions:disable',
+  
+  // Extension state events (main → renderer)
+  /** Extension state change event */
+  EXTENSIONS_ON_STATE_CHANGE: 'extensions:on-state-change',
+  
+  // Extension commands (renderer → main → ext host)
+  /** Execute an extension command */
+  EXTENSIONS_EXECUTE_COMMAND: 'extensions:execute-command',
+  
+  /** List all available extension commands */
+  EXTENSIONS_LIST_COMMANDS: 'extensions:list-commands',
+  
+  // Extension views (renderer → main)
+  /** List all extension views */
+  EXTENSIONS_LIST_VIEWS: 'extensions:list-views',
+  
+  /** Render extension view content */
+  EXTENSIONS_RENDER_VIEW: 'extensions:render-view',
+  
+  // Extension permissions (renderer/main)
+  /** Request a permission for an extension */
+  EXTENSIONS_REQUEST_PERMISSION: 'extensions:request-permission',
+  
+  /** List permissions for an extension */
+  EXTENSIONS_LIST_PERMISSIONS: 'extensions:list-permissions',
+  
+  /** Revoke a permission for an extension */
+  EXTENSIONS_REVOKE_PERMISSION: 'extensions:revoke-permission',
 } as const;
 
 /**

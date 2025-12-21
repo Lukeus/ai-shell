@@ -56,10 +56,12 @@ export function MenuBar({
   onToggleBottomPanel,
 }: MenuBarProps) {
   const isMac = useMemo(() => getPlatformIsMac(), []);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [isMenubarActive, setIsMenubarActive] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [focusedMenuIndex, setFocusedMenuIndex] = useState(0);
   const [focusedItemIndex, setFocusedItemIndex] = useState(0);
+  const [hoveredMenuIndex, setHoveredMenuIndex] = useState<number | null>(null);
   const menuBarRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const menuItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -378,104 +380,268 @@ export function MenuBar({
     openMenuId,
   ]);
 
+  useEffect(() => {
+    if (isMac || !window.api?.windowControls) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    const loadState = async () => {
+      try {
+        const state = await window.api.windowControls.getState();
+        if (isMounted) {
+          setIsMaximized(state.isMaximized);
+        }
+      } catch {
+        // Ignore window state errors
+      }
+    };
+
+    const unsubscribe = window.api.windowControls.onStateChange((state) => {
+      setIsMaximized(state.isMaximized);
+    });
+
+    void loadState();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [isMac]);
+
   return (
     <div
       ref={menuBarRef}
       role="menubar"
       aria-label="Application menu bar"
-      className="flex items-center gap-2 border-b border-border bg-[var(--vscode-titleBar-activeBackground)] px-2 text-[13px] text-secondary"
+      className="menubar flex items-center border-b border-border-subtle bg-[var(--vscode-titleBar-activeBackground)]"
       style={{
         height: 'var(--vscode-menuBar-height, var(--vscode-titleBar-height))',
+        padding: `0 var(--vscode-space-1)`,
+        fontSize: 'var(--vscode-font-size-ui)',
+        WebkitAppRegion: isMac ? 'no-drag' : 'drag',
       }}
     >
-      {menus.map((menu, index) => {
-        const isOpen = openMenuId === menu.id;
-        const isFocused = isMenubarActive && focusedMenuIndex === index;
-        const items = normalizeMenuItems(menu.items);
+      <div className="flex items-center flex-1 min-w-0">
+        <div
+          className="flex items-center justify-center"
+          style={{
+            width: '16px',
+            height: '16px',
+            marginRight: 'var(--vscode-space-2)',
+            color: 'var(--vscode-titleBar-activeForeground)',
+            WebkitAppRegion: 'no-drag',
+          }}
+          aria-label="App icon"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            aria-hidden="true"
+          >
+            <circle cx="8" cy="8" r="6" />
+            <circle cx="12.5" cy="4.5" r="1" fill="currentColor" stroke="none" />
+            <circle cx="3.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+            <circle cx="7" cy="13" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
 
-        return (
-          <div key={menu.id} className="relative">
-            <button
-              ref={(element) => {
-                menuButtonRefs.current[index] = element;
-              }}
-              type="button"
-              role="menuitem"
-              aria-haspopup="true"
-              aria-expanded={isOpen}
-              tabIndex={isFocused ? 0 : -1}
-              onMouseDown={captureLastFocus}
-              onFocus={() => setIsMenubarActive(true)}
-              onMouseEnter={() => {
-                if (openMenuId) {
+        {menus.map((menu, index) => {
+          const isOpen = openMenuId === menu.id;
+          const isFocused = isMenubarActive && focusedMenuIndex === index;
+          const isHovered = hoveredMenuIndex === index;
+          const items = normalizeMenuItems(menu.items);
+          const isSelected = isOpen || isFocused || (isHovered && !openMenuId);
+          const titleColor = isSelected
+            ? 'var(--vscode-menubar-selectionForeground)'
+            : 'var(--vscode-titleBar-activeForeground)';
+          const titleBackground = isSelected
+            ? 'var(--vscode-menubar-selectionBackground)'
+            : 'transparent';
+          const titleOutlineStyle = isOpen || isFocused ? 'solid' : isHovered ? 'dashed' : 'none';
+
+          return (
+            <div key={menu.id} className="relative">
+              <button
+                ref={(element) => {
+                  menuButtonRefs.current[index] = element;
+                }}
+                type="button"
+                role="menuitem"
+                aria-haspopup="true"
+                aria-expanded={isOpen}
+                tabIndex={isFocused ? 0 : -1}
+                onMouseDown={captureLastFocus}
+                onFocus={() => setIsMenubarActive(true)}
+                onMouseEnter={() => {
+                  setHoveredMenuIndex(index);
+                  if (openMenuId) {
+                    openMenuAt(index, 0);
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMenuIndex(null);
+                }}
+                onClick={() => {
+                  if (isOpen) {
+                    dismissMenubar(true);
+                    return;
+                  }
+                  captureLastFocus();
                   openMenuAt(index, 0);
-                }
-              }}
-              onClick={() => {
-                if (isOpen) {
-                  dismissMenubar(true);
-                  return;
-                }
-                captureLastFocus();
-                openMenuAt(index, 0);
-              }}
-              className={`
-                flex items-center my-3 px-3 py-3 rounded-none transition-colors
-                ${isOpen || isFocused
-                  ? 'bg-surface-hover text-primary'
-                  : 'hover:bg-surface-hover hover:text-primary'}
-              `}
-            >
-              {menu.label}
-            </button>
-
-            {isOpen && (
-              <div
-                role="menu"
-                aria-label={`${menu.label} menu`}
-                className="absolute left-0 top-full mt-[1px] min-w-[180px] border border-border bg-surface-secondary  py-2"
-                style={{ zIndex: 'var(--vscode-z-dropdown)' }}
+                }}
+                className="menubar-menu-button flex items-center cursor-default select-none whitespace-nowrap"
+                style={{
+                  height: '100%',
+                  padding: 0,
+                  margin: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  WebkitAppRegion: 'no-drag',
+                }}
               >
-                {items.map((item, itemIndex) => {
-                  const isDisabled = item.enabled === false;
-                  const isActive = itemIndex === focusedItemIndex;
+                <span
+                  className="menubar-menu-title"
+                  style={{
+                    borderRadius: '4px',
+                    color: titleColor,
+                    backgroundColor: titleBackground,
+                    outlineStyle: titleOutlineStyle,
+                    outlineWidth: titleOutlineStyle === 'none' ? '0' : '1px',
+                    outlineColor: 'var(--vscode-menubar-selectionBorder)',
+                    outlineOffset: '-1px',
+                    padding: `0 var(--vscode-space-2)`,
+                    WebkitAppRegion: 'no-drag',
+                  }}
+                >
+                  {menu.label}
+                </span>
+              </button>
 
-                  return (
-                    <button
-                      key={item.id}
-                      ref={(element) => {
-                        menuItemRefs.current[itemIndex] = element;
-                      }}
-                      type="button"
-                      role="menuitem"
-                      tabIndex={isActive ? 0 : -1}
-                      aria-disabled={isDisabled}
-                      onMouseMove={() => setFocusedItemIndex(itemIndex)}
-                      onClick={() => {
-                        if (isDisabled) return;
-                        activateMenuItem(item);
-                      }}
-                      className={`
-                        flex w-full items-center justify-between gap-4 px-3 text-left text-sm
-                        ${isDisabled ? 'cursor-not-allowed text-tertiary' : 'text-secondary'}
-                        ${isActive && !isDisabled ? 'bg-surface-hover text-primary' : ''}
-                      `}
-                      style={{
-                        height: 'var(--vscode-list-rowHeight)',
-                      }}
-                    >
-                      <span className="truncate">{item.label}</span>
-                      {item.shortcut && (
-                        <span className="text-[11px] text-tertiary">{item.shortcut}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {isOpen && (
+                <div
+                  role="menu"
+                  aria-label={`${menu.label} menu`}
+                  className="absolute left-0 top-full mt-[1px] min-w-[180px] border border-border-subtle bg-surface-elevated py-1"
+                  style={{
+                    zIndex: 'var(--vscode-z-dropdown)',
+                    boxShadow: '0 2px 8px var(--color-shadow-medium)',
+                    WebkitAppRegion: 'no-drag',
+                  }}
+                >
+                  {items.map((item, itemIndex) => {
+                    const isDisabled = item.enabled === false;
+                    const isActive = itemIndex === focusedItemIndex;
+
+                    return (
+                      <button
+                        key={item.id}
+                        ref={(element) => {
+                          menuItemRefs.current[itemIndex] = element;
+                        }}
+                        type="button"
+                        role="menuitem"
+                        tabIndex={isActive ? 0 : -1}
+                        aria-disabled={isDisabled}
+                        onMouseMove={() => setFocusedItemIndex(itemIndex)}
+                        onClick={() => {
+                          if (isDisabled) return;
+                          activateMenuItem(item);
+                        }}
+                        className={`
+                          flex w-full items-center justify-between gap-4 text-left
+                          ${isDisabled ? 'cursor-not-allowed text-tertiary' : 'text-secondary'}
+                          ${isActive && !isDisabled ? 'bg-surface-hover text-primary' : ''}
+                        `}
+                        style={{
+                          height: 'var(--vscode-list-rowHeight)',
+                          paddingLeft: 'var(--vscode-space-3)',
+                          paddingRight: 'var(--vscode-space-3)',
+                          fontSize: 'var(--vscode-font-size-ui)',
+                          WebkitAppRegion: 'no-drag',
+                        }}
+                      >
+                        <span className="truncate">{item.label}</span>
+                        {item.shortcut && (
+                          <span className="text-[11px] text-tertiary">{item.shortcut}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {!isMac && (
+        <div
+          className="flex items-center"
+          style={{ WebkitAppRegion: 'no-drag', marginLeft: 'auto' }}
+        >
+          <button
+            type="button"
+            aria-label="Minimize window"
+            onClick={() => window.api?.windowControls?.minimize()}
+            className="flex items-center justify-center hover:bg-[var(--vscode-menubar-selectionBackground)]"
+            style={{
+              width: 'calc(var(--vscode-space-6) + var(--vscode-space-2))',
+              height: 'var(--vscode-menuBar-height)',
+              color: 'var(--vscode-titleBar-activeForeground)',
+            }}
+          >
+            <span className="sr-only">Minimize</span>
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <path d="M1 8h8" stroke="currentColor" strokeWidth="1" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label={isMaximized ? 'Restore window' : 'Maximize window'}
+            onClick={() => window.api?.windowControls?.toggleMaximize()}
+            className="flex items-center justify-center hover:bg-[var(--vscode-menubar-selectionBackground)]"
+            style={{
+              width: 'calc(var(--vscode-space-6) + var(--vscode-space-2))',
+              height: 'var(--vscode-menuBar-height)',
+              color: 'var(--vscode-titleBar-activeForeground)',
+            }}
+          >
+            <span className="sr-only">{isMaximized ? 'Restore' : 'Maximize'}</span>
+            {isMaximized ? (
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                <rect x="2" y="2" width="6" height="6" fill="none" stroke="currentColor" strokeWidth="1" />
+                <rect x="1" y="1" width="6" height="6" fill="none" stroke="currentColor" strokeWidth="1" />
+              </svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                <rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1" />
+              </svg>
             )}
-          </div>
-        );
-      })}
+          </button>
+          <button
+            type="button"
+            aria-label="Close window"
+            onClick={() => window.api?.windowControls?.close()}
+            className="flex items-center justify-center hover:bg-[var(--color-status-error)]"
+            style={{
+              width: 'calc(var(--vscode-space-6) + var(--vscode-space-2))',
+              height: 'var(--vscode-menuBar-height)',
+              color: 'var(--vscode-titleBar-activeForeground)',
+            }}
+          >
+            <span className="sr-only">Close</span>
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
