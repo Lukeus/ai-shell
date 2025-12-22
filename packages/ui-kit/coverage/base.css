@@ -113,11 +113,12 @@ table.coverage td span.cline-any {
 .missing-if-branch .typ, .skip-if-branch .typ {
     color: inherit !important;
 }
+
 .coverage-summary {
   border-collapse: collapse;
   width: 100%;
 }
-.coverage-summary tr { border-bottom: 1px solid #bbb; }
+.coverage-summary tr { border-bottom: 1px solid #505050; }
 .keyline-all { border: 1px solid #ddd; }
 .coverage-summary td, .coverage-summary th { padding: 10px; }
 .coverage-summary tbody { border: 1px solid #bbb; }

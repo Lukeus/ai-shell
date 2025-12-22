@@ -132,6 +132,25 @@ export const IPC_CHANNELS = {
   
   /** Diagnostics summary event (main → renderer) */
   DIAGNOSTICS_ON_SUMMARY: 'diagnostics:on-summary',
+  // Search (workspace)
+  /** Execute workspace search */
+  SEARCH_QUERY: 'search:query',
+
+  /** Execute replace operation */
+  SEARCH_REPLACE: 'search:replace',
+
+  // Source control (git)
+  /** Get SCM status */
+  SCM_STATUS: 'scm:status',
+
+  /** Stage changes */
+  SCM_STAGE: 'scm:stage',
+
+  /** Unstage changes */
+  SCM_UNSTAGE: 'scm:unstage',
+
+  /** Commit staged changes */
+  SCM_COMMIT: 'scm:commit',
 
   // Agent runs + events
   /** List agent runs */
@@ -155,7 +174,7 @@ export const IPC_CHANNELS = {
   /** Unsubscribe from agent events */
   AGENT_EVENTS_UNSUBSCRIBE: 'agent:events:unsubscribe',
 
-  /** Agent event stream (main  renderer) */
+  /** Agent event stream (main -> renderer) */
   AGENT_EVENTS_ON_EVENT: 'agent:events:on-event',
 
   /** List agent trace events */
@@ -238,3 +257,4 @@ export const IPC_CHANNELS = {
  * Union type of all valid IPC channel names.
  */
 export type IPCChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];
+

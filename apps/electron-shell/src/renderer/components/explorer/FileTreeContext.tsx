@@ -40,6 +40,10 @@ export interface FileTreeContextValue {
   dirtyTabs: Set<string>;
   draftContents: Map<string, string>;
 
+  // Selection state
+  selectedEntry: { path: string; type: FileEntry['type'] } | null;
+  setSelectedEntry: (entry: { path: string; type: FileEntry['type'] } | null) => void;
+
   // Workspace operations
   loadWorkspace: () => Promise<void>;
   openWorkspace: () => Promise<void>;
@@ -117,6 +121,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
   const draftContentsRef = useRef(draftContents);
   const savedContentsRef = useRef(savedContents);
   const dirtyTabsRef = useRef(dirtyTabs);
+  const [selectedEntry, setSelectedEntry] = useState<{ path: string; type: FileEntry['type'] } | null>(null);
 
   // Generate localStorage key for current workspace
   const localStorageKey = useMemo(() => {
@@ -216,6 +221,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
         setDirtyTabs(new Set());
         setDraftContents(new Map());
         setSavedContents(new Map());
+        setSelectedEntry(null);
       }
     } catch (err) {
       const message = typeof err === 'object' && err !== null && 'message' in err ? (err as Error).message : 'Failed to open workspace';
@@ -242,6 +248,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
       setDraftContents(new Map());
       setSavedContents(new Map());
       setError(null);
+      setSelectedEntry(null);
     } catch (err) {
       const message = typeof err === 'object' && err !== null && 'message' in err ? (err as Error).message : 'Failed to close workspace';
       setError(message);
@@ -349,6 +356,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
    * Deduplicates: focuses existing tab if already open.
    */
   const openFile = useCallback((path: string) => {
+    setSelectedEntry({ path, type: 'file' });
     setOpenTabs((prev) => {
       const existingIndex = prev.indexOf(path);
       if (existingIndex !== -1) {
@@ -692,6 +700,8 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     activeTabIndex,
     dirtyTabs,
     draftContents,
+    selectedEntry,
+    setSelectedEntry,
     loadWorkspace,
     openWorkspace,
     closeWorkspace,

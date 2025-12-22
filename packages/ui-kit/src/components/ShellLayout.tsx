@@ -112,8 +112,8 @@ export function ShellLayout({
 
       {/* Primary Sidebar - Left collapsible/resizable panel */}
       <div
-        className="bg-surface-secondary border-r border-border-subtle overflow-visible min-h-0 min-w-0"
-        style={{ gridArea: 'primary-sidebar' }}
+        className="bg-surface-secondary border-r border-border-subtle overflow-hidden min-h-0 min-w-0"
+        style={{ gridArea: 'primary-sidebar', paddingBottom: statusBarHeight }}
       >
         {primarySidebar}
       </div>
@@ -129,7 +129,7 @@ export function ShellLayout({
       {/* Secondary Sidebar - Right collapsible/resizable panel */}
       <div
         className="bg-surface-secondary border-l border-border-subtle overflow-visible min-h-0 min-w-0"
-        style={{ gridArea: 'secondary-sidebar' }}
+        style={{ gridArea: 'secondary-sidebar', paddingBottom: statusBarHeight }}
       >
         {secondarySidebar}
       </div>

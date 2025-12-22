@@ -15,6 +15,10 @@ vi.mock('node-pty', () => ({
   spawn: vi.fn(() => mockPtyProcess),
 }));
 
+vi.mock('fs', () => ({
+  realpathSync: vi.fn((value: string) => value),
+}));
+
 import * as pty from 'node-pty';
 
 describe('TerminalService', () => {
@@ -395,6 +399,18 @@ describe('TerminalService', () => {
       };
 
       // Act & Assert
+      expect(() => {
+        terminalService.createSession(request, mockWorkspaceRoot);
+      }).toThrow('Terminal cwd must be within workspace');
+    });
+
+    it('should reject workspace prefix paths outside root', () => {
+      const request: CreateTerminalRequest = {
+        cwd: 'C:\\mock\\workspace2',
+        cols: 80,
+        rows: 24,
+      };
+
       expect(() => {
         terminalService.createSession(request, mockWorkspaceRoot);
       }).toThrow('Terminal cwd must be within workspace');

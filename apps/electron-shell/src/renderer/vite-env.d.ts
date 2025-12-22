@@ -10,7 +10,7 @@ declare global {
   interface Window {
     electron?: {
       ipcRenderer?: {
-        on?: (channel: string, func: (...args: unknown[]) => void) => void;
+        on?: (channel: string, func: (...args: unknown[]) => void) => void | (() => void);
         removeListener?: (channel: string, func: (...args: unknown[]) => void) => void;
       };
     };

@@ -135,6 +135,20 @@ const api: PreloadAPI = {
     },
   },
 
+  // Search methods (workspace)
+  search: {
+    query: (request) => ipcRenderer.invoke(IPC_CHANNELS.SEARCH_QUERY, request),
+    replace: (request) => ipcRenderer.invoke(IPC_CHANNELS.SEARCH_REPLACE, request),
+  },
+
+  // Source control methods (Git)
+  scm: {
+    status: (request) => ipcRenderer.invoke(IPC_CHANNELS.SCM_STATUS, request),
+    stage: (request) => ipcRenderer.invoke(IPC_CHANNELS.SCM_STAGE, request),
+    unstage: (request) => ipcRenderer.invoke(IPC_CHANNELS.SCM_UNSTAGE, request),
+    commit: (request) => ipcRenderer.invoke(IPC_CHANNELS.SCM_COMMIT, request),
+  },
+
   // Agent runs + events (read-only stream + controls)
   agents: {
     listRuns: () => ipcRenderer.invoke(IPC_CHANNELS.AGENT_RUNS_LIST),
@@ -236,6 +250,11 @@ const api: PreloadAPI = {
 // This ensures the renderer cannot access raw ipcRenderer or Node.js APIs
 contextBridge.exposeInMainWorld('api', api);
 
+const menuIpcHandlers = new Map<
+  string,
+  Map<(...args: unknown[]) => void, (...args: unknown[]) => void>
+>();
+
 // Expose limited ipcRenderer for menu events (main -> renderer communication)
 // P2: Only expose specific methods needed for menu event handling
 contextBridge.exposeInMainWorld('electron', {
@@ -249,10 +268,28 @@ contextBridge.exposeInMainWorld('electron', {
         IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
       ]);
       if (validChannels.has(channel)) {
-        // Remove all previous listeners for this channel before adding new one
-        ipcRenderer.removeAllListeners(channel);
-        ipcRenderer.on(channel, (_, ...args) => func(...args));
+        const channelHandlers = menuIpcHandlers.get(channel) ?? new Map();
+        const existing = channelHandlers.get(func);
+        if (existing) {
+          ipcRenderer.removeListener(channel, existing);
+        }
+        const wrapped = (_event: IpcRendererEvent, ...args: unknown[]) => func(...args);
+        channelHandlers.set(func, wrapped);
+        menuIpcHandlers.set(channel, channelHandlers);
+        ipcRenderer.on(channel, wrapped);
+        return () => {
+          const currentHandlers = menuIpcHandlers.get(channel);
+          const current = currentHandlers?.get(func);
+          if (current) {
+            ipcRenderer.removeListener(channel, current);
+            currentHandlers?.delete(func);
+            if (currentHandlers?.size === 0) {
+              menuIpcHandlers.delete(channel);
+            }
+          }
+        };
       }
+      return () => {};
     },
     removeListener: (channel: string, func: (...args: unknown[]) => void) => {
       const validChannels = new Set<string>([
@@ -262,6 +299,16 @@ contextBridge.exposeInMainWorld('electron', {
         IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
       ]);
       if (validChannels.has(channel)) {
+        const channelHandlers = menuIpcHandlers.get(channel);
+        const wrapped = channelHandlers?.get(func);
+        if (wrapped) {
+          ipcRenderer.removeListener(channel, wrapped);
+          channelHandlers?.delete(func);
+          if (channelHandlers?.size === 0) {
+            menuIpcHandlers.delete(channel);
+          }
+          return;
+        }
         ipcRenderer.removeListener(channel, func);
       }
     },

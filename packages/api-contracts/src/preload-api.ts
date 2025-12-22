@@ -32,6 +32,19 @@ import type {
   OutputClearEvent,
 } from './types/output';
 import type {
+  SearchRequest,
+  SearchResponse,
+  ReplaceRequest,
+  ReplaceResponse,
+} from './types/search';
+import type {
+  ScmStatusRequest,
+  ScmStatusResponse,
+  ScmStageRequest,
+  ScmUnstageRequest,
+  ScmCommitRequest,
+} from './types/scm';
+import type {
   PublishDiagnosticsRequest,
   ClearDiagnosticsRequest,
   ListDiagnosticsRequest,
@@ -193,7 +206,7 @@ export interface PreloadAPI {
      * Reads directory contents.
      * 
      * Returns entries sorted: folders first (alphabetical), then files (alphabetical).
-     * Dotfiles (starting with '.') are filtered out.
+     * Dotfiles and dotfolders are included.
      * 
      * @param request - Directory path (absolute or relative to workspace root)
      * @returns Promise resolving to ReadDirectoryResponse with sorted entries
@@ -476,6 +489,50 @@ export interface PreloadAPI {
      * @returns Unsubscribe function (call to remove listener)
      */
     onSummary(callback: (event: DiagnosticsSummaryEvent) => void): () => void;
+  };
+
+  /**
+   * Workspace search APIs.
+   *
+   * Security: search executes in main process only (P1).
+   */
+  search: {
+    /**
+     * Executes a workspace search.
+     */
+    query(request: SearchRequest): Promise<SearchResponse>;
+
+    /**
+     * Executes a replace operation.
+     */
+    replace(request: ReplaceRequest): Promise<ReplaceResponse>;
+  };
+
+  /**
+   * Source control APIs (Git).
+   *
+   * Security: Git commands run in main process only (P1).
+   */
+  scm: {
+    /**
+     * Gets SCM status.
+     */
+    status(request: ScmStatusRequest): Promise<ScmStatusResponse>;
+
+    /**
+     * Stages files or all changes.
+     */
+    stage(request: ScmStageRequest): Promise<void>;
+
+    /**
+     * Unstages files or all changes.
+     */
+    unstage(request: ScmUnstageRequest): Promise<void>;
+
+    /**
+     * Commits staged changes.
+     */
+    commit(request: ScmCommitRequest): Promise<void>;
   };
 
   /**

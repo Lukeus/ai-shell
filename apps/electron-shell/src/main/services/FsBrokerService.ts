@@ -8,6 +8,11 @@ import {
   FsError,
 } from 'packages-api-contracts';
 import { WorkspaceService } from './WorkspaceService';
+import {
+  resolvePathWithinWorkspace,
+  type WorkspacePathOptions,
+  WorkspacePathError,
+} from './workspace-paths';
 
 /**
  * FsBrokerService - Stateless filesystem broker with critical security validation.
@@ -55,7 +60,7 @@ export class FsBrokerService {
    * Read directory contents.
    * 
    * Returns entries sorted: folders first (alphabetical), then files (alphabetical).
-   * Dotfiles (starting with `.`) are filtered out.
+   * Dotfiles and dotfolders are included.
    * 
    * @param requestPath - Path to directory (absolute or relative to workspace root)
    * @returns ReadDirectoryResponse with sorted, filtered entries
@@ -64,35 +69,34 @@ export class FsBrokerService {
   public async readDirectory(requestPath: string): Promise<ReadDirectoryResponse> {
     try {
       // CRITICAL: Validate path before disk access
-      const validatedPath = this.validatePathWithinWorkspace(requestPath);
+      const validatedPath = await this.validatePathWithinWorkspace(requestPath, {
+        requireExisting: true,
+      });
 
       // Read directory with file types
       const dirents = await fs.promises.readdir(validatedPath, { withFileTypes: true });
 
-      // Filter out dotfiles and map to FileEntry
       const entries: FileEntry[] = await Promise.all(
-        dirents
-          .filter((dirent) => !dirent.name.startsWith('.'))
-          .map(async (dirent) => {
-            const entryPath = path.join(validatedPath, dirent.name);
-            const entry: FileEntry = {
-              name: dirent.name,
-              path: entryPath,
-              type: dirent.isDirectory() ? 'directory' : 'file',
-            };
+        dirents.map(async (dirent) => {
+          const entryPath = path.join(validatedPath, dirent.name);
+          const entry: FileEntry = {
+            name: dirent.name,
+            path: entryPath,
+            type: dirent.isDirectory() ? 'directory' : 'file',
+          };
 
-            // Add size for files
-            if (dirent.isFile()) {
-              try {
-                const stats = await fs.promises.stat(entryPath);
-                entry.size = stats.size;
-              } catch {
-                // Ignore stat errors, size is optional
-              }
+          // Add size for files
+          if (dirent.isFile()) {
+            try {
+              const stats = await fs.promises.stat(entryPath);
+              entry.size = stats.size;
+            } catch {
+              // Ignore stat errors, size is optional
             }
+          }
 
-            return entry;
-          })
+          return entry;
+        })
       );
 
       // Sort: folders first (alphabetical), then files (alphabetical)
@@ -120,7 +124,9 @@ export class FsBrokerService {
   public async readFile(requestPath: string): Promise<ReadFileResponse> {
     try {
       // CRITICAL: Validate path before disk access
-      const validatedPath = this.validatePathWithinWorkspace(requestPath);
+      const validatedPath = await this.validatePathWithinWorkspace(requestPath, {
+        requireExisting: true,
+      });
 
       // Read file as UTF-8
       const content = await fs.promises.readFile(validatedPath, 'utf-8');
@@ -140,7 +146,9 @@ export class FsBrokerService {
    */
   public async writeFile(requestPath: string, content: string): Promise<void> {
     try {
-      const validatedPath = this.validatePathWithinWorkspace(requestPath);
+      const validatedPath = await this.validatePathWithinWorkspace(requestPath, {
+        requireExisting: false,
+      });
       await fs.promises.writeFile(validatedPath, content, 'utf-8');
     } catch (error) {
       throw this.mapErrorToFsError(error, requestPath);
@@ -157,7 +165,9 @@ export class FsBrokerService {
   public async createFile(requestPath: string, content: string = ''): Promise<void> {
     try {
       // CRITICAL: Validate path before disk access
-      const validatedPath = this.validatePathWithinWorkspace(requestPath);
+      const validatedPath = await this.validatePathWithinWorkspace(requestPath, {
+        requireExisting: false,
+      });
 
       // Validate filename
       const filename = path.basename(validatedPath);
@@ -181,7 +191,9 @@ export class FsBrokerService {
   public async createDirectory(requestPath: string): Promise<void> {
     try {
       // CRITICAL: Validate path before disk access
-      const validatedPath = this.validatePathWithinWorkspace(requestPath);
+      const validatedPath = await this.validatePathWithinWorkspace(requestPath, {
+        requireExisting: false,
+      });
 
       // Validate directory name
       const dirname = path.basename(validatedPath);
@@ -204,8 +216,12 @@ export class FsBrokerService {
   public async rename(oldPath: string, newPath: string): Promise<void> {
     try {
       // CRITICAL: Validate both paths before disk access
-      const validatedOldPath = this.validatePathWithinWorkspace(oldPath);
-      const validatedNewPath = this.validatePathWithinWorkspace(newPath);
+      const validatedOldPath = await this.validatePathWithinWorkspace(oldPath, {
+        requireExisting: true,
+      });
+      const validatedNewPath = await this.validatePathWithinWorkspace(newPath, {
+        requireExisting: false,
+      });
 
       // Validate new filename
       const newFilename = path.basename(validatedNewPath);
@@ -230,7 +246,9 @@ export class FsBrokerService {
   public async delete(requestPath: string): Promise<void> {
     try {
       // CRITICAL: Validate path before disk access
-      const validatedPath = this.validatePathWithinWorkspace(requestPath);
+      const validatedPath = await this.validatePathWithinWorkspace(requestPath, {
+        requireExisting: true,
+      });
 
       // Move to OS trash (safer than permanent delete)
       await shell.trashItem(validatedPath);
@@ -255,7 +273,10 @@ export class FsBrokerService {
    * 3. Check starts with workspace root
    * 4. Reject if validation fails
    */
-  private validatePathWithinWorkspace(requestPath: string): string {
+  private async validatePathWithinWorkspace(
+    requestPath: string,
+    options: WorkspacePathOptions = {}
+  ): Promise<string> {
     // Get current workspace
     const workspace = this.workspaceService.getWorkspace();
     if (!workspace) {
@@ -266,38 +287,18 @@ export class FsBrokerService {
       throw error;
     }
 
-    const workspaceRoot = workspace.path;
-
-    // Resolve path to absolute (if relative, relative to workspace root)
-    const absolutePath = path.isAbsolute(requestPath)
-      ? requestPath
-      : path.join(workspaceRoot, requestPath);
-
-    // Normalize to remove .., ., redundant separators
-    const normalizedPath = path.normalize(absolutePath);
-
-    // CRITICAL: Check path starts with workspace root
-    // Use resolve to ensure consistent path format for comparison
-    const resolvedPath = path.resolve(normalizedPath);
-    const resolvedRoot = path.resolve(workspaceRoot);
-
-    // On Windows, paths must match case-insensitively for drive letters
-    // On Unix, paths are case-sensitive
-    const isWindows = process.platform === 'win32';
-    const pathStartsWithRoot = isWindows
-      ? resolvedPath.toLowerCase().startsWith(resolvedRoot.toLowerCase() + path.sep) ||
-        resolvedPath.toLowerCase() === resolvedRoot.toLowerCase()
-      : resolvedPath.startsWith(resolvedRoot + path.sep) || resolvedPath === resolvedRoot;
-
-    if (!pathStartsWithRoot) {
-      const error: FsError = {
-        code: 'SECURITY_VIOLATION',
-        message: 'Invalid path: access outside workspace is not allowed.',
-      };
+    try {
+      return await resolvePathWithinWorkspace(requestPath, workspace.path, options);
+    } catch (error) {
+      if (error instanceof WorkspacePathError) {
+        const fsError: FsError = {
+          code: error.code,
+          message: error.message,
+        };
+        throw fsError;
+      }
       throw error;
     }
-
-    return resolvedPath;
   }
 
   /**

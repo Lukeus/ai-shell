@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { EventEmitter } from 'events';
@@ -8,6 +9,7 @@ import {
   TerminalExitEvent,
 } from 'packages-api-contracts';
 import { settingsService } from './SettingsService';
+import { isPathWithinRoot } from './workspace-paths';
 
 /**
  * TerminalService - Singleton service for managing PTY sessions.
@@ -141,7 +143,18 @@ export class TerminalService extends EventEmitter {
       const resolvedCwd = path.resolve(request.cwd);
       const resolvedWorkspace = path.resolve(workspaceRoot);
 
-      if (!resolvedCwd.startsWith(resolvedWorkspace)) {
+      let realCwd: string;
+      let realWorkspace: string;
+      try {
+        realCwd = fs.realpathSync(resolvedCwd);
+        realWorkspace = fs.realpathSync(resolvedWorkspace);
+      } catch {
+        throw new Error(
+          `Terminal cwd must be within workspace. cwd: ${resolvedCwd}, workspace: ${resolvedWorkspace}`
+        );
+      }
+
+      if (!isPathWithinRoot(realCwd, realWorkspace)) {
         throw new Error(
           `Terminal cwd must be within workspace. cwd: ${resolvedCwd}, workspace: ${resolvedWorkspace}`
         );

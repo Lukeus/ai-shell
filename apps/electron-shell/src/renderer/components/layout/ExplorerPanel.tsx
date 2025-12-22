@@ -3,6 +3,8 @@ import { useFileTree } from '../explorer/FileTreeContext';
 import { FileTree } from '../explorer/FileTree';
 import { ConfirmDeleteModal } from '../explorer/ConfirmDeleteModal';
 import { ExtensionsPanel } from '../extensions/ExtensionsPanel';
+import { SearchPanel } from '../search/SearchPanel';
+import { SourceControlPanel } from '../scm/SourceControlPanel';
 
 /**
  * ExplorerPanel - Root explorer component with file tree and header actions.
@@ -40,10 +42,23 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
     createFile,
     createFolder,
     deleteItem,
+    selectedEntry,
   } = useFileTree();
+  const [inlineInputMode, setInlineInputMode] = useState<InlineInputMode>(null);
+  const [inlineInputTargetPath, setInlineInputTargetPath] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   if (activeView === 'extensions') {
     return <ExtensionsPanel />;
+  }
+
+  if (activeView === 'search') {
+    return <SearchPanel />;
+  }
+
+  if (activeView === 'source-control') {
+    return <SourceControlPanel />;
   }
 
   if (activeView !== 'explorer') {
@@ -67,10 +82,6 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
     );
   }
 
-  const [inlineInputMode, setInlineInputMode] = useState<InlineInputMode>(null);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -80,12 +91,23 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
     }
   };
 
+  const getInlineInputTargetPath = () => {
+    if (!workspace) return null;
+    if (!selectedEntry) return workspace.path;
+    if (selectedEntry.type === 'directory') return selectedEntry.path;
+    const separatorIndex = selectedEntry.path.lastIndexOf('/');
+    if (separatorIndex <= 0) return workspace.path;
+    return selectedEntry.path.slice(0, separatorIndex);
+  };
+
   const handleNewFile = () => {
     setInlineInputMode('new-file');
+    setInlineInputTargetPath(getInlineInputTargetPath());
   };
 
   const handleNewFolder = () => {
     setInlineInputMode('new-folder');
+    setInlineInputTargetPath(getInlineInputTargetPath());
   };
 
   const handleCollapseAll = () => {
@@ -94,22 +116,25 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
 
   const handleInlineInputCommit = async (name: string) => {
     if (!workspace) return;
+    const targetPath = inlineInputTargetPath ?? workspace.path;
 
     try {
       if (inlineInputMode === 'new-file') {
-        await createFile(workspace.path, name);
+        await createFile(targetPath, name);
       } else if (inlineInputMode === 'new-folder') {
-        await createFolder(workspace.path, name);
+        await createFolder(targetPath, name);
       }
     } catch (err) {
       console.error('Failed to create item:', err);
     } finally {
       setInlineInputMode(null);
+      setInlineInputTargetPath(null);
     }
   };
 
   const handleInlineInputCancel = () => {
     setInlineInputMode(null);
+    setInlineInputTargetPath(null);
   };
 
   const handleRenameStart = (_path: string) => {
@@ -398,6 +423,7 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
       <div className="flex-1 overflow-hidden">
         <FileTree
           inlineInputMode={inlineInputMode}
+          inlineInputTargetPath={inlineInputTargetPath ?? workspace.path}
           onInlineInputCommit={handleInlineInputCommit}
           onInlineInputCancel={handleInlineInputCancel}
           onRenameStart={handleRenameStart}

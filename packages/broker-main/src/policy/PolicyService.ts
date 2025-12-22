@@ -1,9 +1,21 @@
-import {
+const {
   PolicyDecisionSchema,
   ToolCallEnvelopeSchema,
-  type PolicyDecision,
-  type ToolCallEnvelope,
-} from 'packages-api-contracts';
+} = require('packages-api-contracts');
+
+type PolicyDecision = {
+  allowed: boolean;
+  reason?: string;
+  scope: 'global' | 'run';
+};
+type ToolCallEnvelope = {
+  callId: string;
+  toolId: string;
+  requesterId: string;
+  runId: string;
+  input: unknown;
+  reason?: string;
+};
 
 type PolicyEvaluator = (envelope: ToolCallEnvelope) => PolicyDecision;
 

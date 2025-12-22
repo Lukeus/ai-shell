@@ -11,6 +11,7 @@ import path from 'path';
 import { app } from 'electron';
 import { JSONRPCBroker } from './json-rpc-broker';
 import { ExtensionStateManager } from './extension-state-manager';
+import { buildChildProcessEnv } from './child-env';
 
 interface ExtensionHostConfig {
   /** Path to Extension Host executable */
@@ -57,11 +58,12 @@ export class ExtensionHostManager {
       // P1: Using fork() for separate process with IPC communication
       this.childProcess = fork(this.config.extensionHostPath, [], {
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'], // stdin, stdout, stderr, ipc
-        env: {
-          ...process.env,
-          EXTENSIONS_DIR: this.config.extensionsDir,
-          NODE_ENV: process.env.NODE_ENV || 'production',
-        },
+        env: buildChildProcessEnv({
+          extra: {
+            EXTENSIONS_DIR: this.config.extensionsDir,
+            NODE_ENV: process.env.NODE_ENV || 'production',
+          },
+        }),
         cwd: app.getPath('userData'),
       });
 

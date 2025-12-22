@@ -5,6 +5,8 @@ import { registerIPCHandlers } from './ipc-handlers';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
 import { terminalService } from './services/TerminalService';
+import { searchService } from './services/SearchService';
+import { gitService } from './services/GitService';
 import { connectionsService } from './services/ConnectionsService';
 import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
@@ -37,6 +39,22 @@ vi.mock('./services/TerminalService', () => ({
     resize: vi.fn(),
     close: vi.fn(),
     listSessions: vi.fn(),
+  },
+}));
+
+vi.mock('./services/SearchService', () => ({
+  searchService: {
+    search: vi.fn(),
+    replace: vi.fn(),
+  },
+}));
+
+vi.mock('./services/GitService', () => ({
+  gitService: {
+    getStatus: vi.fn(),
+    stage: vi.fn(),
+    unstage: vi.fn(),
+    commit: vi.fn(),
   },
 }));
 
@@ -486,6 +504,133 @@ describe('IPC Handlers', () => {
     });
   });
 
+  describe('Search handlers', () => {
+    it('should register SEARCH_QUERY handler', () => {
+      expect(handlers.has(IPC_CHANNELS.SEARCH_QUERY)).toBe(true);
+    });
+
+    it('should validate request and call searchService.search', async () => {
+      const mockResponse = { results: [], truncated: false };
+      vi.mocked(searchService.search).mockResolvedValue(mockResponse);
+
+      const handler = getHandler(IPC_CHANNELS.SEARCH_QUERY);
+      const result = await handler(null, { query: 'test' });
+
+      expect(searchService.search).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'test' })
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should reject invalid search request', async () => {
+      const handler = getHandler(IPC_CHANNELS.SEARCH_QUERY);
+      await expect(handler(null, { invalidField: 'test' })).rejects.toThrow();
+    });
+
+    it('should register SEARCH_REPLACE handler', () => {
+      expect(handlers.has(IPC_CHANNELS.SEARCH_REPLACE)).toBe(true);
+    });
+
+    it('should validate request and call searchService.replace', async () => {
+      const mockResponse = { filesChanged: 1, replacements: 3 };
+      vi.mocked(searchService.replace).mockResolvedValue(mockResponse);
+
+      const handler = getHandler(IPC_CHANNELS.SEARCH_REPLACE);
+      const result = await handler(null, {
+        scope: 'workspace',
+        query: 'test',
+        replace: 'ok',
+      });
+
+      expect(searchService.replace).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'test', replace: 'ok' })
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should reject invalid replace request', async () => {
+      const handler = getHandler(IPC_CHANNELS.SEARCH_REPLACE);
+      await expect(handler(null, { query: 'test' })).rejects.toThrow();
+    });
+  });
+
+  describe('SCM handlers', () => {
+    it('should register SCM_STATUS handler', () => {
+      expect(handlers.has(IPC_CHANNELS.SCM_STATUS)).toBe(true);
+    });
+
+    it('should validate request and call gitService.getStatus', async () => {
+      const mockResponse = { staged: [], unstaged: [], untracked: [] };
+      vi.mocked(gitService.getStatus).mockResolvedValue(mockResponse);
+
+      const handler = getHandler(IPC_CHANNELS.SCM_STATUS);
+      const result = await handler(null, {});
+
+      expect(gitService.getStatus).toHaveBeenCalled();
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should register SCM_STAGE handler', () => {
+      expect(handlers.has(IPC_CHANNELS.SCM_STAGE)).toBe(true);
+    });
+
+    it('should validate request and call gitService.stage', async () => {
+      vi.mocked(gitService.stage).mockResolvedValue(undefined);
+
+      const handler = getHandler(IPC_CHANNELS.SCM_STAGE);
+      await handler(null, { all: true });
+
+      expect(gitService.stage).toHaveBeenCalledWith(
+        expect.objectContaining({ all: true })
+      );
+    });
+
+    it('should reject invalid stage request', async () => {
+      const handler = getHandler(IPC_CHANNELS.SCM_STAGE);
+      await expect(handler(null, {})).rejects.toThrow();
+    });
+
+    it('should register SCM_UNSTAGE handler', () => {
+      expect(handlers.has(IPC_CHANNELS.SCM_UNSTAGE)).toBe(true);
+    });
+
+    it('should validate request and call gitService.unstage', async () => {
+      vi.mocked(gitService.unstage).mockResolvedValue(undefined);
+
+      const handler = getHandler(IPC_CHANNELS.SCM_UNSTAGE);
+      await handler(null, { paths: ['file.txt'] });
+
+      expect(gitService.unstage).toHaveBeenCalledWith(
+        expect.objectContaining({ paths: ['file.txt'] })
+      );
+    });
+
+    it('should reject invalid unstage request', async () => {
+      const handler = getHandler(IPC_CHANNELS.SCM_UNSTAGE);
+      await expect(handler(null, {})).rejects.toThrow();
+    });
+
+    it('should register SCM_COMMIT handler', () => {
+      expect(handlers.has(IPC_CHANNELS.SCM_COMMIT)).toBe(true);
+    });
+
+    it('should validate request and call gitService.commit', async () => {
+      vi.mocked(gitService.commit).mockResolvedValue(undefined);
+
+      const handler = getHandler(IPC_CHANNELS.SCM_COMMIT);
+      await handler(null, { message: 'Initial commit' });
+
+      expect(gitService.commit).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Initial commit' })
+      );
+    });
+
+    it('should reject invalid commit request', async () => {
+      const handler = getHandler(IPC_CHANNELS.SCM_COMMIT);
+      await expect(handler(null, { message: '' })).rejects.toThrow();
+    });
+  });
+
   describe('Agent handlers', () => {
     it('should register AGENT_RUNS_LIST handler', () => {
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_LIST)).toBe(true);
@@ -898,7 +1043,7 @@ describe('IPC Handlers', () => {
   });
 
   describe('All handlers registered', () => {
-    it('should register all 34 expected IPC handlers', () => {
+    it('should register all 40 expected IPC handlers', () => {
       // Existing handlers (4)
       expect(handlers.has(IPC_CHANNELS.GET_VERSION)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.GET_SETTINGS)).toBe(true);
@@ -925,6 +1070,16 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.TERMINAL_CLOSE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.TERMINAL_LIST)).toBe(true);
 
+      // Search handlers (2)
+      expect(handlers.has(IPC_CHANNELS.SEARCH_QUERY)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SEARCH_REPLACE)).toBe(true);
+
+      // SCM handlers (4)
+      expect(handlers.has(IPC_CHANNELS.SCM_STATUS)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SCM_STAGE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SCM_UNSTAGE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SCM_COMMIT)).toBe(true);
+
       // Agent handlers (8)
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_GET)).toBe(true);
@@ -945,8 +1100,8 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_REQUEST_SECRET_ACCESS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_AUDIT_LIST)).toBe(true);
 
-      // Total: 34 handlers
-      expect(handlers.size).toBe(34);
+      // Total: 40 handlers
+      expect(handlers.size).toBe(40);
     });
   });
 });

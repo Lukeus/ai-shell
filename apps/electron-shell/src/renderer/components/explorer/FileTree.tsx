@@ -10,9 +10,9 @@ import { InlineInput } from './InlineInput';
  * - Recursive FileTreeNode rendering
  * - Empty states (no workspace, no files, error)
  * - Lazy-loads directories on expand
- * - Inline input for new file/folder at tree root
+ * - Inline input for new file/folder at tree root or selected folder
  * - Sorts: folders first, then files (both alphabetical)
- * - Filters: dotfiles not rendered
+ * - Filters: none (dotfiles and dotfolders shown)
  * - Loading spinner during IPC calls
  * 
  * P1 (Process isolation): Uses FileTreeContext (IPC via window.api), no Node.js access
@@ -22,6 +22,8 @@ import { InlineInput } from './InlineInput';
 export interface FileTreeProps {
   /** Optional: Mode for showing inline input (null = not shown) */
   inlineInputMode?: 'new-file' | 'new-folder' | null;
+  /** Optional: Path for showing inline input under a folder */
+  inlineInputTargetPath?: string | null;
   /** Optional: Called when inline input commits (new file/folder) */
   onInlineInputCommit?: (name: string) => void;
   /** Optional: Called when inline input cancels */
@@ -34,6 +36,7 @@ export interface FileTreeProps {
 
 export function FileTree({
   inlineInputMode,
+  inlineInputTargetPath,
   onInlineInputCommit,
   onInlineInputCancel,
   onRenameStart,
@@ -48,6 +51,9 @@ export function FileTree({
   } = useFileTree();
 
   const [rootEntries, setRootEntries] = useState<typeof directoryCache extends Map<string, infer U> ? U : never>([]);
+  const resolvedInlineInputTargetPath = inlineInputMode
+    ? inlineInputTargetPath ?? workspace?.path ?? null
+    : null;
 
   // Load root directory when workspace changes
   useEffect(() => {
@@ -63,9 +69,7 @@ export function FileTree({
     const updateEntries = () => {
       if (workspace) {
         const entries = directoryCache.get(workspace.path) || [];
-        // Filter out dotfiles
-        const filtered = entries.filter((entry) => !entry.name.startsWith('.'));
-        setRootEntries(filtered);
+        setRootEntries(entries);
       } else {
         setRootEntries([]);
       }
@@ -194,7 +198,7 @@ export function FileTree({
       style={{ fontSize: 'var(--vscode-font-size-ui)' }}
     >
       {/* Inline input for new file/folder at root */}
-      {inlineInputMode && (
+      {inlineInputMode && resolvedInlineInputTargetPath === workspace?.path && (
         <InlineInput
           placeholder={inlineInputMode === 'new-file' ? 'New file name...' : 'New folder name...'}
           onCommit={onInlineInputCommit || (() => {})}
@@ -208,6 +212,10 @@ export function FileTree({
           key={entry.path}
           entry={entry}
           depth={0}
+          inlineInputMode={inlineInputMode}
+          inlineInputTargetPath={resolvedInlineInputTargetPath}
+          onInlineInputCommit={onInlineInputCommit}
+          onInlineInputCancel={onInlineInputCancel}
           onRenameStart={onRenameStart}
           onDelete={onDelete}
         />
