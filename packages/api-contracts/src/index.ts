@@ -26,6 +26,8 @@ export * from './types/extension-registry';
 export * from './types/fs-broker';
 export * from './types/layout-state';
 export * from './types/output';
+export * from './types/scm';
+export * from './types/search';
 export * from './types/secrets';
 export * from './types/settings';
 export * from './types/terminal';

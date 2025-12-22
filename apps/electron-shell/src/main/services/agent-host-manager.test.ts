@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'events';
 import { AgentHostManager } from './agent-host-manager';
 import { BrokerMain } from 'packages-broker-main';
+import { fork } from 'child_process';
 
 vi.mock('electron', () => ({
   app: {
@@ -47,13 +48,31 @@ vi.mock('packages-broker-main', () => {
 });
 
 describe('AgentHostManager built-in tools', () => {
+  let originalEnv: NodeJS.ProcessEnv;
+
+  const restoreProcessEnv = (env: NodeJS.ProcessEnv) => {
+    Object.keys(process.env).forEach((key) => {
+      delete process.env[key];
+    });
+    Object.assign(process.env, env);
+  };
+
   beforeEach(() => {
+    originalEnv = { ...process.env };
     const broker = BrokerMain as unknown as {
       lastInstance: { tools: Array<{ id: string }> } | null;
     };
     if (broker.lastInstance) {
       broker.lastInstance.tools = [];
     }
+
+    process.env.NODE_ENV = 'test';
+    process.env.PATH = '/mock/bin';
+    process.env.SECRET_TOKEN = 'shh';
+  });
+
+  afterEach(() => {
+    restoreProcessEnv(originalEnv);
   });
 
   it('registers built-in tools on start', async () => {
@@ -86,5 +105,16 @@ describe('AgentHostManager built-in tools', () => {
     const tools = broker.lastInstance?.tools.map((tool) => tool.id) ?? [];
 
     expect(tools).toHaveLength(4);
+  });
+
+  it('should allowlist environment variables for child process', async () => {
+    const manager = new AgentHostManager({ agentHostPath: 'fake-agent-host' });
+    await manager.start();
+
+    const env = vi.mocked(fork).mock.calls[0]?.[2]?.env as Record<string, string> | undefined;
+    expect(env).toBeDefined();
+    expect(env?.SECRET_TOKEN).toBeUndefined();
+    expect(env?.PATH ?? env?.Path).toBe('/mock/bin');
+    expect(env?.NODE_ENV).toBe('test');
   });
 });

@@ -90,6 +90,50 @@ Initial built-in tools registered via `packages/agent-tools`:
 - `workspace.write`
 - `workspace.update`
 
+## Search + Source Control
+
+Search and SCM features are implemented as main-process services with contracts-first IPC.
+
+### SearchService
+
+**Location**: `apps/electron-shell/src/main/services/SearchService.ts`
+
+**Responsibilities**:
+- Execute workspace-scoped search via `rg --json`
+- Parse matches into structured results
+- Enforce `maxResults` and return `truncated`
+- Execute replace operations in main only
+
+**IPC Channels**:
+- `search:query`
+- `search:replace`
+
+**Renderer Entry Point**:
+- `window.api.search.query()`
+- `window.api.search.replace()`
+
+### GitService
+
+**Location**: `apps/electron-shell/src/main/services/GitService.ts`
+
+**Responsibilities**:
+- Validate workspace is a Git repo (no network operations)
+- Parse `git status --porcelain=v1 -z` into grouped status
+- Stage/unstage files or all changes
+- Commit with a sanitized message
+
+**IPC Channels**:
+- `scm:status`
+- `scm:stage`
+- `scm:unstage`
+- `scm:commit`
+
+**Renderer Entry Point**:
+- `window.api.scm.status()`
+- `window.api.scm.stage()`
+- `window.api.scm.unstage()`
+- `window.api.scm.commit()`
+
 ## IPC Communication Flow
 
 ### Request/Response Pattern
@@ -280,6 +324,23 @@ const mainWindow = new BrowserWindow({
 - Never log secrets (even redacted)
 - Use Electron's `safeStorage` API exclusively
 - Handle secrets only in main process
+
+#### Child process environment allowlist
+
+Extension Host and Agent Host processes receive a filtered environment. Only the
+following variables are forwarded by default:
+- PATH/Path, PATHEXT
+- SYSTEMROOT, WINDIR, COMSPEC
+- TEMP, TMP, TMPDIR
+- HOME, USERPROFILE, HOMEPATH, HOMEDRIVE
+- APPDATA, LOCALAPPDATA
+- XDG_DATA_HOME, XDG_CONFIG_HOME, XDG_CACHE_HOME, XDG_RUNTIME_DIR
+- SHELL, TERM, TERM_PROGRAM, TERM_PROGRAM_VERSION
+- LANG, LC_ALL, LC_CTYPE
+
+Explicit entries added by the main process:
+- NODE_ENV
+- EXTENSIONS_DIR (extension host only)
 
 **Example** (future implementation):
 

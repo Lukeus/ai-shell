@@ -29,6 +29,7 @@ vi.mock('fs', async () => {
       writeFile: vi.fn(),
       mkdir: vi.fn(),
       rename: vi.fn(),
+      realpath: vi.fn(),
       stat: vi.fn(),
       access: vi.fn(),
     },
@@ -58,6 +59,7 @@ describe('FsBrokerService', () => {
 
     // Clear all mocks
     vi.clearAllMocks();
+    vi.mocked(fs.promises.realpath).mockImplementation(async (value: string) => value);
   });
 
   afterEach(() => {
@@ -120,7 +122,7 @@ describe('FsBrokerService', () => {
       expect(result.entries[3].type).toBe('file');
     });
 
-    it('should filter out dotfiles', async () => {
+    it('should include dotfiles and dotfolders', async () => {
       // Mock readdir with dotfiles
       const mockDirents = [
         { name: '.git', isDirectory: () => true, isFile: () => false },
@@ -133,9 +135,10 @@ describe('FsBrokerService', () => {
 
       const result = await service.readDirectory('./');
 
-      // Only visible.txt should be included
-      expect(result.entries).toHaveLength(1);
-      expect(result.entries[0].name).toBe('visible.txt');
+      expect(result.entries).toHaveLength(3);
+      expect(result.entries.map((entry) => entry.name)).toEqual(
+        expect.arrayContaining(['.git', '.env', 'visible.txt'])
+      );
     });
 
     it('should include file sizes', async () => {

@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import { BrokerMain, createVfsToolDefinitions, type AuditLogger } from './index';
 import { z } from 'zod';
-import type { ToolCallEnvelope } from 'packages-api-contracts';
+type ToolCallEnvelope = {
+  callId: string;
+  toolId: string;
+  requesterId: string;
+  runId: string;
+  input: unknown;
+};
 
 describe('BrokerMain with VFS tools', () => {
   let broker: BrokerMain;

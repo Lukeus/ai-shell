@@ -62,6 +62,12 @@ Add Zod-first schemas in `packages/api-contracts`:
 - IPC handler tests for contract validation.
 - Basic renderer tests for panel rendering and empty states.
 
+## Hardening follow-ups
+- Shared workspace path validator using realpath for FS/search/replace.
+- Terminal cwd validation hardened against prefix and symlink escapes.
+- Allowlist environment variables for extension/agent host spawns.
+- Preload menu IPC listener bookkeeping + unit test coverage.
+
 ## Rollout / migration
 - Panels ship disabled if no workspace.
 - SCM panel shows empty state when no Git repo.

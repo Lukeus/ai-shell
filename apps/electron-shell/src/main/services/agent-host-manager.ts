@@ -15,6 +15,7 @@ import * as brokerMainModule from 'packages-broker-main';
 import type { ExtensionToolService } from './extension-tool-service';
 import { fsBrokerService } from './FsBrokerService';
 import { workspaceService } from './WorkspaceService';
+import { buildChildProcessEnv } from './child-env';
 
 type BrokerMainInstance = InstanceType<typeof brokerMainModule.BrokerMain>;
 
@@ -86,10 +87,11 @@ export class AgentHostManager {
 
     this.childProcess = fork(this.config.agentHostPath, [], {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-      env: {
-        ...process.env,
-        NODE_ENV: process.env.NODE_ENV || 'production',
-      },
+      env: buildChildProcessEnv({
+        extra: {
+          NODE_ENV: process.env.NODE_ENV || 'production',
+        },
+      }),
       cwd: app.getPath('userData'),
     });
 

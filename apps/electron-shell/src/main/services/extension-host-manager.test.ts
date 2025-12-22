@@ -28,8 +28,18 @@ vi.mock('electron', () => ({
 describe('ExtensionHostManager', () => {
   let manager: ExtensionHostManager;
   let mockChildProcess: Partial<ChildProcess>;
+  let originalEnv: NodeJS.ProcessEnv;
+
+  const restoreProcessEnv = (env: NodeJS.ProcessEnv) => {
+    Object.keys(process.env).forEach((key) => {
+      delete process.env[key];
+    });
+    Object.assign(process.env, env);
+  };
 
   beforeEach(() => {
+    originalEnv = { ...process.env };
+
     // Reset mocks
     vi.clearAllMocks();
 
@@ -60,6 +70,10 @@ describe('ExtensionHostManager', () => {
       extensionHostPath: '/path/to/extension-host.js',
       extensionsDir: '/path/to/extensions',
     });
+
+    process.env.NODE_ENV = 'test';
+    process.env.PATH = '/mock/bin';
+    process.env.SECRET_TOKEN = 'shh';
   });
 
   afterEach(async () => {
@@ -67,6 +81,7 @@ describe('ExtensionHostManager', () => {
     if (manager.isRunning()) {
       await manager.stop();
     }
+    restoreProcessEnv(originalEnv);
   });
 
   describe('start', () => {
@@ -95,6 +110,17 @@ describe('ExtensionHostManager', () => {
       await manager.start();
 
       expect(manager.isRunning()).toBe(true);
+    });
+
+    it('should allowlist environment variables for child process', async () => {
+      await manager.start();
+
+      const env = mockFork.mock.calls[0]?.[2]?.env as Record<string, string> | undefined;
+      expect(env).toBeDefined();
+      expect(env?.SECRET_TOKEN).toBeUndefined();
+      expect(env?.PATH ?? env?.Path).toBe('/mock/bin');
+      expect(env?.EXTENSIONS_DIR).toBe('/path/to/extensions');
+      expect(env?.NODE_ENV).toBe('test');
     });
 
     it('should not start if already running', async () => {

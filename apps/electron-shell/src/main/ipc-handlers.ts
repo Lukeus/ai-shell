@@ -51,11 +51,22 @@ import {
   WindowStateSchema,
   ExtensionIdRequestSchema,
   ListExtensionsResponse,
+  SearchRequestSchema,
+  SearchResponse,
+  ReplaceRequestSchema,
+  ReplaceResponse,
+  ScmStatusRequestSchema,
+  ScmStatusResponse,
+  ScmStageRequestSchema,
+  ScmUnstageRequestSchema,
+  ScmCommitRequestSchema,
 } from 'packages-api-contracts';
 import { settingsService } from './services/SettingsService';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
 import { terminalService } from './services/TerminalService';
+import { searchService } from './services/SearchService';
+import { gitService } from './services/GitService';
 import { connectionsService } from './services/ConnectionsService';
 import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
@@ -388,6 +399,91 @@ export function registerIPCHandlers(): void {
       await fsBrokerService.delete(validated.path);
       // Note: recursive flag in schema but delete() doesn't use it
       // (shell.trashItem handles both files and directories)
+    }
+  );
+
+  // ========================================
+  // Search IPC Handlers
+  // P6 (Contracts-first): Validate all requests with Zod before processing
+  // P1 (Process isolation): Search runs in main process only
+  // ========================================
+
+  /**
+   * Handler for SEARCH_QUERY channel.
+   * Executes workspace search via SearchService.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.SEARCH_QUERY,
+    async (_event, request: unknown): Promise<SearchResponse> => {
+      const validated = SearchRequestSchema.parse(request);
+      return await searchService.search(validated);
+    }
+  );
+
+  /**
+   * Handler for SEARCH_REPLACE channel.
+   * Executes replace operation via SearchService.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.SEARCH_REPLACE,
+    async (_event, request: unknown): Promise<ReplaceResponse> => {
+      const validated = ReplaceRequestSchema.parse(request);
+      return await searchService.replace(validated);
+    }
+  );
+
+  // ========================================
+  // SCM IPC Handlers
+  // P6 (Contracts-first): Validate all requests with Zod before processing
+  // P1 (Process isolation): Git commands run in main process only
+  // P3 (Secrets): No remote operations or credentials logged
+  // ========================================
+
+  /**
+   * Handler for SCM_STATUS channel.
+   * Retrieves Git status via GitService.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.SCM_STATUS,
+    async (_event, request: unknown): Promise<ScmStatusResponse> => {
+      ScmStatusRequestSchema.parse(request ?? {});
+      return await gitService.getStatus();
+    }
+  );
+
+  /**
+   * Handler for SCM_STAGE channel.
+   * Stages files or all changes.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.SCM_STAGE,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = ScmStageRequestSchema.parse(request);
+      await gitService.stage(validated);
+    }
+  );
+
+  /**
+   * Handler for SCM_UNSTAGE channel.
+   * Unstages files or all changes.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.SCM_UNSTAGE,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = ScmUnstageRequestSchema.parse(request);
+      await gitService.unstage(validated);
+    }
+  );
+
+  /**
+   * Handler for SCM_COMMIT channel.
+   * Commits staged changes with a message.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.SCM_COMMIT,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = ScmCommitRequestSchema.parse(request);
+      await gitService.commit(validated);
     }
   );
 

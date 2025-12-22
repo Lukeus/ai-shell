@@ -44,7 +44,7 @@ export type ReadDirectoryRequest = z.infer<typeof ReadDirectoryRequestSchema>;
  * Response from readDirectory operation.
  * 
  * Entries are sorted: folders first (alphabetical), then files (alphabetical).
- * Dotfiles (starting with '.') are filtered out.
+ * Dotfiles and dotfolders are included.
  */
 export const ReadDirectoryResponseSchema = z.object({
   /** Array of file entries (sorted: folders first, then files, both alphabetical) */

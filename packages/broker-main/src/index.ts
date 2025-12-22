@@ -1,11 +1,27 @@
-import {
+const {
   JsonValueSchema,
   ToolCallEnvelopeSchema,
   ToolCallResultSchema,
-  type JsonValue,
-  type ToolCallEnvelope,
-  type ToolCallResult,
-} from 'packages-api-contracts';
+} = require('packages-api-contracts');
+
+type JsonValue = unknown;
+type ToolCallEnvelope = {
+  callId: string;
+  toolId: string;
+  requesterId: string;
+  runId: string;
+  input: JsonValue;
+  reason?: string;
+};
+type ToolCallResult = {
+  callId: string;
+  toolId: string;
+  runId: string;
+  ok: boolean;
+  durationMs: number;
+  output?: JsonValue;
+  error?: string;
+};
 import { ToolExecutor, ToolRegistry, type ToolDefinition } from 'packages-agent-tools';
 import { PolicyService } from './policy/PolicyService';
 

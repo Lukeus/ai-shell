@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { FileEntry } from 'packages-api-contracts';
 import { useFileTree } from './FileTreeContext';
 import { InlineInput } from './InlineInput';
@@ -10,7 +10,7 @@ import { InlineInput } from './InlineInput';
  * - Chevron icon for folders (expand/collapse)
  * - File/folder icon
  * - Label with filename
- * - Hover actions: rename and delete icons
+ * - Selection highlight for active item
  * - Inline editing for rename
  * - Recursive rendering for expanded folders
  * 
@@ -23,34 +23,54 @@ export interface FileTreeNodeProps {
   entry: FileEntry;
   /** Nesting depth (for indentation) */
   depth: number;
+  /** Optional: Mode for showing inline input (null = not shown) */
+  inlineInputMode?: 'new-file' | 'new-folder' | null;
+  /** Optional: Path for showing inline input under a folder */
+  inlineInputTargetPath?: string | null;
+  /** Optional: Called when inline input commits (new file/folder) */
+  onInlineInputCommit?: (name: string) => void;
+  /** Optional: Called when inline input cancels */
+  onInlineInputCancel?: () => void;
   /** Optional: Called when rename is requested (shows inline input) */
   onRenameStart?: (path: string) => void;
   /** Optional: Called when delete is requested */
   onDelete?: (path: string) => void;
 }
 
-export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTreeNodeProps) {
+export function FileTreeNode({
+  entry,
+  depth,
+  inlineInputMode,
+  inlineInputTargetPath,
+  onInlineInputCommit,
+  onInlineInputCancel,
+  onRenameStart,
+  onDelete,
+}: FileTreeNodeProps) {
   const {
     expandedFolders,
     directoryCache,
     isLoading,
     toggleFolder,
     openFile,
+    selectedEntry,
+    setSelectedEntry,
   } = useFileTree();
 
-  const [isHovered, setIsHovered] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
 
   const isDirectory = entry.type === 'directory';
   const isExpanded = isDirectory && expandedFolders.has(entry.path);
   const children = isExpanded ? directoryCache.get(entry.path) || [] : [];
+  const isSelected = selectedEntry?.path === entry.path;
+  const showInlineInput = Boolean(inlineInputMode) && isDirectory && inlineInputTargetPath === entry.path;
 
-  // Filter out dotfiles
-  const filteredChildren = children.filter((child) => !child.name.startsWith('.'));
+  const filteredChildren = children;
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isDirectory) {
+      setSelectedEntry({ path: entry.path, type: entry.type });
       await toggleFolder(entry.path);
     }
   };
@@ -58,6 +78,7 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
   const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
+      setSelectedEntry({ path: entry.path, type: entry.type });
       if (isDirectory) {
         await toggleFolder(entry.path);
       } else {
@@ -67,29 +88,20 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
       e.preventDefault();
       setIsRenaming(true);
       onRenameStart?.(entry.path);
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      onDelete?.(entry.path);
     }
   };
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isDirectory) {
-      openFile(entry.path);
+    setSelectedEntry({ path: entry.path, type: entry.type });
+    if (isDirectory) {
+      void toggleFolder(entry.path);
+      return;
     }
-  };
-
-  const handleRename = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsRenaming(true);
-    if (onRenameStart) {
-      onRenameStart(entry.path);
-    }
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onDelete) {
-      onDelete(entry.path);
-    }
+    openFile(entry.path);
   };
 
   const handleRenameCommit = async (_newName: string) => {
@@ -101,6 +113,12 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
   const handleRenameCancel = () => {
     setIsRenaming(false);
   };
+
+  useEffect(() => {
+    if (showInlineInput && !isExpanded) {
+      void toggleFolder(entry.path);
+    }
+  }, [entry.path, isExpanded, showInlineInput, toggleFolder]);
 
   // Calculate indentation based on depth
   const indentStyle = {
@@ -127,16 +145,15 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
       <div
         className={`
           flex items-center cursor-pointer select-none
-          hover:bg-[var(--vscode-list-hoverBackground)]
+          ${isSelected ? 'bg-[var(--vscode-list-activeSelectionBackground)]' : 'hover:bg-[var(--vscode-list-hoverBackground)]'}
           text-primary
         `}
         style={indentStyle}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         role="treeitem"
         aria-expanded={isDirectory ? isExpanded : undefined}
+        aria-selected={isSelected}
         aria-label={`${isDirectory ? 'Folder' : 'File'}: ${entry.name}`}
         tabIndex={0}
       >
@@ -193,40 +210,29 @@ export function FileTreeNode({ entry, depth, onRenameStart, onDelete }: FileTree
           </div>
         )}
 
-        {/* Hover actions */}
-        {isHovered && !isLoading && (
-          <div className="flex items-center gap-1 ml-2">
-            {/* Rename button */}
-            <button
-              className="flex items-center justify-center w-4 h-4 hover:bg-[var(--vscode-list-hoverBackground)]"
-              onClick={handleRename}
-              aria-label="Rename"
-              title="Rename"
-            >
-              <span className="codicon codicon-edit" aria-hidden="true" />
-            </button>
-
-            {/* Delete button */}
-            <button
-              className="flex items-center justify-center w-4 h-4 hover:bg-[var(--vscode-list-hoverBackground)] text-status-error"
-              onClick={handleDelete}
-              aria-label="Delete"
-              title="Delete"
-            >
-              <span className="codicon codicon-trash" aria-hidden="true" />
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Recursive children rendering */}
-      {isExpanded && filteredChildren.length > 0 && (
+      {isExpanded && (filteredChildren.length > 0 || showInlineInput) && (
         <div role="group">
+          {showInlineInput && (
+            <div style={{ paddingLeft: `${(depth + 1) * 16 + 8}px` }}>
+              <InlineInput
+                placeholder={inlineInputMode === 'new-file' ? 'New file name...' : 'New folder name...'}
+                onCommit={onInlineInputCommit || (() => {})}
+                onCancel={onInlineInputCancel || (() => {})}
+              />
+            </div>
+          )}
           {filteredChildren.map((child) => (
             <FileTreeNode
               key={child.path}
               entry={child}
               depth={depth + 1}
+              inlineInputMode={inlineInputMode}
+              inlineInputTargetPath={inlineInputTargetPath}
+              onInlineInputCommit={onInlineInputCommit}
+              onInlineInputCancel={onInlineInputCancel}
               onRenameStart={onRenameStart}
               onDelete={onDelete}
             />

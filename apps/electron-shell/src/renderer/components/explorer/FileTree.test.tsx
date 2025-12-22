@@ -192,7 +192,7 @@ describe('FileTree', () => {
       expect(items[3]).toHaveTextContent('zzz-file.txt');
     });
 
-    it('should filter out dotfiles', async () => {
+    it('should show dotfiles and dotfolders', async () => {
       mockApi.workspace.getCurrent.mockResolvedValue(mockWorkspace);
       const entriesWithDotfiles: FileEntry[] = [
         { name: '.hidden-file', path: '/test/workspace/.hidden-file', type: 'file', size: 100 },
@@ -213,8 +213,8 @@ describe('FileTree', () => {
       });
 
       expect(screen.getByText('visible-folder')).toBeInTheDocument();
-      expect(screen.queryByText('.hidden-file')).not.toBeInTheDocument();
-      expect(screen.queryByText('.hidden-folder')).not.toBeInTheDocument();
+      expect(screen.getByText('.hidden-file')).toBeInTheDocument();
+      expect(screen.getByText('.hidden-folder')).toBeInTheDocument();
     });
   });
 

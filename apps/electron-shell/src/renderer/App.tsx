@@ -95,6 +95,7 @@ function AppContent() {
   const primarySidebarView = isSettingsView ? 'explorer' : state.activeActivityBarIcon;
   const [menuBarVisible, setMenuBarVisible] = useState(SETTINGS_DEFAULTS.appearance.menuBarVisible);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [branchName, setBranchName] = useState<string | null>(null);
   const isMac = typeof navigator !== 'undefined'
     ? (navigator.platform || navigator.userAgent || '').toLowerCase().includes('mac')
     : false;
@@ -142,6 +143,39 @@ function AppContent() {
       settingsEventTarget.removeEventListener('ai-shell:settings-updated', handleSettingsUpdated);
     };
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const handleScmUpdate = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { branch?: string | null } | undefined;
+      if (!isActive) return;
+      setBranchName(detail?.branch ?? null);
+    };
+
+    const refreshBranch = async () => {
+      if (!workspace) {
+        setBranchName(null);
+        return;
+      }
+      try {
+        const response = await window.api.scm.status({});
+        if (isActive) {
+          setBranchName(response.branch ?? null);
+        }
+      } catch (error) {
+        console.error('Failed to load SCM status:', error);
+      }
+    };
+
+    window.addEventListener('ai-shell:scm-status', handleScmUpdate);
+    void refreshBranch();
+
+    return () => {
+      isActive = false;
+      window.removeEventListener('ai-shell:scm-status', handleScmUpdate);
+    };
+  }, [workspace]);
   
   // P1 (Process isolation): Listen for menu events from main process
   useEffect(() => {
@@ -163,32 +197,29 @@ function AppContent() {
     };
     
     // Subscribe to menu events from main process
-    window.electron?.ipcRenderer?.on?.(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handleMenuWorkspaceOpen);
-    window.electron?.ipcRenderer?.on?.(IPC_CHANNELS.MENU_WORKSPACE_CLOSE, handleMenuWorkspaceClose);
-    window.electron?.ipcRenderer?.on?.(IPC_CHANNELS.MENU_REFRESH_EXPLORER, handleMenuRefreshExplorer);
-    window.electron?.ipcRenderer?.on?.(
+    const unsubscribeHandlers: Array<() => void> = [];
+    const addListener = (channel: string, handler: (...args: unknown[]) => void) => {
+      const unsubscribe = window.electron?.ipcRenderer?.on?.(channel, handler);
+      if (typeof unsubscribe === 'function') {
+        unsubscribeHandlers.push(unsubscribe);
+      } else {
+        unsubscribeHandlers.push(() => {
+          window.electron?.ipcRenderer?.removeListener?.(channel, handler);
+        });
+      }
+    };
+
+    addListener(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handleMenuWorkspaceOpen);
+    addListener(IPC_CHANNELS.MENU_WORKSPACE_CLOSE, handleMenuWorkspaceClose);
+    addListener(IPC_CHANNELS.MENU_REFRESH_EXPLORER, handleMenuRefreshExplorer);
+    addListener(
       IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
       handleMenuToggleSecondarySidebar
     );
     
     // Cleanup listeners on unmount
     return () => {
-      window.electron?.ipcRenderer?.removeListener?.(
-        IPC_CHANNELS.MENU_WORKSPACE_OPEN,
-        handleMenuWorkspaceOpen
-      );
-      window.electron?.ipcRenderer?.removeListener?.(
-        IPC_CHANNELS.MENU_WORKSPACE_CLOSE,
-        handleMenuWorkspaceClose
-      );
-      window.electron?.ipcRenderer?.removeListener?.(
-        IPC_CHANNELS.MENU_REFRESH_EXPLORER,
-        handleMenuRefreshExplorer
-      );
-      window.electron?.ipcRenderer?.removeListener?.(
-        IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
-        handleMenuToggleSecondarySidebar
-      );
+      unsubscribeHandlers.forEach((unsubscribe) => unsubscribe());
     };
   }, [openWorkspace, closeWorkspace, refresh, toggleSecondarySidebar]);
 
@@ -465,8 +496,8 @@ function AppContent() {
                 {
                   id: 'git',
                   icon: 'codicon-source-control',
-                  label: 'main',
-                  tooltip: 'Git branch (placeholder)',
+                  label: branchName ?? 'No Repo',
+                  tooltip: branchName ? `Git branch: ${branchName}` : 'No Git repository',
                 },
               ]}
               rightItems={[

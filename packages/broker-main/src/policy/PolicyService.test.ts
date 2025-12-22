@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'crypto';
-import type { ToolCallEnvelope } from 'packages-api-contracts';
 import { PolicyService } from './PolicyService';
+
+type ToolCallEnvelope = {
+  callId: string;
+  toolId: string;
+  requesterId: string;
+  runId: string;
+  input: unknown;
+};
 
 const buildEnvelope = (toolId: string): ToolCallEnvelope => ({
   callId: randomUUID(),
