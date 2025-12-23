@@ -57,6 +57,7 @@ export class SddTraceService {
   private index: SddIndex | null = null;
   private selectedTask: { featureId: string; taskId: string } | null = null;
   private statusListeners = new Set<(status: SddStatus) => void>();
+  private commitOverride: { reason: string; createdAt: string } | null = null;
 
   private constructor() {
     this.workspaceService = WorkspaceService.getInstance();
@@ -77,6 +78,9 @@ export class SddTraceService {
       await this.abortActiveRun('system');
     }
     this.enabled = enabled;
+    if (!enabled) {
+      this.commitOverride = null;
+    }
     await this.emitStatusChange();
   }
 
@@ -238,7 +242,7 @@ export class SddTraceService {
       return;
     }
 
-    const sanitizedReason = reason.trim().slice(0, 500);
+    const sanitizedReason = this.sanitizeReason(reason);
     if (!sanitizedReason) {
       throw new Error('Override reason is required.');
     }
@@ -258,6 +262,55 @@ export class SddTraceService {
           }
         : undefined,
       meta: { reason: sanitizedReason },
+    };
+
+    await this.recordEvent(event, paths);
+    this.commitOverride = { reason: sanitizedReason, createdAt: now };
+    await this.emitStatusChange();
+  }
+
+  public consumeCommitOverride(): { reason: string; createdAt: string } | null {
+    const override = this.commitOverride;
+    this.commitOverride = null;
+    return override;
+  }
+
+  public async recordCommitEvent(params: {
+    type: 'COMMIT_BLOCKED' | 'COMMIT_SUCCEEDED';
+    reason?: string;
+    driftFiles?: string[];
+    actor?: string;
+  }): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+
+    const paths = await this.ensureStorage();
+    const now = new Date().toISOString();
+    const meta: Record<string, string | number | boolean | null> = {};
+    if (params.reason) {
+      const sanitized = this.sanitizeReason(params.reason);
+      if (sanitized) {
+        meta.reason = sanitized;
+      }
+    }
+    if (params.driftFiles) {
+      meta.driftFilesCount = params.driftFiles.length;
+    }
+
+    const event: SddEvent = {
+      v: SDD_SCHEMA_VERSION,
+      ts: now,
+      type: params.type,
+      actor: params.actor ?? 'human',
+      run: this.activeRun
+        ? {
+            runId: this.activeRun.runId,
+            featureId: this.activeRun.featureId,
+            taskId: this.activeRun.taskId,
+          }
+        : undefined,
+      meta: Object.keys(meta).length > 0 ? meta : undefined,
     };
 
     await this.recordEvent(event, paths);
@@ -533,6 +586,10 @@ export class SddTraceService {
 
   private async writeIndex(indexPath: string, index: SddIndex): Promise<void> {
     await fs.promises.writeFile(indexPath, JSON.stringify(index, null, 2), 'utf-8');
+  }
+
+  private sanitizeReason(reason: string): string {
+    return reason.trim().slice(0, 500);
   }
 
   private async ensureStorage(): Promise<StoragePaths> {

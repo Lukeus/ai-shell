@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'events';
+import { createHash } from 'crypto';
+import * as fs from 'fs';
 import { AgentHostManager } from './agent-host-manager';
 import { BrokerMain } from 'packages-broker-main';
 import { fork } from 'child_process';
+import { fsBrokerService } from './FsBrokerService';
+import { workspaceService } from './WorkspaceService';
+import { sddTraceService } from './SddTraceService';
+import { resolvePathWithinWorkspace } from './workspace-paths';
 
 vi.mock('electron', () => ({
   app: {
@@ -28,11 +34,11 @@ vi.mock('child_process', () => ({
 vi.mock('packages-broker-main', () => {
   class BrokerMain {
     static lastInstance: BrokerMain | null = null;
-    public tools: Array<{ id: string }> = [];
+    public tools: Array<{ id: string; execute?: (input: unknown) => unknown }> = [];
     constructor() {
       BrokerMain.lastInstance = this;
     }
-    registerToolDefinition(tool: { id: string }) {
+    registerToolDefinition(tool: { id: string; execute?: (input: unknown) => unknown }) {
       if (!this.tools.find((t) => t.id === tool.id)) {
         this.tools.push(tool);
       }
@@ -47,6 +53,28 @@ vi.mock('packages-broker-main', () => {
   return { BrokerMain };
 });
 
+vi.mock('./FsBrokerService', () => ({
+  fsBrokerService: {
+    createFile: vi.fn(),
+  },
+}));
+
+vi.mock('./WorkspaceService', () => ({
+  workspaceService: {
+    getWorkspace: vi.fn(),
+  },
+}));
+
+vi.mock('./SddTraceService', () => ({
+  sddTraceService: {
+    recordFileChange: vi.fn(),
+  },
+}));
+
+vi.mock('./workspace-paths', () => ({
+  resolvePathWithinWorkspace: vi.fn(),
+}));
+
 describe('AgentHostManager built-in tools', () => {
   let originalEnv: NodeJS.ProcessEnv;
 
@@ -58,6 +86,7 @@ describe('AgentHostManager built-in tools', () => {
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     originalEnv = { ...process.env };
     const broker = BrokerMain as unknown as {
       lastInstance: { tools: Array<{ id: string }> } | null;
@@ -116,5 +145,80 @@ describe('AgentHostManager built-in tools', () => {
     expect(env?.SECRET_TOKEN).toBeUndefined();
     expect(env?.PATH ?? env?.Path).toBe('/mock/bin');
     expect(env?.NODE_ENV).toBe('test');
+  });
+
+  it('records SDD metadata for workspace.write', async () => {
+    const manager = new AgentHostManager({ agentHostPath: 'fake-agent-host' });
+    vi.mocked(workspaceService.getWorkspace).mockReturnValue({
+      path: 'C:\\workspace',
+      name: 'workspace',
+    });
+    vi.mocked(resolvePathWithinWorkspace).mockResolvedValue('C:\\workspace\\file.txt');
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockResolvedValue({
+      isFile: () => true,
+    } as fs.Stats);
+    const readSpy = vi.spyOn(fs.promises, 'readFile').mockResolvedValue(Buffer.from('before'));
+    vi.mocked(fsBrokerService.createFile).mockResolvedValue(undefined);
+
+    await manager.start();
+
+    const broker = BrokerMain as unknown as {
+      lastInstance: { tools: Array<{ id: string; execute?: (input: unknown) => unknown }> } | null;
+    };
+    const tool = broker.lastInstance?.tools.find((item) => item.id === 'workspace.write');
+    expect(tool?.execute).toBeDefined();
+
+    await tool?.execute?.({ path: 'file.txt', content: 'after' });
+
+    const beforeHash = createHash('sha256').update('before').digest('hex');
+    const afterHash = createHash('sha256').update('after', 'utf8').digest('hex');
+
+    expect(fsBrokerService.createFile).toHaveBeenCalledWith('file.txt', 'after');
+    expect(sddTraceService.recordFileChange).toHaveBeenCalledWith({
+      path: 'C:\\workspace\\file.txt',
+      op: 'modified',
+      actor: 'agent',
+      hashBefore: beforeHash,
+      hashAfter: afterHash,
+    });
+
+    statSpy.mockRestore();
+    readSpy.mockRestore();
+  });
+
+  it('records SDD metadata for workspace.update on new files', async () => {
+    const manager = new AgentHostManager({ agentHostPath: 'fake-agent-host' });
+    vi.mocked(workspaceService.getWorkspace).mockReturnValue({
+      path: 'C:\\workspace',
+      name: 'workspace',
+    });
+    vi.mocked(resolvePathWithinWorkspace).mockResolvedValue('C:\\workspace\\new.txt');
+    const statSpy = vi
+      .spyOn(fs.promises, 'stat')
+      .mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    vi.mocked(fsBrokerService.createFile).mockResolvedValue(undefined);
+
+    await manager.start();
+
+    const broker = BrokerMain as unknown as {
+      lastInstance: { tools: Array<{ id: string; execute?: (input: unknown) => unknown }> } | null;
+    };
+    const tool = broker.lastInstance?.tools.find((item) => item.id === 'workspace.update');
+    expect(tool?.execute).toBeDefined();
+
+    await tool?.execute?.({ path: 'new.txt', content: 'content' });
+
+    const afterHash = createHash('sha256').update('content', 'utf8').digest('hex');
+
+    expect(fsBrokerService.createFile).toHaveBeenCalledWith('new.txt', 'content');
+    expect(sddTraceService.recordFileChange).toHaveBeenCalledWith({
+      path: 'C:\\workspace\\new.txt',
+      op: 'added',
+      actor: 'agent',
+      hashBefore: undefined,
+      hashAfter: afterHash,
+    });
+
+    statSpy.mockRestore();
   });
 });

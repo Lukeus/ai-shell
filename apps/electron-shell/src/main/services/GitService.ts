@@ -6,8 +6,11 @@ import type {
   ScmUnstageRequest,
   ScmCommitRequest,
   ScmFileStatus,
+  ScmCommitResponse,
 } from 'packages-api-contracts';
 import { WorkspaceService } from './WorkspaceService';
+import { settingsService } from './SettingsService';
+import { sddTraceService } from './SddTraceService';
 
 type StatusEntry = {
   status: string;
@@ -102,7 +105,7 @@ export class GitService {
     await this.runGit(['reset', '--', ...paths], workspaceRoot);
   }
 
-  public async commit(request: ScmCommitRequest): Promise<void> {
+  public async commit(request: ScmCommitRequest): Promise<ScmCommitResponse> {
     const workspaceRoot = this.getWorkspaceRoot();
     await this.ensureGitRepo(workspaceRoot);
 
@@ -111,7 +114,53 @@ export class GitService {
       throw new Error('Commit message is required.');
     }
 
+    const settings = settingsService.getSettings();
+    const enforcementEnabled =
+      settings.sdd.enabled && settings.sdd.blockCommitOnUntrackedCodeChanges;
+    if (enforcementEnabled && sddTraceService.isEnabled()) {
+      const override = sddTraceService.consumeCommitOverride();
+      if (!override) {
+      try {
+        const parity = await sddTraceService.getParity();
+        const driftFiles = parity.driftFiles ?? [];
+        if (parity.untrackedFileChanges > 0 || driftFiles.length > 0) {
+          const reason = 'Untracked code changes detected.';
+          try {
+            await sddTraceService.recordCommitEvent({
+              type: 'COMMIT_BLOCKED',
+              reason,
+              driftFiles,
+              actor: 'human',
+            });
+          } catch {
+            // Ignore trace recording failures.
+          }
+          return {
+            ok: false,
+            blocked: true,
+            reason,
+            untrackedFiles: driftFiles,
+            driftFiles,
+          };
+        }
+      } catch {
+        // Ignore parity lookup failures and allow commit.
+      }
+      }
+    }
+
     await this.runGit(['commit', '-m', message], workspaceRoot);
+    if (enforcementEnabled && sddTraceService.isEnabled()) {
+      try {
+        await sddTraceService.recordCommitEvent({
+          type: 'COMMIT_SUCCEEDED',
+          actor: 'human',
+        });
+      } catch {
+        // Ignore trace recording failures.
+      }
+    }
+    return { ok: true };
   }
 
   private async isGitRepo(cwd: string): Promise<boolean> {

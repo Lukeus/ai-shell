@@ -11,7 +11,7 @@ vi.mock('../explorer/FileTreeContext', () => ({
 const mockStatus = vi.fn();
 const mockStage = vi.fn();
 const mockUnstage = vi.fn();
-const mockCommit = vi.fn();
+const mockCommit = vi.fn().mockResolvedValue({ ok: true });
 
 beforeEach(() => {
   vi.clearAllMocks();

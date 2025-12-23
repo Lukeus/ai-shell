@@ -3,6 +3,9 @@ import { EventEmitter } from 'events';
 import { spawn } from 'child_process';
 import { GitService } from './GitService';
 import * as path from 'path';
+import { SETTINGS_DEFAULTS } from 'packages-api-contracts';
+import { settingsService } from './SettingsService';
+import { sddTraceService } from './SddTraceService';
 
 const workspaceRoot = vi.hoisted(() => path.resolve('workspace-root'));
 
@@ -19,6 +22,21 @@ vi.mock('./WorkspaceService', () => ({
 
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
+}));
+
+vi.mock('./SettingsService', () => ({
+  settingsService: {
+    getSettings: vi.fn(),
+  },
+}));
+
+vi.mock('./SddTraceService', () => ({
+  sddTraceService: {
+    getParity: vi.fn(),
+    recordCommitEvent: vi.fn(),
+    isEnabled: vi.fn(),
+    consumeCommitOverride: vi.fn(),
+  },
 }));
 
 type MockChild = EventEmitter & {
@@ -49,6 +67,9 @@ describe('GitService', () => {
     vi.clearAllMocks();
     // @ts-expect-error reset singleton for tests
     GitService.instance = null;
+    vi.mocked(settingsService.getSettings).mockReturnValue(SETTINGS_DEFAULTS);
+    vi.mocked(sddTraceService.isEnabled).mockReturnValue(false);
+    vi.mocked(sddTraceService.consumeCommitOverride).mockReturnValue(null);
   });
 
   it('returns empty status when workspace is not a git repo', async () => {
@@ -107,9 +128,15 @@ describe('GitService', () => {
   });
 
   it('stages specific paths relative to workspace', async () => {
-    vi.mocked(spawn).mockImplementation((_cmd, _args) => {
+    vi.mocked(spawn).mockImplementation((_cmd, args) => {
       const child = createChild();
-      queueMicrotask(() => emitResult(child, ''));
+      queueMicrotask(() => {
+        if (args.includes('--is-inside-work-tree')) {
+          emitResult(child, 'true');
+          return;
+        }
+        emitResult(child, '');
+      });
       return child;
     });
 
@@ -124,9 +151,15 @@ describe('GitService', () => {
   });
 
   it('stages all changes with -A', async () => {
-    vi.mocked(spawn).mockImplementation((_cmd, _args) => {
+    vi.mocked(spawn).mockImplementation((_cmd, args) => {
       const child = createChild();
-      queueMicrotask(() => emitResult(child, ''));
+      queueMicrotask(() => {
+        if (args.includes('--is-inside-work-tree')) {
+          emitResult(child, 'true');
+          return;
+        }
+        emitResult(child, '');
+      });
       return child;
     });
 
@@ -141,9 +174,15 @@ describe('GitService', () => {
   });
 
   it('rejects staging paths outside workspace', async () => {
-    vi.mocked(spawn).mockImplementation((_cmd, _args) => {
+    vi.mocked(spawn).mockImplementation((_cmd, args) => {
       const child = createChild();
-      queueMicrotask(() => emitResult(child, ''));
+      queueMicrotask(() => {
+        if (args.includes('--is-inside-work-tree')) {
+          emitResult(child, 'true');
+          return;
+        }
+        emitResult(child, '');
+      });
       return child;
     });
 
@@ -155,18 +194,154 @@ describe('GitService', () => {
   });
 
   it('commits with sanitized message', async () => {
-    vi.mocked(spawn).mockImplementation((_cmd, _args) => {
+    vi.mocked(spawn).mockImplementation((_cmd, args) => {
       const child = createChild();
-      queueMicrotask(() => emitResult(child, ''));
+      queueMicrotask(() => {
+        if (args.includes('--is-inside-work-tree')) {
+          emitResult(child, 'true');
+          return;
+        }
+        emitResult(child, '');
+      });
       return child;
     });
 
     const service = GitService.getInstance();
-    await service.commit({ message: '  hello   world  ' });
+    const result = await service.commit({ message: '  hello   world  ' });
 
+    expect(result).toEqual({ ok: true });
     expect(vi.mocked(spawn)).toHaveBeenCalledWith(
       'git',
       ['commit', '-m', 'hello world'],
+      expect.objectContaining({ cwd: workspaceRoot })
+    );
+  });
+
+  it('blocks commit when SDD enforcement detects untracked changes', async () => {
+    vi.mocked(settingsService.getSettings).mockReturnValue({
+      ...SETTINGS_DEFAULTS,
+      sdd: {
+        enabled: true,
+        blockCommitOnUntrackedCodeChanges: true,
+      },
+    });
+    vi.mocked(sddTraceService.isEnabled).mockReturnValue(true);
+    vi.mocked(sddTraceService.getParity).mockResolvedValue({
+      trackedFileChanges: 1,
+      untrackedFileChanges: 2,
+      trackedRatio: 0.33,
+      driftFiles: ['C:\\workspace\\drift.ts'],
+      staleDocs: [],
+    });
+
+    vi.mocked(spawn).mockImplementation((_cmd, args) => {
+      const child = createChild();
+      queueMicrotask(() => {
+        if (args.includes('--is-inside-work-tree')) {
+          emitResult(child, 'true');
+          return;
+        }
+        emitResult(child, '');
+      });
+      return child;
+    });
+
+    const service = GitService.getInstance();
+    const result = await service.commit({ message: 'block me' });
+
+    expect(result).toEqual({
+      ok: false,
+      blocked: true,
+      reason: 'Untracked code changes detected.',
+      untrackedFiles: ['C:\\workspace\\drift.ts'],
+      driftFiles: ['C:\\workspace\\drift.ts'],
+    });
+    expect(vi.mocked(spawn)).not.toHaveBeenCalledWith(
+      'git',
+      ['commit', '-m', 'block me'],
+      expect.anything()
+    );
+    expect(sddTraceService.recordCommitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'COMMIT_BLOCKED' })
+    );
+  });
+
+  it('commits when SDD enforcement is enabled but no drift exists', async () => {
+    vi.mocked(settingsService.getSettings).mockReturnValue({
+      ...SETTINGS_DEFAULTS,
+      sdd: {
+        enabled: true,
+        blockCommitOnUntrackedCodeChanges: true,
+      },
+    });
+    vi.mocked(sddTraceService.isEnabled).mockReturnValue(true);
+    vi.mocked(sddTraceService.getParity).mockResolvedValue({
+      trackedFileChanges: 1,
+      untrackedFileChanges: 0,
+      trackedRatio: 1,
+      driftFiles: [],
+      staleDocs: [],
+    });
+
+    vi.mocked(spawn).mockImplementation((_cmd, args) => {
+      const child = createChild();
+      queueMicrotask(() => {
+        if (args.includes('--is-inside-work-tree')) {
+          emitResult(child, 'true');
+          return;
+        }
+        emitResult(child, '');
+      });
+      return child;
+    });
+
+    const service = GitService.getInstance();
+    const result = await service.commit({ message: 'clean commit' });
+
+    expect(result).toEqual({ ok: true });
+    expect(vi.mocked(spawn)).toHaveBeenCalledWith(
+      'git',
+      ['commit', '-m', 'clean commit'],
+      expect.objectContaining({ cwd: workspaceRoot })
+    );
+    expect(sddTraceService.recordCommitEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'COMMIT_SUCCEEDED' })
+    );
+  });
+
+  it('allows commit when an override is present', async () => {
+    vi.mocked(settingsService.getSettings).mockReturnValue({
+      ...SETTINGS_DEFAULTS,
+      sdd: {
+        enabled: true,
+        blockCommitOnUntrackedCodeChanges: true,
+      },
+    });
+    vi.mocked(sddTraceService.isEnabled).mockReturnValue(true);
+    vi.mocked(sddTraceService.consumeCommitOverride).mockReturnValue({
+      reason: 'override',
+      createdAt: '2024-01-01T00:00:00.000Z',
+    });
+
+    vi.mocked(spawn).mockImplementation((_cmd, args) => {
+      const child = createChild();
+      queueMicrotask(() => {
+        if (args.includes('--is-inside-work-tree')) {
+          emitResult(child, 'true');
+          return;
+        }
+        emitResult(child, '');
+      });
+      return child;
+    });
+
+    const service = GitService.getInstance();
+    const result = await service.commit({ message: 'override commit' });
+
+    expect(result).toEqual({ ok: true });
+    expect(vi.mocked(spawn)).toHaveBeenCalledWith(
+      'git',
+      ['commit', '-m', 'override commit'],
       expect.objectContaining({ cwd: workspaceRoot })
     );
   });

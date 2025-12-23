@@ -1,6 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { TabBar, type Tab } from 'packages-ui-kit';
+import type { SddFileTraceResponse } from 'packages-api-contracts';
 import { useFileTree } from '../explorer/FileTreeContext';
+import { useSddStatus } from '../../hooks/useSddStatus';
+import { SddBadge } from '../sdd/SddBadge';
 
 /**
  * EditorTabBar - Horizontal tab bar for open editor files.
@@ -25,12 +28,16 @@ export function EditorTabBar() {
     closeOtherTabs,
     closeTabsToRight,
     setActiveTab,
+    setSelectedEntry,
+    workspace,
   } = useFileTree();
+  const { enabled: sddEnabled, status: sddStatus } = useSddStatus(workspace?.path);
   const [contextMenu, setContextMenu] = useState<{
     tabId: string;
     x: number;
     y: number;
   } | null>(null);
+  const [traceByPath, setTraceByPath] = useState<Record<string, SddFileTraceResponse | null>>({});
 
   const hasTabs = openTabs.length > 0;
 
@@ -46,14 +53,125 @@ export function EditorTabBar() {
     ? (activeTabIndex >= 0 ? openTabs[activeTabIndex] : openTabs[0])
     : '';
 
+  const untrackedSet = useMemo(
+    () => new Set(sddStatus?.parity?.driftFiles ?? []),
+    [sddStatus?.parity?.driftFiles]
+  );
+
+  const handleBadgeClick = useCallback(
+    (path: string) => {
+      setSelectedEntry({ path, type: 'file' });
+      window.dispatchEvent(new CustomEvent('ai-shell:open-sdd', { detail: { path } }));
+    },
+    [setSelectedEntry]
+  );
+
   const tabs: Tab[] = useMemo(() => {
-    return openTabs.map((path) => ({
-      id: path,
-      label: getBasename(path),
-      icon: <span className="codicon codicon-file" aria-hidden="true" />,
-      dirty: dirtyTabs.has(path),
-    }));
-  }, [openTabs, dirtyTabs]);
+    return openTabs.map((path) => {
+      let badge: React.ReactNode | undefined;
+      if (sddEnabled && sddStatus?.parity) {
+        const isUntracked = untrackedSet.has(path);
+        if (isUntracked) {
+          badge = (
+            <SddBadge
+              status="untracked"
+              title="Untracked change"
+              as="span"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleBadgeClick(path);
+              }}
+            />
+          );
+        } else {
+          const trace = traceByPath[path];
+          if (trace?.runs?.length) {
+            const run = trace.runs[0];
+            badge = (
+              <SddBadge
+                status="tracked"
+                title={`Tracked (${run.featureId} / ${run.taskId})`}
+                as="span"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleBadgeClick(path);
+                }}
+              />
+            );
+          }
+        }
+      }
+
+      return {
+        id: path,
+        label: getBasename(path),
+        icon: <span className="codicon codicon-file" aria-hidden="true" />,
+        dirty: dirtyTabs.has(path),
+        badge,
+      };
+    });
+  }, [openTabs, dirtyTabs, handleBadgeClick, sddEnabled, sddStatus, traceByPath, untrackedSet]);
+
+  useEffect(() => {
+    if (!sddEnabled) {
+      setTraceByPath({});
+      return;
+    }
+    setTraceByPath((prev) => {
+      const next: Record<string, SddFileTraceResponse | null> = {};
+      openTabs.forEach((path) => {
+        if (prev[path]) {
+          next[path] = prev[path];
+        }
+      });
+      return next;
+    });
+  }, [openTabs, sddEnabled]);
+
+  useEffect(() => {
+    if (!sddEnabled || typeof window.api?.sdd?.getFileTrace !== 'function') {
+      return;
+    }
+
+    const pathsToFetch = openTabs.filter(
+      (path) => !untrackedSet.has(path) && !traceByPath[path]
+    );
+    if (pathsToFetch.length === 0) {
+      return;
+    }
+
+    let isMounted = true;
+    const loadTraces = async () => {
+      await Promise.all(
+        pathsToFetch.map(async (path) => {
+          try {
+            const trace = await window.api.sdd.getFileTrace(path);
+            if (isMounted) {
+              setTraceByPath((prev) => ({ ...prev, [path]: trace }));
+            }
+          } catch (traceError) {
+            console.error('Failed to load SDD file trace:', traceError);
+            if (isMounted) {
+              setTraceByPath((prev) => ({ ...prev, [path]: null }));
+            }
+          }
+        })
+      );
+    };
+
+    void loadTraces();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    openTabs,
+    sddEnabled,
+    sddStatus?.parity?.trackedFileChanges,
+    sddStatus?.parity?.untrackedFileChanges,
+    traceByPath,
+    untrackedSet,
+  ]);
 
   const handleChange = (tabId: string) => {
     const index = openTabs.indexOf(tabId);

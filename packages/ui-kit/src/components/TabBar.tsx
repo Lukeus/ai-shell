@@ -24,6 +24,9 @@ export interface Tab {
 
   /** Whether the tab can be closed (default: true) */
   closable?: boolean;
+
+  /** Optional badge element to display after the label */
+  badge?: React.ReactNode;
 }
 
 /**
@@ -186,6 +189,7 @@ export function TabBar({
             <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 text-left">
               {tab.label}
             </span>
+            {tab.badge && <span className="flex items-center">{tab.badge}</span>}
             {isPinned && (
               <span className="codicon codicon-pin text-secondary" aria-hidden="true" />
             )}

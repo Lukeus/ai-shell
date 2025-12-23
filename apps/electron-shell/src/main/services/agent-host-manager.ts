@@ -1,5 +1,7 @@
 import { fork, spawn, type ChildProcess } from 'child_process';
 import { app } from 'electron';
+import { createHash } from 'crypto';
+import * as fs from 'fs';
 import {
   AgentEventSchema,
   AgentRunStartRequestSchema,
@@ -16,6 +18,8 @@ import type { ExtensionToolService } from './extension-tool-service';
 import { fsBrokerService } from './FsBrokerService';
 import { workspaceService } from './WorkspaceService';
 import { buildChildProcessEnv } from './child-env';
+import { sddTraceService } from './SddTraceService';
+import { resolvePathWithinWorkspace } from './workspace-paths';
 
 type BrokerMainInstance = InstanceType<typeof brokerMainModule.BrokerMain>;
 
@@ -223,6 +227,74 @@ export class AgentHostManager {
     this.childProcess?.send(response);
   }
 
+  private async buildAgentFileChange(
+    requestPath: string,
+    content: string
+  ): Promise<{
+    path: string;
+    op: 'added' | 'modified';
+    hashBefore?: string;
+    hashAfter: string;
+  } | null> {
+    const workspace = workspaceService.getWorkspace();
+    if (!workspace) {
+      return null;
+    }
+
+    let resolvedPath = requestPath;
+    try {
+      resolvedPath = await resolvePathWithinWorkspace(requestPath, workspace.path, {
+        requireExisting: false,
+      });
+    } catch {
+      return null;
+    }
+
+    const { exists, hashBefore } = await this.readExistingFileHash(resolvedPath);
+    const hashAfter = this.hashContent(content);
+
+    return {
+      path: resolvedPath,
+      op: exists ? 'modified' : 'added',
+      hashBefore,
+      hashAfter,
+    };
+  }
+
+  private async readExistingFileHash(
+    filePath: string
+  ): Promise<{ exists: boolean; hashBefore?: string }> {
+    try {
+      const stat = await fs.promises.stat(filePath);
+      if (!stat.isFile()) {
+        return { exists: false };
+      }
+      try {
+        const content = await fs.promises.readFile(filePath);
+        return { exists: true, hashBefore: createHash('sha256').update(content).digest('hex') };
+      } catch {
+        return { exists: true };
+      }
+    } catch (error) {
+      if (this.isMissingPathError(error)) {
+        return { exists: false };
+      }
+      return { exists: false };
+    }
+  }
+
+  private hashContent(content: string): string {
+    return createHash('sha256').update(content, 'utf8').digest('hex');
+  }
+
+  private isMissingPathError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === 'ENOENT' || code === 'ENOTDIR';
+  }
+
   private registerBuiltInTools(): void {
     if (this.builtInsRegistered) {
       return;
@@ -263,7 +335,21 @@ export class AgentHostManager {
       category: 'fs',
       execute: async (input) => {
         const { path, content } = input as z.infer<typeof workspaceWriteInput>;
+        const change = await this.buildAgentFileChange(path, content);
         await fsBrokerService.createFile(path, content);
+        if (change) {
+          try {
+            await sddTraceService.recordFileChange({
+              path: change.path,
+              op: change.op,
+              actor: 'agent',
+              hashBefore: change.hashBefore,
+              hashAfter: change.hashAfter,
+            });
+          } catch {
+            // Ignore SDD failures so agent tool execution succeeds.
+          }
+        }
         return { success: true };
       },
     });
@@ -276,7 +362,21 @@ export class AgentHostManager {
       category: 'fs',
       execute: async (input) => {
         const { path, content } = input as z.infer<typeof workspaceWriteInput>;
+        const change = await this.buildAgentFileChange(path, content);
         await fsBrokerService.createFile(path, content);
+        if (change) {
+          try {
+            await sddTraceService.recordFileChange({
+              path: change.path,
+              op: change.op,
+              actor: 'agent',
+              hashBefore: change.hashBefore,
+              hashAfter: change.hashAfter,
+            });
+          } catch {
+            // Ignore SDD failures so agent tool execution succeeds.
+          }
+        }
         return { success: true };
       },
     });

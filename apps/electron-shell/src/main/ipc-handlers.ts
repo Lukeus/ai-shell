@@ -62,6 +62,7 @@ import {
   ScmStageRequestSchema,
   ScmUnstageRequestSchema,
   ScmCommitRequestSchema,
+  ScmCommitResponse,
   SddListFeaturesRequestSchema,
   SddListFeaturesResponse,
   SddStartRunRequestSchema,
@@ -653,9 +654,9 @@ export function registerIPCHandlers(): void {
    */
   ipcMain.handle(
     IPC_CHANNELS.SCM_COMMIT,
-    async (_event, request: unknown): Promise<void> => {
+    async (_event, request: unknown): Promise<ScmCommitResponse> => {
       const validated = ScmCommitRequestSchema.parse(request);
-      await gitService.commit(validated);
+      return await gitService.commit(validated);
     }
   );
 

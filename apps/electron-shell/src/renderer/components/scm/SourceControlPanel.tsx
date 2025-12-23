@@ -129,7 +129,11 @@ export function SourceControlPanel() {
 
     setError(null);
     try {
-      await window.api.scm.commit({ message });
+      const result = await window.api.scm.commit({ message });
+      if (!result.ok) {
+        setError(result.reason ?? 'Commit blocked by policy.');
+        return;
+      }
       setCommitMessage('');
       await refreshStatus();
     } catch (err) {
@@ -320,11 +324,11 @@ export function SourceControlPanel() {
                 No files.
               </div>
             ) : (
-              <div className="flex flex-col">
+              <div className="sm:flex shrink-0 sm:flex-col hidden">
                 {group.items.map((item) => (
                   <div
                     key={`${group.id}-${item.path}`}
-                    className="flex items-center justify-between hover:bg-surface-hover"
+                    className="sm:flex items-center justify-between hover:bg-surface-hover"
                     style={{ padding: 'var(--vscode-space-2)' }}
                   >
                     <button

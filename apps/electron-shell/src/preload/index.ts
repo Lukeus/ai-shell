@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import { IPC_CHANNELS, PreloadAPI, WindowStateSchema } from 'packages-api-contracts';
+import {
+  IPC_CHANNELS,
+  PreloadAPI,
+  WindowStateSchema,
+  type SddStatus,
+} from 'packages-api-contracts';
 
 /**
  * Preload script that exposes a minimal, secure API to the renderer.
@@ -147,6 +152,31 @@ const api: PreloadAPI = {
     stage: (request) => ipcRenderer.invoke(IPC_CHANNELS.SCM_STAGE, request),
     unstage: (request) => ipcRenderer.invoke(IPC_CHANNELS.SCM_UNSTAGE, request),
     commit: (request) => ipcRenderer.invoke(IPC_CHANNELS.SCM_COMMIT, request),
+  },
+
+  // Spec-driven development (SDD) methods
+  sdd: {
+    listFeatures: () => ipcRenderer.invoke(IPC_CHANNELS.SDD_LIST_FEATURES),
+    status: () => ipcRenderer.invoke(IPC_CHANNELS.SDD_STATUS),
+    startRun: (request) => ipcRenderer.invoke(IPC_CHANNELS.SDD_START_RUN, request),
+    stopRun: () => ipcRenderer.invoke(IPC_CHANNELS.SDD_STOP_RUN),
+    setActiveTask: (featureId, taskId) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SDD_SET_ACTIVE_TASK, { featureId, taskId }),
+    getFileTrace: (path) => ipcRenderer.invoke(IPC_CHANNELS.SDD_GET_FILE_TRACE, { path }),
+    getTaskTrace: (featureId, taskId) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SDD_GET_TASK_TRACE, { featureId, taskId }),
+    getParity: () => ipcRenderer.invoke(IPC_CHANNELS.SDD_GET_PARITY),
+    onChange: (handler) => {
+      const listener = (_event: IpcRendererEvent, status: SddStatus) => {
+        handler(_event, status);
+      };
+      ipcRenderer.on(IPC_CHANNELS.SDD_CHANGED, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.SDD_CHANGED, listener);
+      };
+    },
+    overrideUntracked: (reason) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SDD_OVERRIDE_UNTRACKED, { reason }),
   },
 
   // Agent runs + events (read-only stream + controls)
