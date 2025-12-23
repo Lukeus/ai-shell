@@ -45,6 +45,7 @@ describe('SettingsPanel', () => {
       expect(screen.getByText('Appearance')).toBeInTheDocument();
       expect(screen.getByText('Editor')).toBeInTheDocument();
       expect(screen.getByText('Terminal')).toBeInTheDocument();
+      expect(screen.getByText('Agents')).toBeInTheDocument();
       expect(screen.getByText('SDD')).toBeInTheDocument();
       expect(screen.getByText('Connections')).toBeInTheDocument();
       expect(screen.getByText('Extensions')).toBeInTheDocument();

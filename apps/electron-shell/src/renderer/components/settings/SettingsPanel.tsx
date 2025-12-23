@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Settings, Theme } from 'packages-api-contracts';
+import type { Settings, Theme, PartialSettings } from 'packages-api-contracts';
 import { SearchBar } from './SearchBar';
 import { SettingsCategoryNav, type SettingsCategory } from './SettingsCategoryNav';
 import { SettingItem, type SettingType } from './SettingItem';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
+import { AgentsSettingsPanel } from './AgentsSettingsPanel';
 import { useTheme } from '../ThemeProvider';
 
 /**
@@ -29,6 +30,7 @@ const CATEGORIES: SettingsCategory[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'editor', label: 'Editor' },
   { id: 'terminal', label: 'Terminal' },
+  { id: 'agents', label: 'Agents' },
   { id: 'sdd', label: 'SDD' },
   { id: 'connections', label: 'Connections' },
   { id: 'extensions', label: 'Extensions' },
@@ -273,6 +275,7 @@ export function SettingsPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   // eslint-disable-next-line no-undef
   const [updateTimeoutId, setUpdateTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const isAgentsCategory = activeCategory === 'agents';
   const isConnectionsCategory = activeCategory === 'connections';
 
   /**
@@ -302,6 +305,34 @@ export function SettingsPanel() {
   /**
    * Debounced settings update (300ms)
    */
+  const applySettingsUpdate = useCallback(
+    async (updates: PartialSettings) => {
+      if (!settings) return;
+
+      const newSettings = {
+        ...settings,
+        appearance: { ...settings.appearance, ...updates.appearance },
+        editor: { ...settings.editor, ...updates.editor },
+        terminal: { ...settings.terminal, ...updates.terminal },
+        extensions: { ...settings.extensions, ...updates.extensions },
+        agents: { ...settings.agents, ...updates.agents },
+        sdd: { ...settings.sdd, ...updates.sdd },
+      };
+
+      setSettings(newSettings);
+      window.dispatchEvent(
+        new window.CustomEvent('ai-shell:settings-updated', { detail: newSettings })
+      );
+
+      try {
+        await window.api.updateSettings(updates);
+      } catch (error) {
+        console.error('Failed to update settings:', error);
+      }
+    },
+    [settings]
+  );
+
   const handleSettingChange = useCallback((key: string, value: string | number | boolean) => {
     if (!settings) return;
 
@@ -316,6 +347,7 @@ export function SettingsPanel() {
       editor: { ...settings.editor, ...updates.editor },
       terminal: { ...settings.terminal, ...updates.terminal },
       extensions: { ...settings.extensions, ...updates.extensions },
+      agents: { ...settings.agents, ...updates.agents },
       sdd: { ...settings.sdd, ...updates.sdd },
     };
     setSettings(newSettings);
@@ -349,7 +381,7 @@ export function SettingsPanel() {
    */
   const filteredSettings = useMemo(() => {
     if (!settings) return [];
-    if (isConnectionsCategory) return [];
+    if (isConnectionsCategory || isAgentsCategory) return [];
 
     let filtered = SETTINGS_DEFINITIONS;
 
@@ -367,7 +399,7 @@ export function SettingsPanel() {
     }
 
     return filtered;
-  }, [settings, activeCategory, searchQuery, isConnectionsCategory]);
+  }, [settings, activeCategory, searchQuery, isConnectionsCategory, isAgentsCategory]);
 
   if (!settings) {
     return (
@@ -429,6 +461,11 @@ export function SettingsPanel() {
         </div>
         {isConnectionsCategory ? (
           <ConnectionsPanel />
+        ) : isAgentsCategory ? (
+          <AgentsSettingsPanel
+            settings={settings}
+            onSettingsUpdate={applySettingsUpdate}
+          />
         ) : (
           <div
             className="flex-1 overflow-auto"

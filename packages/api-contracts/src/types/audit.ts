@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const AuditEventTypeSchema = z.enum([
   'secret-access',
   'agent-tool-access',
+  'model-call',
 ]);
 
 export type AuditEventType = z.infer<typeof AuditEventTypeSchema>;
@@ -34,9 +35,27 @@ export const AgentToolAccessAuditEventSchema = AuditEventBaseSchema.extend({
 
 export type AgentToolAccessAuditEvent = z.infer<typeof AgentToolAccessAuditEventSchema>;
 
+export const ModelCallAuditStatusSchema = z.enum(['success', 'error']);
+
+export type ModelCallAuditStatus = z.infer<typeof ModelCallAuditStatusSchema>;
+
+export const ModelCallAuditEventSchema = AuditEventBaseSchema.extend({
+  type: z.literal('model-call'),
+  runId: z.string().uuid(),
+  providerId: z.string(),
+  connectionId: z.string().uuid(),
+  modelRef: z.string().optional(),
+  status: ModelCallAuditStatusSchema,
+  durationMs: z.number().int().min(0),
+  error: z.string().optional(),
+});
+
+export type ModelCallAuditEvent = z.infer<typeof ModelCallAuditEventSchema>;
+
 export const AuditEventSchema = z.discriminatedUnion('type', [
   SecretAccessAuditEventSchema,
   AgentToolAccessAuditEventSchema,
+  ModelCallAuditEventSchema,
 ]);
 
 export type AuditEvent = z.infer<typeof AuditEventSchema>;

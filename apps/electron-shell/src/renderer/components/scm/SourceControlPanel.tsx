@@ -56,7 +56,7 @@ export function SourceControlPanel() {
       setIsLoading(true);
       const response = await window.api.scm.status({});
       setStatus(response);
-      window.dispatchEvent(new CustomEvent(SCM_STATUS_EVENT, { detail: response }));
+      window.dispatchEvent(new window.CustomEvent(SCM_STATUS_EVENT, { detail: response }));
       if (
         response.staged.length === 0 &&
         response.unstaged.length === 0 &&
@@ -79,7 +79,7 @@ export function SourceControlPanel() {
   const handleStage = useCallback(async (filePath: string) => {
     setError(null);
     try {
-      await window.api.scm.stage({ paths: [filePath] });
+      await window.api.scm.stage({ all: false, paths: [filePath] });
       await refreshStatus();
     } catch (err) {
       console.error('Failed to stage file:', err);
@@ -90,7 +90,7 @@ export function SourceControlPanel() {
   const handleUnstage = useCallback(async (filePath: string) => {
     setError(null);
     try {
-      await window.api.scm.unstage({ paths: [filePath] });
+      await window.api.scm.unstage({ all: false, paths: [filePath] });
       await refreshStatus();
     } catch (err) {
       console.error('Failed to unstage file:', err);

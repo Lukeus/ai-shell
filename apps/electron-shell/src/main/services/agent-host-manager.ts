@@ -6,6 +6,8 @@ import {
   AgentEventSchema,
   AgentRunStartRequestSchema,
   JsonValueSchema,
+  ModelGenerateRequestSchema,
+  ModelGenerateResponseSchema,
   ToolCallEnvelopeSchema,
   type AgentEvent,
   type AgentRunStartRequest,
@@ -20,6 +22,7 @@ import { workspaceService } from './WorkspaceService';
 import { buildChildProcessEnv } from './child-env';
 import { sddTraceService } from './SddTraceService';
 import { resolvePathWithinWorkspace } from './workspace-paths';
+import { modelGatewayService } from './ModelGatewayService';
 
 type BrokerMainInstance = InstanceType<typeof brokerMainModule.BrokerMain>;
 
@@ -448,6 +451,25 @@ export class AgentHostManager {
         });
 
         return { matches };
+      },
+    });
+
+    this.brokerMain.registerToolDefinition({
+      id: 'model.generate',
+      description: 'Generate a model response using a configured connection.',
+      inputSchema: ModelGenerateRequestSchema,
+      outputSchema: ModelGenerateResponseSchema,
+      category: 'net',
+      execute: async (input, context) => {
+        const envelope = context?.envelope as ToolCallEnvelope | undefined;
+        if (!envelope) {
+          throw new Error('Missing tool execution envelope.');
+        }
+        const request = ModelGenerateRequestSchema.parse(input);
+        return await modelGatewayService.generate(request, {
+          runId: envelope.runId,
+          requesterId: envelope.requesterId,
+        });
       },
     });
 

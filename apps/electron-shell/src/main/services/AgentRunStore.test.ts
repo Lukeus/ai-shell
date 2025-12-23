@@ -95,6 +95,25 @@ describe('AgentRunStore', () => {
     expect(second.nextCursor).toBeUndefined();
   });
 
+  it('updates routing metadata for a run', () => {
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const run = store.createRun('user');
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+
+    const updated = store.updateRunRouting(run.id, {
+      connectionId: '123e4567-e89b-12d3-a456-426614174000',
+      providerId: 'ollama',
+      modelRef: 'llama3',
+    });
+
+    expect(updated.routing?.providerId).toBe('ollama');
+    expect(updated.routing?.connectionId).toBe('123e4567-e89b-12d3-a456-426614174000');
+  });
+
   it('caps events per run', () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       throw new Error('ENOENT');

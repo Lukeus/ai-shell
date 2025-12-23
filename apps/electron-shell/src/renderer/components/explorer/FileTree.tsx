@@ -60,7 +60,7 @@ export function FileTree({
   const handleSddBadgeClick = useCallback(
     (path: string) => {
       setSelectedEntry({ path, type: 'file' });
-      window.dispatchEvent(new CustomEvent('ai-shell:open-sdd', { detail: { path } }));
+      window.dispatchEvent(new window.CustomEvent('ai-shell:open-sdd', { detail: { path } }));
     },
     [setSelectedEntry]
   );

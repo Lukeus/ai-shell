@@ -9,6 +9,49 @@ const mockDelete = vi.fn();
 const mockSetSecret = vi.fn();
 const mockReplaceSecret = vi.fn();
 const mockRequestSecretAccess = vi.fn();
+const mockListProviders = vi.fn();
+
+const sampleProviders = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    description: 'OpenAI API access',
+    fields: [
+      {
+        id: 'endpoint',
+        label: 'Endpoint',
+        type: 'string',
+        required: true,
+        placeholder: 'https://api.openai.com',
+      },
+      {
+        id: 'model',
+        label: 'Default model',
+        type: 'select',
+        required: false,
+        options: [
+          { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+          { value: 'gpt-4o', label: 'GPT-4o' },
+        ],
+        defaultValue: 'gpt-4o-mini',
+      },
+      {
+        id: 'organization',
+        label: 'Organization ID',
+        type: 'string',
+        required: false,
+        placeholder: 'org_...',
+      },
+      {
+        id: 'apiKey',
+        label: 'API key',
+        type: 'secret',
+        required: true,
+        placeholder: 'sk-***',
+      },
+    ],
+  },
+];
 
 const sampleConnection = {
   metadata: {
@@ -30,6 +73,7 @@ beforeEach(() => {
   (global as any).window = {
     api: {
       connections: {
+        listProviders: mockListProviders,
         list: mockList,
         create: mockCreate,
         update: mockUpdate,
@@ -50,6 +94,7 @@ afterEach(() => {
 
 describe('ConnectionsPanel', () => {
   it('renders connections list and details', async () => {
+    mockListProviders.mockResolvedValue({ providers: sampleProviders });
     mockList.mockResolvedValue({ connections: [sampleConnection] });
 
     render(<ConnectionsPanel />);
@@ -60,6 +105,7 @@ describe('ConnectionsPanel', () => {
   });
 
   it('replaces a stored secret from the detail view', async () => {
+    mockListProviders.mockResolvedValue({ providers: sampleProviders });
     mockList.mockResolvedValue({ connections: [sampleConnection] });
     mockReplaceSecret.mockResolvedValue({ secretRef: 'secret-ref' });
 

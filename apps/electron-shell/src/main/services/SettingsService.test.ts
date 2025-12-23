@@ -48,6 +48,7 @@ describe('SettingsService', () => {
         editor: { wordWrap: false, lineNumbers: true, minimap: false, breadcrumbsEnabled: true },
         terminal: { defaultShell: 'pwsh' },
         extensions: { autoUpdate: true, enableTelemetry: true },
+        agents: { defaultConnectionId: null },
         sdd: { enabled: true, blockCommitOnUntrackedCodeChanges: false },
       };
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockSettings));
@@ -153,6 +154,7 @@ describe('SettingsService', () => {
       expect(result.editor).toEqual(SETTINGS_DEFAULTS.editor);
       expect(result.terminal).toEqual(SETTINGS_DEFAULTS.terminal);
       expect(result.extensions).toEqual(SETTINGS_DEFAULTS.extensions);
+      expect(result.agents).toEqual(SETTINGS_DEFAULTS.agents);
       expect(result.sdd).toEqual(SETTINGS_DEFAULTS.sdd);
 
       // Verify persistence
@@ -226,6 +228,7 @@ describe('SettingsService', () => {
         editor: { wordWrap: true, lineNumbers: false, minimap: true },
         terminal: { defaultShell: 'pwsh' as const },
         extensions: { autoUpdate: false, enableTelemetry: false },
+        agents: { defaultConnectionId: '123e4567-e89b-12d3-a456-426614174000' },
         sdd: { enabled: true, blockCommitOnUntrackedCodeChanges: true },
       };
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(modifiedSettings));
@@ -345,7 +348,7 @@ describe('SettingsService', () => {
       expect(settings).not.toHaveProperty('secret');
       
       // All fields should be UI preferences only
-      const keys = ['appearance', 'editor', 'terminal', 'extensions', 'sdd'];
+      const keys = ['appearance', 'editor', 'terminal', 'extensions', 'agents', 'sdd'];
       expect(Object.keys(settings).sort()).toEqual(keys.sort());
     });
   });
