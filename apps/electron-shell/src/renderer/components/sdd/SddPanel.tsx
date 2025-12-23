@@ -316,7 +316,7 @@ export function SddPanel() {
 
   if (!workspace) {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
         <div
           className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
           style={{
@@ -337,7 +337,7 @@ export function SddPanel() {
 
   if (!enabled) {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
         <div
           className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
           style={{
@@ -357,9 +357,9 @@ export function SddPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div className="flex flex-col h-full min-h-0 bg-surface">
       <div
-        className="border-b border-border-subtle bg-surface-secondary"
+        className="border-b border-border-subtle bg-surface-secondary shrink-0"
         style={{ padding: 'var(--vscode-space-3)' }}
       >
         <div className="flex items-center justify-between gap-2">
@@ -432,7 +432,7 @@ export function SddPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto">
         {error && (
           <div
             className="text-status-error"

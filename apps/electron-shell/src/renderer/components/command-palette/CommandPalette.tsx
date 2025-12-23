@@ -317,7 +317,7 @@ export function CommandPalette({ isOpen, onClose, builtInCommands = [] }: Comman
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex justify-center bg-[var(--color-overlay)]"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"

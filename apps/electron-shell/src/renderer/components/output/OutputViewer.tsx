@@ -134,7 +134,7 @@ export function OutputViewer({
                 containerRef.current.scrollTop = containerRef.current.scrollHeight;
               }
             }}
-            className="px-3 py-2 bg-primary text-white text-sm rounded shadow-lg hover:bg-primary-hover transition-colors"
+            className="px-3 py-2 bg-accent text-[var(--vscode-button-foreground)] text-sm rounded shadow-lg hover:bg-accent-hover transition-colors"
             title="Scroll to bottom"
           >
             <svg

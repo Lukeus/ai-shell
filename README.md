@@ -7,8 +7,13 @@ An enterprise-grade Electron application shell with secure process architecture,
 ### Settings
 ![AI Shell Settings](docs/images/ui-settings.png)
 
-### SDD Settings
-![AI Shell Settings SDD (Spec Driven Development) ](docs/images/ui-settings-sdd.png)
+### SDD (Spec Driven Development) Settings
+
+![AI Shell Settings SDD ](docs/images/ui-settings-sdd.png)
+*SDD Settings*
+
+![AI Shell SDD panel ](docs/images/ui-settings-sdd-panel.png)
+*SDD Panel* 
 
 ## Features
 

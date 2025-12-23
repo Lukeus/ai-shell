@@ -144,7 +144,7 @@ export function SearchPanel() {
 
   if (!workspace) {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
         <div
           className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
           style={{
@@ -164,9 +164,9 @@ export function SearchPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div className="flex flex-col h-full min-h-0 bg-surface">
       <div
-        className="border-b border-border-subtle bg-surface-secondary"
+        className="border-b border-border-subtle bg-surface-secondary shrink-0"
         style={{
           padding: 'var(--vscode-space-3)',
         }}
@@ -266,7 +266,7 @@ export function SearchPanel() {
       </div>
 
       <div
-        className="flex-1 overflow-y-auto overflow-x-hidden"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
         style={{ paddingBottom: 'var(--vscode-space-3)' }}
       >
         {error && (

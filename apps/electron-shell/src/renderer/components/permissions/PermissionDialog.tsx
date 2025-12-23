@@ -82,7 +82,7 @@ export function PermissionDialog({
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)]"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"

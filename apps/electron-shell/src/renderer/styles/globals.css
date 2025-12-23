@@ -23,6 +23,14 @@ body,
   font-weight: var(--vscode-font-weight-normal);
 }
 
+:root {
+  --editor-bg: var(--vscode-editor-background);
+  --editor-fg: var(--vscode-foreground);
+  --primary-fg: var(--vscode-accent);
+  --secondary-fg: var(--vscode-foreground-secondary);
+  --error-fg: var(--color-status-error);
+}
+
 /**
  * P4 (UI design system): Tailwind 4 CSS-first tokens
  * All theme colors reference CSS variables from themes.css

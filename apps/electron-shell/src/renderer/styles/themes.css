@@ -127,6 +127,63 @@
   --color-glow-accent: rgba(37, 99, 235, 0.3);
   --color-glow-success: rgba(26, 127, 55, 0.2);
   --color-glow-error: rgba(207, 34, 46, 0.2);
+
+  /* VS Code token overrides for light theme */
+  --vscode-editor-background: var(--color-surface-default);
+  --vscode-sidebar-background: var(--color-surface-secondary);
+  --vscode-activityBar-background: var(--color-surface-elevated);
+  --vscode-statusBar-background: var(--color-accent-primary);
+  --vscode-statusBar-foreground: #ffffff;
+  --vscode-statusBar-hoverBackground: var(--color-accent-hover);
+  --vscode-titleBar-activeBackground: var(--color-surface-elevated);
+  --vscode-titleBar-activeForeground: var(--color-text-primary);
+  --vscode-titleBar-inactiveForeground: var(--color-text-secondary);
+
+  --vscode-tab-activeBackground: var(--color-surface-default);
+  --vscode-tab-inactiveBackground: var(--color-surface-secondary);
+  --vscode-tab-border: var(--color-border-subtle);
+  --vscode-tab-activeBorderTop: var(--color-accent-primary);
+
+  --vscode-border: var(--color-border-default);
+  --vscode-border-subtle: var(--color-border-subtle);
+  --vscode-panel-border: var(--color-border-default);
+
+  --vscode-foreground: var(--color-text-primary);
+  --vscode-foreground-secondary: var(--color-text-secondary);
+  --vscode-foreground-muted: var(--color-text-tertiary);
+
+  --vscode-hover-background: var(--color-surface-hover);
+  --vscode-selection-background: var(--color-selection-bg);
+  --vscode-focus-border: var(--color-border-focus);
+  --vscode-accent: var(--color-accent-primary);
+
+  --vscode-list-hoverBackground: var(--color-surface-hover);
+  --vscode-list-activeSelectionBackground: var(--color-selection-bg);
+  --vscode-list-inactiveSelectionBackground: var(--color-surface-hover);
+  --vscode-list-focusOutline: var(--color-border-focus);
+
+  --vscode-input-background: var(--color-surface-default);
+  --vscode-input-border: var(--color-border-default);
+
+  --vscode-menubar-selectionBackground: var(--color-surface-hover);
+  --vscode-menubar-selectionForeground: var(--color-text-primary);
+  --vscode-menubar-selectionBorder: var(--color-border-focus);
+  --vscode-menu-background: var(--color-surface-elevated);
+  --vscode-menu-foreground: var(--color-text-primary);
+  --vscode-menu-selectionBackground: var(--color-selection-bg);
+  --vscode-menu-selectionForeground: var(--color-text-primary);
+  --vscode-menu-border: var(--color-border-default);
+
+  --vscode-button-background: var(--color-accent-primary);
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-hoverBackground: var(--color-accent-hover);
+  --vscode-button-secondaryBackground: var(--color-surface-secondary);
+  --vscode-button-secondaryForeground: var(--color-text-primary);
+  --vscode-button-secondaryHoverBackground: var(--color-surface-hover);
+
+  --vscode-editorWidget-background: var(--color-surface-elevated);
+  --vscode-editorWidget-border: var(--color-border-default);
+  --vscode-widget-shadow: 0 6px 24px var(--color-shadow-medium);
 }
 
 /* ===================================================================
@@ -345,5 +402,62 @@
     --color-glow-accent: rgba(37, 99, 235, 0.3);
     --color-glow-success: rgba(26, 127, 55, 0.2);
     --color-glow-error: rgba(207, 34, 46, 0.2);
+
+    /* VS Code token overrides for system light */
+    --vscode-editor-background: var(--color-surface-default);
+    --vscode-sidebar-background: var(--color-surface-secondary);
+    --vscode-activityBar-background: var(--color-surface-elevated);
+    --vscode-statusBar-background: var(--color-accent-primary);
+    --vscode-statusBar-foreground: #ffffff;
+    --vscode-statusBar-hoverBackground: var(--color-accent-hover);
+    --vscode-titleBar-activeBackground: var(--color-surface-elevated);
+    --vscode-titleBar-activeForeground: var(--color-text-primary);
+    --vscode-titleBar-inactiveForeground: var(--color-text-secondary);
+
+    --vscode-tab-activeBackground: var(--color-surface-default);
+    --vscode-tab-inactiveBackground: var(--color-surface-secondary);
+    --vscode-tab-border: var(--color-border-subtle);
+    --vscode-tab-activeBorderTop: var(--color-accent-primary);
+
+    --vscode-border: var(--color-border-default);
+    --vscode-border-subtle: var(--color-border-subtle);
+    --vscode-panel-border: var(--color-border-default);
+
+    --vscode-foreground: var(--color-text-primary);
+    --vscode-foreground-secondary: var(--color-text-secondary);
+    --vscode-foreground-muted: var(--color-text-tertiary);
+
+    --vscode-hover-background: var(--color-surface-hover);
+    --vscode-selection-background: var(--color-selection-bg);
+    --vscode-focus-border: var(--color-border-focus);
+    --vscode-accent: var(--color-accent-primary);
+
+    --vscode-list-hoverBackground: var(--color-surface-hover);
+    --vscode-list-activeSelectionBackground: var(--color-selection-bg);
+    --vscode-list-inactiveSelectionBackground: var(--color-surface-hover);
+    --vscode-list-focusOutline: var(--color-border-focus);
+
+    --vscode-input-background: var(--color-surface-default);
+    --vscode-input-border: var(--color-border-default);
+
+    --vscode-menubar-selectionBackground: var(--color-surface-hover);
+    --vscode-menubar-selectionForeground: var(--color-text-primary);
+    --vscode-menubar-selectionBorder: var(--color-border-focus);
+    --vscode-menu-background: var(--color-surface-elevated);
+    --vscode-menu-foreground: var(--color-text-primary);
+    --vscode-menu-selectionBackground: var(--color-selection-bg);
+    --vscode-menu-selectionForeground: var(--color-text-primary);
+    --vscode-menu-border: var(--color-border-default);
+
+    --vscode-button-background: var(--color-accent-primary);
+    --vscode-button-foreground: #ffffff;
+    --vscode-button-hoverBackground: var(--color-accent-hover);
+    --vscode-button-secondaryBackground: var(--color-surface-secondary);
+    --vscode-button-secondaryForeground: var(--color-text-primary);
+    --vscode-button-secondaryHoverBackground: var(--color-surface-hover);
+
+    --vscode-editorWidget-background: var(--color-surface-elevated);
+    --vscode-editorWidget-border: var(--color-border-default);
+    --vscode-widget-shadow: 0 6px 24px var(--color-shadow-medium);
   }
 }

@@ -423,7 +423,7 @@ export function ConnectionDetail({
                   type="button"
                   onClick={handleCreate}
                   disabled={isBusy || !displayName.trim()}
-                  className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
+                  className="px-3 py-2 text-xs font-semibold bg-accent text-[var(--vscode-button-foreground)] rounded-sm hover:bg-accent-hover disabled:opacity-50"
                 >
                   Create connection
                 </button>
@@ -432,7 +432,7 @@ export function ConnectionDetail({
                   type="button"
                   onClick={handleReplaceSecret}
                   disabled={isBusy || !replaceSecretValue.trim()}
-                  className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
+                  className="px-3 py-2 text-xs font-semibold bg-accent text-[var(--vscode-button-foreground)] rounded-sm hover:bg-accent-hover disabled:opacity-50"
                 >
                   Replace secret
                 </button>
@@ -447,7 +447,7 @@ export function ConnectionDetail({
               type="button"
               onClick={handleUpdate}
               disabled={isBusy || !displayName.trim()}
-              className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
+              className="px-3 py-2 text-xs font-semibold bg-accent text-[var(--vscode-button-foreground)] rounded-sm hover:bg-accent-hover disabled:opacity-50"
             >
               Save changes
             </button>
@@ -460,7 +460,7 @@ export function ConnectionDetail({
               type="button"
               onClick={handleCreate}
               disabled={isBusy || !displayName.trim()}
-              className="px-3 py-2 text-xs font-semibold bg-accent text-white rounded-sm hover:bg-accent-hover disabled:opacity-50"
+              className="px-3 py-2 text-xs font-semibold bg-accent text-[var(--vscode-button-foreground)] rounded-sm hover:bg-accent-hover disabled:opacity-50"
             >
               Create connection
             </button>

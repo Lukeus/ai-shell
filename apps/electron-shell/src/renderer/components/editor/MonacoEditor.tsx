@@ -58,6 +58,28 @@ export interface MonacoEditorProps {
   onSymbolsChange?: (symbols: BreadcrumbSymbol[]) => void;
 }
 
+const resolveMonacoTheme = (): string => {
+  const theme = document.documentElement.getAttribute('data-theme') ?? 'dark';
+
+  if (theme === 'light') {
+    return 'vs';
+  }
+  if (theme === 'high-contrast-dark') {
+    return 'hc-black';
+  }
+  if (theme === 'high-contrast-light') {
+    return 'hc-light';
+  }
+  if (theme === 'system') {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'vs-dark';
+    }
+    return 'vs';
+  }
+
+  return 'vs-dark';
+};
+
 export function MonacoEditor({
   filePath,
   content,
@@ -250,7 +272,7 @@ export function MonacoEditor({
     const editorInstance = monaco.editor.create(editorRef.current, {
       value: content,
       language: language,
-      theme: 'vs-dark',
+      theme: resolveMonacoTheme(),
       automaticLayout: false, // We'll handle layout manually
       readOnly: false,
       minimap: { enabled: true },
@@ -264,6 +286,46 @@ export function MonacoEditor({
 
     setEditor(editorInstance);
   }, [monaco, editor, content, language]);
+
+  useEffect(() => {
+    if (!monaco) {
+      return;
+    }
+
+    const applyTheme = () => {
+      monaco.editor.setTheme(resolveMonacoTheme());
+    };
+
+    applyTheme();
+
+    const observer = new MutationObserver(() => applyTheme());
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleMediaChange = () => {
+      if (document.documentElement.getAttribute('data-theme') === 'system') {
+        applyTheme();
+      }
+    };
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleMediaChange);
+    } else {
+      mediaQuery.addListener(handleMediaChange);
+    }
+
+    return () => {
+      observer.disconnect();
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+      } else {
+        mediaQuery.removeListener(handleMediaChange);
+      }
+    };
+  }, [monaco]);
 
   useEffect(() => {
     if (!editor || !onChange) {
