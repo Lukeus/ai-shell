@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { AgentEvent, AgentRunMetadata } from 'packages-api-contracts';
+import type { AgentEvent, AgentRunMetadata, Connection } from 'packages-api-contracts';
+import { Select } from 'packages-ui-kit';
 import { AgentRunList } from './AgentRunList';
 import { AgentPlanTodos } from './AgentPlanTodos';
 import { AgentEventStream } from './AgentEventStream';
@@ -25,6 +26,10 @@ export function AgentsPanel() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [goal, setGoal] = useState('');
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [selectedConnectionId, setSelectedConnectionId] = useState('');
+  const [isConnectionsLoading, setIsConnectionsLoading] = useState(true);
+  const [connectionsError, setConnectionsError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -46,9 +51,34 @@ export function AgentsPanel() {
     [selectedRunId]
   );
 
+  const refreshConnections = useCallback(async () => {
+    try {
+      setConnectionsError(null);
+      const response = await window.api.connections.list();
+      setConnections(response.connections);
+    } catch {
+      setConnectionsError('Failed to load connections.');
+    } finally {
+      setIsConnectionsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void refreshRuns(null);
   }, [refreshRuns]);
+
+  useEffect(() => {
+    void refreshConnections();
+  }, [refreshConnections]);
+
+  useEffect(() => {
+    if (
+      selectedConnectionId &&
+      !connections.some((connection) => connection.metadata.id === selectedConnectionId)
+    ) {
+      setSelectedConnectionId('');
+    }
+  }, [connections, selectedConnectionId]);
 
   useEffect(() => {
     if (!activeRunId) {
@@ -87,6 +117,9 @@ export function AgentsPanel() {
           )
         );
       }
+      if (event.type === 'error') {
+        setErrorMessage(event.message);
+      }
     });
 
     return () => {
@@ -96,14 +129,41 @@ export function AgentsPanel() {
     };
   }, [activeRunId]);
 
+  const connectionOptions = useMemo(() => {
+    if (isConnectionsLoading) {
+      return [{ value: '', label: 'Loading connections...' }];
+    }
+
+    const baseOptions = [{ value: '', label: 'Use default connection' }];
+    const connectionOptionList = connections.map((connection) => ({
+      value: connection.metadata.id,
+      label: `${connection.metadata.displayName} (${connection.metadata.providerId})`,
+    }));
+
+    return baseOptions.concat(connectionOptionList);
+  }, [connections, isConnectionsLoading]);
+
+  const connectionLookup = useMemo(() => {
+    return new Map(connections.map((connection) => [connection.metadata.id, connection]));
+  }, [connections]);
+
   const handleStartRun = async () => {
-    if (!goal.trim()) {
+    const trimmedGoal = goal.trim();
+    if (!trimmedGoal) {
       setErrorMessage('Enter a goal to start a run.');
+      return;
+    }
+    if (selectedConnectionId && !connectionLookup.has(selectedConnectionId)) {
+      setErrorMessage('Selected connection is no longer available.');
       return;
     }
     setIsBusy(true);
     try {
-      const response = await window.api.agents.startRun({ goal: goal.trim() });
+      const request = {
+        goal: trimmedGoal,
+        ...(selectedConnectionId ? { connectionId: selectedConnectionId } : {}),
+      };
+      const response = await window.api.agents.startRun(request);
       setGoal('');
       await refreshRuns(response.run.id);
     } catch {
@@ -144,6 +204,20 @@ export function AgentsPanel() {
   };
 
   const activeRun = sortedRuns.find((run) => run.id === activeRunId) ?? null;
+  const routingLabel = useMemo(() => {
+    if (!activeRun?.routing) {
+      return null;
+    }
+
+    const connection = connectionLookup.get(activeRun.routing.connectionId);
+    const connectionName =
+      connection?.metadata.displayName ??
+      `Connection ${activeRun.routing.connectionId.slice(0, 8)}`;
+    const providerId = activeRun.routing.providerId;
+    const modelPart = activeRun.routing.modelRef ? ` - ${activeRun.routing.modelRef}` : '';
+
+    return `${connectionName} (${providerId})${modelPart}`;
+  }, [activeRun, connectionLookup]);
 
   return (
     <div className="flex flex-col h-full">
@@ -185,6 +259,39 @@ export function AgentsPanel() {
             marginBottom: 'var(--vscode-space-2)',
           }}
         />
+        <div style={{ marginBottom: 'var(--vscode-space-2)' }}>
+          <div
+            className="uppercase text-secondary"
+            style={{
+              fontSize: 'var(--vscode-font-size-small)',
+              letterSpacing: '0.08em',
+              marginBottom: 'var(--vscode-space-1)',
+            }}
+          >
+            Connection
+          </div>
+          <Select
+            value={selectedConnectionId}
+            onChange={setSelectedConnectionId}
+            options={connectionOptions}
+            disabled={isBusy || isConnectionsLoading}
+            className="w-full bg-[var(--vscode-input-background)] border-[var(--vscode-input-border)]"
+          />
+          <div
+            className="text-secondary"
+            style={{ fontSize: 'var(--vscode-font-size-small)', marginTop: 'var(--vscode-space-1)' }}
+          >
+            Uses the default connection when empty.
+          </div>
+          {connectionsError ? (
+            <div
+              className="text-error"
+              style={{ fontSize: 'var(--vscode-font-size-small)', marginTop: 'var(--vscode-space-1)' }}
+            >
+              {connectionsError}
+            </div>
+          ) : null}
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -280,11 +387,18 @@ export function AgentsPanel() {
           Events
         </div>
         {activeRun ? (
-          <div
-            className="uppercase text-secondary"
-            style={{ fontSize: '10px', letterSpacing: '0.08em' }}
-          >
-            {activeRun.status}
+          <div className="flex flex-col items-end gap-1">
+            <div
+              className="uppercase text-secondary"
+              style={{ fontSize: '10px', letterSpacing: '0.08em' }}
+            >
+              {activeRun.status}
+            </div>
+            {routingLabel ? (
+              <div className="text-secondary" style={{ fontSize: '10px' }}>
+                {routingLabel}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -293,3 +407,5 @@ export function AgentsPanel() {
     </div>
   );
 }
+
+

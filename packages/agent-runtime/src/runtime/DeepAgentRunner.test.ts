@@ -172,8 +172,9 @@ describe('DeepAgentRunner', () => {
       reason: 'write to protected path',
     };
 
-    // Policy denial results in successful execution but ok: false result
-    await runner.startRun(runId, { goal: 'Write file' }, [deniedCall]);
+    await expect(runner.startRun(runId, { goal: 'Write file' }, [deniedCall])).rejects.toThrow(
+      'POLICY_DENIED'
+    );
 
     const toolResultEvents = events.filter((e) => e.type === 'tool-result');
     expect(toolResultEvents.length).toBe(1);
@@ -182,9 +183,49 @@ describe('DeepAgentRunner', () => {
       'POLICY_DENIED'
     );
 
-    // Verify status shows completed (policy denial is not a run failure)
+    // Verify status shows failed after a denied tool call
     const statusEvents = events.filter((e) => e.type === 'status');
-    expect(statusEvents[statusEvents.length - 1]).toMatchObject({ status: 'completed' });
+    expect(statusEvents[statusEvents.length - 1]).toMatchObject({ status: 'failed' });
+  });
+
+  it('invokes model.generate when no tool calls are provided', async () => {
+    const events: AgentEvent[] = [];
+    const toolExecutor = {
+      executeToolCall: vi.fn(async (envelope: ToolCallEnvelope) => ({
+        callId: envelope.callId,
+        toolId: envelope.toolId,
+        runId: envelope.runId,
+        ok: true,
+        output: { text: 'Hello from model' },
+        durationMs: 12,
+      })),
+    };
+
+    const runner = new DeepAgentRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+    });
+
+    const runId = randomUUID();
+    const connectionId = randomUUID();
+
+    await runner.startRun(runId, {
+      goal: 'Summarize changes',
+      connectionId,
+      config: { modelRef: 'llama3' },
+    });
+
+    expect(toolExecutor.executeToolCall).toHaveBeenCalledTimes(1);
+    const [call] = toolExecutor.executeToolCall.mock.calls[0] as [ToolCallEnvelope];
+    expect(call.toolId).toBe('model.generate');
+    expect(call.input).toMatchObject({
+      prompt: 'Summarize changes',
+      connectionId,
+      modelRef: 'llama3',
+    });
+
+    const types = events.map((event) => event.type);
+    expect(types).toEqual(['status', 'tool-call', 'tool-result', 'log', 'status']);
   });
 
   it('emits tool-call events with input data for storage-layer redaction', async () => {

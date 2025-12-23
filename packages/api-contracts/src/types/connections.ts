@@ -44,6 +44,10 @@ export const ConnectionProviderSchema = z.object({
 
 export type ConnectionProvider = z.infer<typeof ConnectionProviderSchema>;
 
+export const ProviderDescriptorSchema = ConnectionProviderSchema;
+
+export type ProviderDescriptor = ConnectionProvider;
+
 export const ConnectionConfigSchema = z.record(
   z.string(),
   z.union([z.string(), z.number(), z.boolean()])
@@ -110,3 +114,9 @@ export const ListConnectionsResponseSchema = z.object({
 });
 
 export type ListConnectionsResponse = z.infer<typeof ListConnectionsResponseSchema>;
+
+export const ListProvidersResponseSchema = z.object({
+  providers: z.array(ProviderDescriptorSchema),
+});
+
+export type ListProvidersResponse = z.infer<typeof ListProvidersResponseSchema>;

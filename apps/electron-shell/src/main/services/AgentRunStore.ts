@@ -95,6 +95,27 @@ export class AgentRunStore {
     return updated;
   }
 
+  public updateRunRouting(
+    runId: string,
+    routing: AgentRunMetadata['routing']
+  ): AgentRunMetadata {
+    const store = this.loadStore();
+    const existing = store.runs[runId];
+    if (!existing) {
+      throw new Error(`Agent run not found: ${runId}`);
+    }
+
+    const updated = AgentRunMetadataSchema.parse({
+      ...existing,
+      routing,
+      updatedAt: new Date().toISOString(),
+    });
+
+    store.runs[runId] = updated;
+    this.saveStore(store);
+    return updated;
+  }
+
   public appendEvent(event: AgentEvent): void {
     // Redact sensitive fields before persisting (P2: Security defaults)
     const redacted = this.redactEvent(event);

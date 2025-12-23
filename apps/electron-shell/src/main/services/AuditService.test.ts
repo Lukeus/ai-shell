@@ -64,6 +64,23 @@ describe('AuditService', () => {
     expect(appendedContent).not.toContain('secretValue');
   });
 
+  it('logs model call events without secret values', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const event = service.logModelCall({
+      runId: '5a2f7f28-0b51-4e55-8b76-3a2d3a3a9a01',
+      providerId: 'ollama',
+      connectionId: '00000000-0000-0000-0000-000000000003',
+      modelRef: 'llama3',
+      status: 'success',
+      durationMs: 120,
+    });
+
+    expect(event.type).toBe('model-call');
+    expect(appendedContent).toContain('"type":"model-call"');
+    expect(appendedContent).not.toContain('secretValue');
+  });
+
   it('lists audit events with pagination', () => {
     const events = [
       service.logSecretAccess({

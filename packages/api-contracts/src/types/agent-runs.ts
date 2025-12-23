@@ -19,6 +19,13 @@ export const AgentRunMetadataSchema = z.object({
   id: z.string().uuid(),
   status: AgentRunStatusSchema,
   source: AgentRunSourceSchema,
+  routing: z
+    .object({
+      connectionId: z.string().uuid(),
+      providerId: z.string(),
+      modelRef: z.string().optional(),
+    })
+    .optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -73,6 +80,7 @@ export type GetAgentRunResponse = z.infer<typeof GetAgentRunResponseSchema>;
 
 export const AgentRunStartRequestSchema = z.object({
   goal: z.string().min(1),
+  connectionId: z.string().uuid().optional(),
   inputs: z.record(JsonValueSchema).optional(),
   toolAllowlist: z.array(z.string()).optional(),
   config: DeepAgentRunConfigSchema.optional(),

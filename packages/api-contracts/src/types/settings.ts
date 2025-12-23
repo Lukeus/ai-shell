@@ -112,6 +112,21 @@ export const ExtensionSettingsSchema = z.object({
 export type ExtensionSettings = z.infer<typeof ExtensionSettingsSchema>;
 
 /**
+ * Agent settings.
+ *
+ * Controls default connection selection for agent runs.
+ */
+export const AgentSettingsSchema = z.object({
+  /** Default connection used when a run does not specify one (default: null) */
+  defaultConnectionId: z.string().uuid().nullable().default(null),
+});
+
+/**
+ * Agent settings type inferred from AgentSettingsSchema.
+ */
+export type AgentSettings = z.infer<typeof AgentSettingsSchema>;
+
+/**
  * Terminal settings.
  *
  * Controls the default shell selection for new terminal sessions.
@@ -177,6 +192,9 @@ export const SettingsSchema = z.object({
   /** Extension management settings */
   extensions: ExtensionSettingsSchema,
 
+  /** Agent settings */
+  agents: AgentSettingsSchema,
+
   /** Spec-driven development settings */
   sdd: SddSettingsSchema,
 });
@@ -206,6 +224,7 @@ export const SETTINGS_DEFAULTS: Settings = SettingsSchema.parse({
   editor: {},
   terminal: {},
   extensions: {},
+  agents: {},
   sdd: {},
 });
 

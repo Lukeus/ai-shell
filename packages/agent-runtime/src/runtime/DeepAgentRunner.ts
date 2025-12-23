@@ -7,7 +7,6 @@ import {
   type AgentRunStartRequest,
   type AgentRunStatus,
   type ToolCallEnvelope,
-  type ToolCallResult,
 } from 'packages-api-contracts';
 
 export type ToolExecutor = {
@@ -41,9 +40,11 @@ export class DeepAgentRunner {
   ): Promise<void> {
     AgentRunStartRequestSchema.parse(request);
     this.emitStatus(runId, 'running');
+    const activeToolCalls =
+      toolCalls.length > 0 ? toolCalls : [this.buildModelGenerateCall(runId, request)];
 
     try {
-      for (const toolCall of toolCalls) {
+      for (const toolCall of activeToolCalls) {
         const validatedCall = ToolCallEnvelopeSchema.parse(toolCall);
         if (validatedCall.runId !== runId) {
           throw new Error(`Tool call runId mismatch: ${validatedCall.runId}`);
@@ -65,6 +66,14 @@ export class DeepAgentRunner {
           type: 'tool-result',
           result,
         });
+
+        if (!result.ok) {
+          throw new Error(result.error ?? 'Tool call failed');
+        }
+
+        if (validatedCall.toolId === 'model.generate') {
+          this.emitModelLog(runId, result.output);
+        }
       }
 
       this.emitStatus(runId, 'completed');
@@ -100,5 +109,55 @@ export class DeepAgentRunner {
   private emitEvent(event: AgentEvent): void {
     const validated = AgentEventSchema.parse(event);
     this.onEvent(validated);
+  }
+
+  private buildModelGenerateCall(
+    runId: string,
+    request: AgentRunStartRequest
+  ): ToolCallEnvelope {
+    const input: Record<string, unknown> = {
+      prompt: request.goal,
+    };
+
+    if (request.connectionId) {
+      input.connectionId = request.connectionId;
+    }
+
+    if (request.config?.modelRef) {
+      input.modelRef = request.config.modelRef;
+    }
+
+    return {
+      callId: randomUUID(),
+      toolId: 'model.generate',
+      requesterId: 'agent-host',
+      runId,
+      input,
+      reason: 'Generate model response',
+    };
+  }
+
+  private emitModelLog(runId: string, output?: unknown): void {
+    if (!output || typeof output !== 'object') {
+      return;
+    }
+
+    const textValue = (output as { text?: unknown }).text;
+    if (typeof textValue !== 'string' || textValue.trim().length === 0) {
+      return;
+    }
+
+    const normalized = textValue.replace(/\s+/g, ' ').trim();
+    const truncated =
+      normalized.length > 240 ? `${normalized.slice(0, 240)}...` : normalized;
+
+    this.emitEvent({
+      id: randomUUID(),
+      runId,
+      timestamp: new Date().toISOString(),
+      type: 'log',
+      level: 'info',
+      message: truncated,
+    });
   }
 }

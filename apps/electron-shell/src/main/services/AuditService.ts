@@ -20,6 +20,16 @@ type AgentToolAccessLogInput = {
   allowed: boolean;
 };
 
+type ModelCallLogInput = {
+  runId: string;
+  providerId: string;
+  connectionId: string;
+  modelRef?: string;
+  status: 'success' | 'error';
+  durationMs: number;
+  error?: string;
+};
+
 /**
  * AuditService - append-only audit log for sensitive actions.
  * 
@@ -64,6 +74,24 @@ export class AuditService {
       requesterId: input.requesterId,
       reason: input.reason,
       allowed: input.allowed,
+      createdAt: new Date().toISOString(),
+    });
+
+    this.appendEvent(event);
+    return event;
+  }
+
+  public logModelCall(input: ModelCallLogInput): AuditEvent {
+    const event = AuditEventSchema.parse({
+      id: randomUUID(),
+      type: 'model-call',
+      runId: input.runId,
+      providerId: input.providerId,
+      connectionId: input.connectionId,
+      modelRef: input.modelRef,
+      status: input.status,
+      durationMs: input.durationMs,
+      error: input.error,
       createdAt: new Date().toISOString(),
     });
 

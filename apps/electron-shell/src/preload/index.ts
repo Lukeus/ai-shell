@@ -204,6 +204,7 @@ const api: PreloadAPI = {
 
   // Connections + secrets methods (metadata only)
   connections: {
+    listProviders: () => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_PROVIDERS_LIST),
     list: () => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_LIST),
     create: (request) => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_CREATE, request),
     update: (request) => ipcRenderer.invoke(IPC_CHANNELS.CONNECTIONS_UPDATE, request),

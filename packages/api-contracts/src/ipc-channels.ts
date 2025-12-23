@@ -214,6 +214,9 @@ export const IPC_CHANNELS = {
   // Connections + Secrets
   /** List connections */
   CONNECTIONS_LIST: 'connections:list',
+
+  /** List available connection providers */
+  CONNECTIONS_PROVIDERS_LIST: 'connections:providers:list',
   
   /** Create connection metadata */
   CONNECTIONS_CREATE: 'connections:create',

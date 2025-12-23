@@ -84,6 +84,7 @@ import type {
   UpdateConnectionResponse,
   DeleteConnectionRequest,
   ListConnectionsResponse,
+  ListProvidersResponse,
 } from './types/connections';
 import type {
   SetSecretRequest,
@@ -658,6 +659,11 @@ export interface PreloadAPI {
    * Security: secrets are written to main only; renderer never receives plaintext.
    */
   connections: {
+    /**
+     * Lists available connection providers.
+     */
+    listProviders(): Promise<ListProvidersResponse>;
+
     /**
      * Lists all connections.
      */

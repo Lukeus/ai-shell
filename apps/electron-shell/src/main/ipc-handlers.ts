@@ -42,6 +42,7 @@ import {
   UpdateConnectionResponse,
   DeleteConnectionRequestSchema,
   ListConnectionsResponse,
+  ListProvidersResponse,
   SetSecretRequestSchema,
   SetSecretResponse,
   ReplaceSecretRequestSchema,
@@ -87,6 +88,7 @@ import { terminalService } from './services/TerminalService';
 import { searchService } from './services/SearchService';
 import { gitService } from './services/GitService';
 import { connectionsService } from './services/ConnectionsService';
+import { connectionProviderRegistry } from './services/ConnectionProviderRegistry';
 import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
 import { auditService } from './services/AuditService';
@@ -862,31 +864,10 @@ export function registerIPCHandlers(): void {
     IPC_CHANNELS.AGENT_RUNS_START,
     async (_event, request: unknown): Promise<AgentRunStartResponse> => {
       const validated = AgentRunStartRequestSchema.parse(request);
-      const run = agentRunStore.createRun('user');
+      let run = agentRunStore.createRun('user');
       appendAndPublish(buildStatusEvent(run.id, run.status));
 
-      ensureAgentHostBindings();
-      const agentHostManager = getAgentHostManager();
-
-      if (!agentHostManager) {
-        appendAndPublish(
-          AgentEventSchema.parse({
-            id: randomUUID(),
-            runId: run.id,
-            timestamp: new Date().toISOString(),
-            type: 'error',
-            message: 'Agent Host not available.',
-          })
-        );
-        return { run };
-      }
-
-      try {
-        await agentHostManager.startRun(run.id, validated);
-        return { run };
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to start agent run';
+      const failRun = (message: string): AgentRunStartResponse => {
         const failedRun = agentRunStore.updateRunStatus(run.id, 'failed');
         appendAndPublish(
           AgentEventSchema.parse({
@@ -898,6 +879,53 @@ export function registerIPCHandlers(): void {
           })
         );
         return { run: failedRun };
+      };
+
+      const settings = settingsService.getSettings();
+      const resolvedConnectionId =
+        validated.connectionId ?? settings.agents.defaultConnectionId;
+
+      if (!resolvedConnectionId) {
+        return failRun('No connection configured for this run.');
+      }
+
+      const connection = connectionsService
+        .listConnections()
+        .find((item) => item.metadata.id === resolvedConnectionId);
+
+      if (!connection) {
+        return failRun(`Connection not found: ${resolvedConnectionId}`);
+      }
+
+      const connectionModel =
+        typeof connection.config.model === 'string' ? connection.config.model : undefined;
+      const effectiveModelRef = validated.config?.modelRef ?? connectionModel;
+
+      run = agentRunStore.updateRunRouting(run.id, {
+        connectionId: resolvedConnectionId,
+        providerId: connection.metadata.providerId,
+        modelRef: effectiveModelRef,
+      });
+
+      ensureAgentHostBindings();
+      const agentHostManager = getAgentHostManager();
+
+      if (!agentHostManager) {
+        return failRun('Agent Host not available.');
+      }
+
+      const requestForHost = {
+        ...validated,
+        connectionId: resolvedConnectionId,
+      };
+
+      try {
+        await agentHostManager.startRun(run.id, requestForHost);
+        return { run };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to start agent run';
+        return failRun(message);
       }
     }
   );
@@ -958,6 +986,13 @@ export function registerIPCHandlers(): void {
   // P1 (Process isolation): Secret storage via main process only
   // P3 (Secrets): Never log secret values
   // ========================================
+
+  ipcMain.handle(
+    IPC_CHANNELS.CONNECTIONS_PROVIDERS_LIST,
+    async (): Promise<ListProvidersResponse> => {
+      return { providers: connectionProviderRegistry.list() };
+    }
+  );
 
   ipcMain.handle(
     IPC_CHANNELS.CONNECTIONS_LIST,

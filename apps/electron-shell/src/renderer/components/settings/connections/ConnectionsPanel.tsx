@@ -8,114 +8,6 @@ import { ConnectionsProvider } from '../../../contexts/ConnectionsContext';
 import { ConnectionsList } from './ConnectionsList';
 import { ConnectionDetail, type ConnectionFormValues } from './ConnectionDetail';
 
-// Static provider catalog until extension contributions are wired in.
-const PROVIDERS: ConnectionProvider[] = [
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    description: 'OpenAI API access',
-    fields: [
-      {
-        id: 'endpoint',
-        label: 'Endpoint',
-        type: 'string',
-        required: true,
-        placeholder: 'https://api.openai.com',
-      },
-      {
-        id: 'model',
-        label: 'Default model',
-        type: 'select',
-        required: false,
-        options: [
-          { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-          { value: 'gpt-4o', label: 'GPT-4o' },
-        ],
-        defaultValue: 'gpt-4o-mini',
-      },
-      {
-        id: 'organization',
-        label: 'Organization ID',
-        type: 'string',
-        required: false,
-        placeholder: 'org_...',
-      },
-      {
-        id: 'apiKey',
-        label: 'API key',
-        type: 'secret',
-        required: true,
-        placeholder: 'sk-***',
-      },
-    ],
-  },
-  {
-    id: 'postgres',
-    name: 'PostgreSQL',
-    description: 'PostgreSQL database',
-    fields: [
-      {
-        id: 'host',
-        label: 'Host',
-        type: 'string',
-        required: true,
-        placeholder: 'localhost',
-      },
-      {
-        id: 'port',
-        label: 'Port',
-        type: 'number',
-        required: false,
-        defaultValue: 5432,
-      },
-      {
-        id: 'database',
-        label: 'Database',
-        type: 'string',
-        required: true,
-      },
-      {
-        id: 'username',
-        label: 'Username',
-        type: 'string',
-        required: false,
-      },
-      {
-        id: 'password',
-        label: 'Password',
-        type: 'secret',
-        required: false,
-      },
-    ],
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    description: 'GitHub API',
-    fields: [
-      {
-        id: 'baseUrl',
-        label: 'Base URL',
-        type: 'string',
-        required: false,
-        defaultValue: 'https://api.github.com',
-      },
-      {
-        id: 'org',
-        label: 'Organization',
-        type: 'string',
-        required: false,
-      },
-      {
-        id: 'token',
-        label: 'Personal access token',
-        type: 'secret',
-        required: true,
-      },
-    ],
-  },
-];
-
 const normalizeScope = (scope: ConnectionScope) => scope;
 
 export function ConnectionsPanel() {
@@ -123,15 +15,28 @@ export function ConnectionsPanel() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<'create' | 'view'>('view');
   const [isLoading, setIsLoading] = useState(true);
+  const [isProvidersLoading, setIsProvidersLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const providers = useMemo(() => PROVIDERS, []);
+  const [providers, setProviders] = useState<ConnectionProvider[]>([]);
 
   const selectedConnection = useMemo(
     () => connections.find((item) => item.metadata.id === selectedId) ?? null,
     [connections, selectedId]
   );
+
+  const refreshProviders = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await window.api.connections.listProviders();
+      setProviders(response.providers);
+    } catch (err) {
+      console.error('Failed to load providers:', err);
+      setError('Failed to load connection providers.');
+    } finally {
+      setIsProvidersLoading(false);
+    }
+  }, []);
 
   const refreshConnections = useCallback(
     async (preferredSelection?: string | null) => {
@@ -161,6 +66,10 @@ export function ConnectionsPanel() {
   useEffect(() => {
     void refreshConnections();
   }, [refreshConnections]);
+
+  useEffect(() => {
+    void refreshProviders();
+  }, [refreshProviders]);
 
   const handleSelect = useCallback((connectionId: string) => {
     setMode('view');
@@ -275,7 +184,7 @@ export function ConnectionsPanel() {
         />
 
         <div className="flex-1 flex flex-col">
-          {isLoading ? (
+          {isLoading || isProvidersLoading ? (
             <div className="flex-1 flex items-center justify-center text-sm text-secondary">
               Loading connections...
             </div>

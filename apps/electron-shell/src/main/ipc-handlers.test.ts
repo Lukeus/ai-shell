@@ -8,6 +8,7 @@ import { terminalService } from './services/TerminalService';
 import { searchService } from './services/SearchService';
 import { gitService } from './services/GitService';
 import { connectionsService } from './services/ConnectionsService';
+import { connectionProviderRegistry } from './services/ConnectionProviderRegistry';
 import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
 import { auditService } from './services/AuditService';
@@ -93,6 +94,12 @@ vi.mock('./services/ConnectionsService', () => ({
   },
 }));
 
+vi.mock('./services/ConnectionProviderRegistry', () => ({
+  connectionProviderRegistry: {
+    list: vi.fn(),
+  },
+}));
+
 vi.mock('./services/SecretsService', () => ({
   secretsService: {
     setSecret: vi.fn(),
@@ -120,6 +127,7 @@ vi.mock('./services/AgentRunStore', () => ({
     getRun: vi.fn(),
     createRun: vi.fn(),
     updateRunStatus: vi.fn(),
+    updateRunRouting: vi.fn(),
     appendEvent: vi.fn(),
     listEvents: vi.fn(),
   },
@@ -713,6 +721,20 @@ describe('IPC Handlers', () => {
     });
 
     it('should start a run and append a status event', async () => {
+      const connectionId = '123e4567-e89b-12d3-a456-426614174111';
+      const connection = {
+        metadata: {
+          id: connectionId,
+          providerId: 'ollama',
+          scope: 'user',
+          displayName: 'Local Ollama',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        config: {
+          model: 'llama3',
+        },
+      };
       const run = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         status: 'queued' as const,
@@ -720,12 +742,29 @@ describe('IPC Handlers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
       };
+      const routedRun = {
+        ...run,
+        routing: {
+          connectionId,
+          providerId: 'ollama',
+          modelRef: 'llama3',
+        },
+      };
+      const failedRun = { ...routedRun, status: 'failed' as const };
       vi.mocked(agentRunStore.createRun).mockReturnValue(run);
+      vi.mocked(connectionsService.listConnections).mockReturnValue([connection]);
+      vi.mocked(agentRunStore.updateRunRouting).mockReturnValue(routedRun);
+      vi.mocked(agentRunStore.updateRunStatus).mockReturnValue(failedRun);
 
       const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_START);
-      const result = await handler(null, { goal: 'Do the thing' });
+      const result = await handler(null, { goal: 'Do the thing', connectionId });
 
       expect(agentRunStore.createRun).toHaveBeenCalledWith('user');
+      expect(agentRunStore.updateRunRouting).toHaveBeenCalledWith(run.id, {
+        connectionId,
+        providerId: 'ollama',
+        modelRef: 'llama3',
+      });
       expect(agentRunStore.appendEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'status',
@@ -733,7 +772,7 @@ describe('IPC Handlers', () => {
           status: 'queued',
         })
       );
-      expect(result).toEqual({ run });
+      expect(result).toEqual({ run: failedRun });
     });
 
     it('should cancel a run and append a status event', async () => {
@@ -808,6 +847,20 @@ describe('IPC Handlers', () => {
 
   describe('Agent run integration with event stream', () => {
     it('should emit status events in correct order for run lifecycle', async () => {
+      const connectionId = '123e4567-e89b-12d3-a456-426614174111';
+      const connection = {
+        metadata: {
+          id: connectionId,
+          providerId: 'ollama',
+          scope: 'user',
+          displayName: 'Local Ollama',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        config: {
+          model: 'llama3',
+        },
+      };
       const mockRun = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         status: 'queued' as const,
@@ -815,11 +868,21 @@ describe('IPC Handlers', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
       };
+      const routedRun = {
+        ...mockRun,
+        routing: {
+          connectionId,
+          providerId: 'ollama',
+          modelRef: 'llama3',
+        },
+      };
       vi.mocked(agentRunStore.createRun).mockReturnValue(mockRun);
+      vi.mocked(connectionsService.listConnections).mockReturnValue([connection]);
+      vi.mocked(agentRunStore.updateRunRouting).mockReturnValue(routedRun);
 
       // Start run
       const startHandler = getHandler(IPC_CHANNELS.AGENT_RUNS_START);
-      await startHandler(null, { goal: 'Integration test' });
+      await startHandler(null, { goal: 'Integration test', connectionId });
 
       expect(agentRunStore.appendEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -883,8 +946,30 @@ describe('IPC Handlers', () => {
   });
 
   describe('Connections handlers', () => {
+    it('should register CONNECTIONS_PROVIDERS_LIST handler', () => {
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_PROVIDERS_LIST)).toBe(true);
+    });
+
     it('should register CONNECTIONS_LIST handler', () => {
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_LIST)).toBe(true);
+    });
+
+    it('should list providers via ConnectionProviderRegistry', async () => {
+      const providers = [
+        {
+          id: 'openai',
+          name: 'OpenAI',
+          fields: [],
+        },
+      ];
+
+      vi.mocked(connectionProviderRegistry.list).mockReturnValue(providers);
+
+      const handler = getHandler(IPC_CHANNELS.CONNECTIONS_PROVIDERS_LIST);
+      const result = await handler();
+
+      expect(connectionProviderRegistry.list).toHaveBeenCalled();
+      expect(result).toEqual({ providers });
     });
 
     it('should list connections via ConnectionsService', async () => {
