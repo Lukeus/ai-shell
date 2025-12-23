@@ -5,6 +5,7 @@ import { ConfirmDeleteModal } from '../explorer/ConfirmDeleteModal';
 import { ExtensionsPanel } from '../extensions/ExtensionsPanel';
 import { SearchPanel } from '../search/SearchPanel';
 import { SourceControlPanel } from '../scm/SourceControlPanel';
+import { SddPanel } from '../sdd/SddPanel';
 
 /**
  * ExplorerPanel - Root explorer component with file tree and header actions.
@@ -59,6 +60,10 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
 
   if (activeView === 'source-control') {
     return <SourceControlPanel />;
+  }
+
+  if (activeView === 'sdd') {
+    return <SddPanel />;
   }
 
   if (activeView !== 'explorer') {

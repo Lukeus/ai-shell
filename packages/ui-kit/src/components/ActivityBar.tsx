@@ -49,6 +49,11 @@ const ACTIVITY_ICONS: ActivityIcon[] = [
     codicon: 'codicon-extensions',
   },
   {
+    id: 'sdd',
+    label: 'SDD',
+    codicon: 'codicon-checklist',
+  },
+  {
     id: 'settings',
     label: 'Settings',
     codicon: 'codicon-settings-gear',
@@ -60,7 +65,7 @@ const ACTIVITY_ICONS: ActivityIcon[] = [
  * 
  * Features:
  * - Fixed width (48px)
- * - 6 placeholder icons (Explorer, Search, Source Control, Run & Debug, Extensions, Settings)
+ * - 7 placeholder icons (Explorer, Search, Source Control, Run & Debug, Extensions, SDD, Settings)
  * - Active icon highlighted with bg-blue-600
  * - Click handler emits icon ID
  * 

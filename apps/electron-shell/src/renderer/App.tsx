@@ -87,6 +87,7 @@ function AppContent() {
     'source-control': 'Source Control',
     'run-debug': 'Run and Debug',
     extensions: 'Extensions',
+    sdd: 'SDD',
     settings: 'Settings',
   };
   const primarySidebarTitle = isSettingsView
@@ -222,6 +223,17 @@ function AppContent() {
       unsubscribeHandlers.forEach((unsubscribe) => unsubscribe());
     };
   }, [openWorkspace, closeWorkspace, refresh, toggleSecondarySidebar]);
+
+  useEffect(() => {
+    const handleOpenSdd = () => {
+      setActiveActivityBarIcon('sdd');
+    };
+
+    window.addEventListener('ai-shell:open-sdd', handleOpenSdd);
+    return () => {
+      window.removeEventListener('ai-shell:open-sdd', handleOpenSdd);
+    };
+  }, [setActiveActivityBarIcon]);
 
   const activeFilePath =
     activeTabIndex >= 0 && activeTabIndex < openTabs.length ? openTabs[activeTabIndex] : null;

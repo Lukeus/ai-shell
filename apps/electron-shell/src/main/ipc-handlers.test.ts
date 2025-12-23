@@ -647,7 +647,7 @@ describe('IPC Handlers', () => {
     });
 
     it('should validate request and call gitService.commit', async () => {
-      vi.mocked(gitService.commit).mockResolvedValue(undefined);
+      vi.mocked(gitService.commit).mockResolvedValue({ ok: true });
 
       const handler = getHandler(IPC_CHANNELS.SCM_COMMIT);
       await handler(null, { message: 'Initial commit' });

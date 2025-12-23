@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFileTree } from './FileTreeContext';
 import { FileTreeNode } from './FileTreeNode';
 import { InlineInput } from './InlineInput';
+import { useSddStatus } from '../../hooks/useSddStatus';
 
 /**
  * FileTree - Root tree component displaying workspace files and folders.
@@ -48,12 +49,21 @@ export function FileTree({
     error,
     directoryCache,
     loadDirectory,
+    setSelectedEntry,
   } = useFileTree();
+  const { enabled: sddEnabled, status: sddStatus } = useSddStatus(workspace?.path);
 
   const [rootEntries, setRootEntries] = useState<typeof directoryCache extends Map<string, infer U> ? U : never>([]);
   const resolvedInlineInputTargetPath = inlineInputMode
     ? inlineInputTargetPath ?? workspace?.path ?? null
     : null;
+  const handleSddBadgeClick = useCallback(
+    (path: string) => {
+      setSelectedEntry({ path, type: 'file' });
+      window.dispatchEvent(new CustomEvent('ai-shell:open-sdd', { detail: { path } }));
+    },
+    [setSelectedEntry]
+  );
 
   // Load root directory when workspace changes
   useEffect(() => {
@@ -218,6 +228,9 @@ export function FileTree({
           onInlineInputCancel={onInlineInputCancel}
           onRenameStart={onRenameStart}
           onDelete={onDelete}
+          sddEnabled={sddEnabled}
+          sddStatus={sddStatus}
+          onSddBadgeClick={handleSddBadgeClick}
         />
       ))}
     </div>

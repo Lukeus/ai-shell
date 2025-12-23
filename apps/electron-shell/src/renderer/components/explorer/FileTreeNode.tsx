@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import type { FileEntry } from 'packages-api-contracts';
+import type { FileEntry, SddFileTraceResponse, SddStatus } from 'packages-api-contracts';
 import { useFileTree } from './FileTreeContext';
 import { InlineInput } from './InlineInput';
+import { SddBadge } from '../sdd/SddBadge';
 
 /**
  * FileTreeNode - Displays a single file or folder in the explorer tree.
@@ -35,6 +36,12 @@ export interface FileTreeNodeProps {
   onRenameStart?: (path: string) => void;
   /** Optional: Called when delete is requested */
   onDelete?: (path: string) => void;
+  /** Optional: Whether SDD is enabled */
+  sddEnabled?: boolean;
+  /** Optional: Latest SDD status snapshot */
+  sddStatus?: SddStatus | null;
+  /** Optional: Called when SDD badge is clicked */
+  onSddBadgeClick?: (path: string) => void;
 }
 
 export function FileTreeNode({
@@ -46,6 +53,9 @@ export function FileTreeNode({
   onInlineInputCancel,
   onRenameStart,
   onDelete,
+  sddEnabled,
+  sddStatus,
+  onSddBadgeClick,
 }: FileTreeNodeProps) {
   const {
     expandedFolders,
@@ -58,12 +68,52 @@ export function FileTreeNode({
   } = useFileTree();
 
   const [isRenaming, setIsRenaming] = useState(false);
+  const [fileTrace, setFileTrace] = useState<SddFileTraceResponse | null>(null);
 
   const isDirectory = entry.type === 'directory';
+  const isFile = entry.type === 'file';
   const isExpanded = isDirectory && expandedFolders.has(entry.path);
   const children = isExpanded ? directoryCache.get(entry.path) || [] : [];
   const isSelected = selectedEntry?.path === entry.path;
   const showInlineInput = Boolean(inlineInputMode) && isDirectory && inlineInputTargetPath === entry.path;
+  const isUntracked = Boolean(sddEnabled && sddStatus?.parity?.driftFiles?.includes(entry.path));
+  const trackedRun = fileTrace?.runs?.[0];
+  const showTrackedBadge = Boolean(!isUntracked && fileTrace?.runs?.length);
+
+  useEffect(() => {
+    if (!isFile || !sddEnabled || isUntracked || typeof window.api?.sdd?.getFileTrace !== 'function') {
+      setFileTrace(null);
+      return;
+    }
+
+    let isMounted = true;
+    const loadTrace = async () => {
+      try {
+        const trace = await window.api.sdd.getFileTrace(entry.path);
+        if (isMounted) {
+          setFileTrace(trace);
+        }
+      } catch (traceError) {
+        console.error('Failed to load SDD file trace:', traceError);
+        if (isMounted) {
+          setFileTrace(null);
+        }
+      }
+    };
+
+    void loadTrace();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    entry.path,
+    isFile,
+    isUntracked,
+    sddEnabled,
+    sddStatus?.parity?.trackedFileChanges,
+    sddStatus?.parity?.untrackedFileChanges,
+  ]);
 
   const filteredChildren = children;
 
@@ -188,6 +238,29 @@ export function FileTreeNode({
           {entry.name}
         </span>
 
+        {(isUntracked || showTrackedBadge) && (
+          <span className="ml-2 flex items-center">
+            <SddBadge
+              status={isUntracked ? 'untracked' : 'tracked'}
+              title={
+                isUntracked
+                  ? 'Untracked change'
+                  : trackedRun
+                    ? `Tracked (${trackedRun.featureId} / ${trackedRun.taskId})`
+                    : 'Tracked'
+              }
+              onClick={
+                onSddBadgeClick
+                  ? (event) => {
+                      event.stopPropagation();
+                      onSddBadgeClick(entry.path);
+                    }
+                  : undefined
+              }
+            />
+          </span>
+        )}
+
         {/* Loading spinner for expanding folder */}
         {isDirectory && isLoading && isExpanded && (
           <div className="w-4 h-4 ml-2">
@@ -235,6 +308,9 @@ export function FileTreeNode({
               onInlineInputCancel={onInlineInputCancel}
               onRenameStart={onRenameStart}
               onDelete={onDelete}
+              sddEnabled={sddEnabled}
+              sddStatus={sddStatus}
+              onSddBadgeClick={onSddBadgeClick}
             />
           ))}
         </div>

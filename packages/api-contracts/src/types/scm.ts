@@ -108,3 +108,24 @@ export const ScmCommitRequestSchema = z.object({
  * ScmCommitRequest type inferred from schema.
  */
 export type ScmCommitRequest = z.infer<typeof ScmCommitRequestSchema>;
+
+/**
+ * Response after attempting a commit.
+ */
+export const ScmCommitResponseSchema = z.object({
+  /** True if commit succeeded */
+  ok: z.boolean(),
+  /** True if commit was blocked by policy */
+  blocked: z.boolean().optional(),
+  /** Optional reason for a blocked commit */
+  reason: z.string().optional(),
+  /** Paths flagged as untracked by SDD policy */
+  untrackedFiles: z.array(z.string()).optional(),
+  /** Paths flagged as drift files by SDD policy */
+  driftFiles: z.array(z.string()).optional(),
+});
+
+/**
+ * ScmCommitResponse type inferred from schema.
+ */
+export type ScmCommitResponse = z.infer<typeof ScmCommitResponseSchema>;

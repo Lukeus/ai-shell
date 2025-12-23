@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       'packages-ui-kit': path.resolve(__dirname, '../../packages/ui-kit/src/index.ts'),
+      'packages-api-contracts': path.resolve(__dirname, '../../packages/api-contracts/src/index.ts'),
     },
   },
   optimizeDeps: {

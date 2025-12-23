@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite';
+import path from 'path';
 
 // https://vitejs.dev/config
 export default defineConfig({
   resolve: {
+    alias: {
+      'packages-api-contracts': path.resolve(__dirname, '../../packages/api-contracts/src/index.ts'),
+    },
     // Prefer Node.js compatible module resolution
     mainFields: ['module', 'jsnext:main', 'jsnext'],
   },

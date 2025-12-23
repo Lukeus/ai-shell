@@ -43,6 +43,7 @@ import type {
   ScmStageRequest,
   ScmUnstageRequest,
   ScmCommitRequest,
+  ScmCommitResponse,
 } from './types/scm';
 import type {
   SddListFeaturesResponse,
@@ -541,7 +542,7 @@ export interface PreloadAPI {
     /**
      * Commits staged changes.
      */
-    commit(request: ScmCommitRequest): Promise<void>;
+    commit(request: ScmCommitRequest): Promise<ScmCommitResponse>;
   };
 
   /**
@@ -591,7 +592,7 @@ export interface PreloadAPI {
     /**
      * Subscribes to SDD status change events.
      */
-    onChange(handler: (_event: unknown, status: SddStatus) => void): void;
+    onChange(handler: (_event: unknown, status: SddStatus) => void): () => void;
 
     /**
      * Overrides untracked changes for commit enforcement.

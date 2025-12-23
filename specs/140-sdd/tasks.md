@@ -233,11 +233,12 @@ pnpm test:e2e -- --project=chromium
 
 ## Task 11: Update architecture docs
 **Files to modify:**
+- `readme.md`
 - `docs/architecture/architecture.md`
 - `specs/140-sdd/spec.md` (if scope changes)
 
 **Description:**
-Document SDD data flow, main-process responsibilities, IPC contracts, settings
+Document Spec Drviven Development (SDD) data flow, main-process responsibilities, IPC contracts, settings
 controls, and parity enforcement behavior.
 
 **Verification:**

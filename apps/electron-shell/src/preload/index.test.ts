@@ -27,6 +27,16 @@ const loadPreload = async () => {
   };
 };
 
+const loadApi = async () => {
+  await import('./index');
+  const apiCall = exposeInMainWorldMock.mock.calls.find((call) => call[0] === 'api');
+  return apiCall?.[1] as {
+    sdd: {
+      onChange: (handler: (...args: unknown[]) => void) => () => void;
+    };
+  };
+};
+
 describe('preload menu IPC listeners', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -69,6 +79,35 @@ describe('preload menu IPC listeners', () => {
     expect(ipcRendererMock.removeListener).toHaveBeenCalledWith(
       IPC_CHANNELS.MENU_WORKSPACE_OPEN,
       firstWrapped
+    );
+  });
+});
+
+describe('preload sdd IPC listeners', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    exposeInMainWorldMock.mockClear();
+    ipcRendererMock.on.mockClear();
+    ipcRendererMock.removeListener.mockClear();
+    ipcRendererMock.removeAllListeners.mockClear();
+    ipcRendererMock.invoke.mockClear();
+  });
+
+  it('returns unsubscribe for SDD change listener', async () => {
+    const api = await loadApi();
+    const handler = vi.fn();
+
+    const unsubscribe = api.sdd.onChange(handler);
+    const wrapped = ipcRendererMock.on.mock.calls[0]?.[1] as (...args: unknown[]) => void;
+
+    expect(wrapped).toBeDefined();
+    expect(wrapped).not.toBe(handler);
+
+    unsubscribe();
+
+    expect(ipcRendererMock.removeListener).toHaveBeenCalledWith(
+      IPC_CHANNELS.SDD_CHANGED,
+      wrapped
     );
   });
 });
