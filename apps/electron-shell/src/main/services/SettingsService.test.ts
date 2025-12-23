@@ -44,9 +44,11 @@ describe('SettingsService', () => {
     it('should read file, parse JSON, and validate with Zod', () => {
       // Arrange
       const mockSettings = {
-        appearance: { theme: 'light', fontSize: 16, iconTheme: 'default' },
-        editor: { wordWrap: false, lineNumbers: true, minimap: false },
+        appearance: { theme: 'light', fontSize: 16, iconTheme: 'default', menuBarVisible: true },
+        editor: { wordWrap: false, lineNumbers: true, minimap: false, breadcrumbsEnabled: true },
+        terminal: { defaultShell: 'pwsh' },
         extensions: { autoUpdate: true, enableTelemetry: true },
+        sdd: { enabled: true, blockCommitOnUntrackedCodeChanges: false },
       };
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockSettings));
 
@@ -149,7 +151,9 @@ describe('SettingsService', () => {
       // Other fields should remain unchanged
       expect(result.appearance.fontSize).toBe(SETTINGS_DEFAULTS.appearance.fontSize);
       expect(result.editor).toEqual(SETTINGS_DEFAULTS.editor);
+      expect(result.terminal).toEqual(SETTINGS_DEFAULTS.terminal);
       expect(result.extensions).toEqual(SETTINGS_DEFAULTS.extensions);
+      expect(result.sdd).toEqual(SETTINGS_DEFAULTS.sdd);
 
       // Verify persistence
       expect(fs.writeFileSync).toHaveBeenCalledWith(
@@ -220,7 +224,9 @@ describe('SettingsService', () => {
       const modifiedSettings = {
         appearance: { theme: 'light' as const, fontSize: 18, iconTheme: 'minimal' as const },
         editor: { wordWrap: true, lineNumbers: false, minimap: true },
+        terminal: { defaultShell: 'pwsh' as const },
         extensions: { autoUpdate: false, enableTelemetry: false },
+        sdd: { enabled: true, blockCommitOnUntrackedCodeChanges: true },
       };
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(modifiedSettings));
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -339,7 +345,7 @@ describe('SettingsService', () => {
       expect(settings).not.toHaveProperty('secret');
       
       // All fields should be UI preferences only
-      const keys = ['appearance', 'editor', 'extensions'];
+      const keys = ['appearance', 'editor', 'terminal', 'extensions', 'sdd'];
       expect(Object.keys(settings).sort()).toEqual(keys.sort());
     });
   });

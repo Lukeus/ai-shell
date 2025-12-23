@@ -1,4 +1,4 @@
-SDD Traceability + Parity (ai-shell)
+# Spec Drvien Development (SDD) Traceability + Parity (ai-shell)
 
 ## Architecture decisions
 
@@ -22,6 +22,7 @@ Rationale: jsonl is resilient and auditable; index is fast and disposable.
 - When disabled, SddTraceService and watchers stop and skip new events.
 - Commit enforcement uses `sdd.blockCommitOnUntrackedCodeChanges` and is disabled by default.
 - Settings are stored via SettingsService (userData), not in workspace files.
+- Settings updates propagate through main IPC to toggle SddTraceService and watcher state.
 
 ### 4) Capture provenance at the moment of change (no "infer later")
 Changes are attributed via:
@@ -85,7 +86,7 @@ Wherever workspace tools are executed in main (broker/handlers for `workspace.wr
 ### Renderer
 
 #### New UI panel
-- `apps/electron-shell/src/renderer/components/panels/SddPanel.tsx`
+- `apps/electron-shell/src/renderer/components/sdd/SddPanel.tsx`
   - Feature/task tree view
   - Start/stop run controls
   - Parity meter + drift list
@@ -96,7 +97,7 @@ Wherever workspace tools are executed in main (broker/handlers for `workspace.wr
 - FileTree + EditorTabBar add provenance badges:
   - “Tracked” (feature/task) or “Untracked”
   - Click → opens File Trace view in SDD panel
-- Settings panel adds an SDD category with a toggle for `sdd.enabled` and the commit enforcement flag
+- Settings panel (`apps/electron-shell/src/renderer/components/settings/SettingsPanel.tsx`) adds an SDD category with a toggle for `sdd.enabled` and the commit enforcement flag
 
 ---
 

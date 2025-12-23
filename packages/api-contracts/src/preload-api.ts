@@ -45,6 +45,15 @@ import type {
   ScmCommitRequest,
 } from './types/scm';
 import type {
+  SddListFeaturesResponse,
+  SddStatus,
+  SddStartRunRequest,
+  SddRun,
+  SddFileTraceResponse,
+  SddTaskTraceResponse,
+  SddParity,
+} from './types/sdd';
+import type {
   PublishDiagnosticsRequest,
   ClearDiagnosticsRequest,
   ListDiagnosticsRequest,
@@ -533,6 +542,61 @@ export interface PreloadAPI {
      * Commits staged changes.
      */
     commit(request: ScmCommitRequest): Promise<void>;
+  };
+
+  /**
+   * Spec-driven development APIs (traceability + parity).
+   */
+  sdd: {
+    /**
+     * Lists SDD features available in the workspace.
+     */
+    listFeatures(): Promise<SddListFeaturesResponse>;
+
+    /**
+     * Gets current SDD status.
+     */
+    status(): Promise<SddStatus>;
+
+    /**
+     * Starts a new SDD run for a feature/task.
+     */
+    startRun(request: SddStartRunRequest): Promise<SddRun>;
+
+    /**
+     * Stops the active SDD run.
+     */
+    stopRun(): Promise<void>;
+
+    /**
+     * Sets the active task without starting a run.
+     */
+    setActiveTask(featureId: string, taskId: string): Promise<void>;
+
+    /**
+     * Retrieves file trace for a path.
+     */
+    getFileTrace(path: string): Promise<SddFileTraceResponse>;
+
+    /**
+     * Retrieves task trace for a feature/task.
+     */
+    getTaskTrace(featureId: string, taskId: string): Promise<SddTaskTraceResponse>;
+
+    /**
+     * Retrieves parity summary.
+     */
+    getParity(): Promise<SddParity>;
+
+    /**
+     * Subscribes to SDD status change events.
+     */
+    onChange(handler: (_event: unknown, status: SddStatus) => void): void;
+
+    /**
+     * Overrides untracked changes for commit enforcement.
+     */
+    overrideUntracked(reason: string): Promise<void>;
   };
 
   /**

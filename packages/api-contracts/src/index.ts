@@ -29,6 +29,7 @@ export * from './types/output';
 export * from './types/scm';
 export * from './types/search';
 export * from './types/secrets';
+export * from './types/sdd';
 export * from './types/settings';
 export * from './types/terminal';
 export * from './types/window-state';

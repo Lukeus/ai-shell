@@ -17,9 +17,9 @@
   --vscode-sidebar-background: #252526;
   --vscode-activityBar-background: #333333;
   --vscode-statusBar-background: #007acc;
-  --vscode-statusBar-foreground: #ffffff;
+  --vscode-statusBar-foreground: #cccccc;
   --vscode-statusBar-hoverBackground: #1f8ad6;
-  --vscode-titleBar-activeBackground: #3c3c3c;
+  --vscode-titleBar-activeBackground: #333333;
   --vscode-titleBar-activeForeground: #cccccc;
   --vscode-titleBar-inactiveForeground: #969696;
   
@@ -31,7 +31,7 @@
   
   /* Border colors */
   --vscode-border: #252526;
-  --vscode-border-subtle: #1e1e1e;
+  --vscode-border-subtle: #333333;
   --vscode-panel-border: #252526;
   
   /* Text colors */

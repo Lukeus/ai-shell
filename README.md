@@ -1,8 +1,14 @@
-# ai-shell
+# AI-Shell
 
 An enterprise-grade Electron application shell with secure process architecture, designed for building AI-powered development tools.
 
+## Screen Clippings
+
+### Settings
 ![AI Shell Settings](docs/images/ui-settings.png)
+
+### SDD Settings
+![AI Shell Settings SDD (Spec Driven Development) ](docs/images/ui-settings-sdd.png)
 
 ## Features
 

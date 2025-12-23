@@ -4,6 +4,8 @@ import fs from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { buildApplicationMenu } from './menu';
 import { terminalService } from './services/TerminalService';
+import { sddTraceService } from './services/SddTraceService';
+import { sddWatcher } from './services/SddWatcher';
 import { ExtensionHostManager } from './services/extension-host-manager';
 import { ExtensionRegistry } from './services/extension-registry';
 import { ExtensionCommandService } from './services/extension-command-service';
@@ -300,6 +302,8 @@ app.on('ready', () => {
 app.on('window-all-closed', () => {
   // Clean up terminal sessions before quitting
   terminalService.cleanup();
+  sddWatcher.stop();
+  void sddTraceService.abortActiveRun('system').catch(() => undefined);
   
   // Stop Extension Host gracefully
   if (extensionHostManager) {

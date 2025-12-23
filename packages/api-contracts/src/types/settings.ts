@@ -127,10 +127,28 @@ export const TerminalSettingsSchema = z.object({
 export type TerminalSettings = z.infer<typeof TerminalSettingsSchema>;
 
 /**
+ * Spec-driven development settings.
+ *
+ * Controls whether SDD tracing is enabled and whether commit enforcement applies.
+ */
+export const SddSettingsSchema = z.object({
+  /** Enable SDD tracing and parity computation (default: false) */
+  enabled: z.boolean().default(false),
+
+  /** Block commits when untracked code changes exist (default: false) */
+  blockCommitOnUntrackedCodeChanges: z.boolean().default(false),
+});
+
+/**
+ * SDD settings type inferred from SddSettingsSchema.
+ */
+export type SddSettings = z.infer<typeof SddSettingsSchema>;
+
+/**
  * Root settings schema.
  * 
  * Top-level settings object with nested categories for appearance, editor,
- * and extension configuration. All settings persist to disk and are validated
+ * terminal, extension, and SDD configuration. All settings persist to disk and are validated
  * with Zod before being saved.
  * 
  * @remarks
@@ -158,6 +176,9 @@ export const SettingsSchema = z.object({
 
   /** Extension management settings */
   extensions: ExtensionSettingsSchema,
+
+  /** Spec-driven development settings */
+  sdd: SddSettingsSchema,
 });
 
 /**
@@ -178,12 +199,14 @@ export type Settings = z.infer<typeof SettingsSchema>;
  * - Menu bar visible: true
  * - Editor: no word wrap, line numbers on, minimap on, breadcrumbs on
  * - Extensions: auto-update on, telemetry off
+ * - SDD: disabled, commit enforcement off
  */
 export const SETTINGS_DEFAULTS: Settings = SettingsSchema.parse({
   appearance: {},
   editor: {},
   terminal: {},
   extensions: {},
+  sdd: {},
 });
 
 /**
