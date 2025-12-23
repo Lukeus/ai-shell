@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ipcMain } from 'electron';
-import { IPC_CHANNELS } from 'packages-api-contracts';
+import { IPC_CHANNELS, SETTINGS_DEFAULTS } from 'packages-api-contracts';
 import { registerIPCHandlers } from './ipc-handlers';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
@@ -12,6 +12,8 @@ import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
 import { auditService } from './services/AuditService';
 import { agentRunStore } from './services/AgentRunStore';
+import { sddTraceService } from './services/SddTraceService';
+import { sddWatcher } from './services/SddWatcher';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -20,6 +22,10 @@ vi.mock('electron', () => ({
   },
   app: {
     getVersion: vi.fn(() => '1.0.0'),
+  },
+  BrowserWindow: {
+    fromWebContents: vi.fn(() => null),
+    getAllWindows: vi.fn(() => []),
   },
 }));
 
@@ -119,6 +125,27 @@ vi.mock('./services/AgentRunStore', () => ({
   },
 }));
 
+vi.mock('./services/SddTraceService', () => ({
+  sddTraceService: {
+    onStatusChange: vi.fn(),
+    setEnabled: vi.fn(),
+    getStatus: vi.fn(),
+    startRun: vi.fn(),
+    stopRun: vi.fn(),
+    setActiveTask: vi.fn(),
+    getFileTrace: vi.fn(),
+    getTaskTrace: vi.fn(),
+    getParity: vi.fn(),
+    overrideUntracked: vi.fn(),
+  },
+}));
+
+vi.mock('./services/SddWatcher', () => ({
+  sddWatcher: {
+    setEnabled: vi.fn(),
+  },
+}));
+
 
 describe('IPC Handlers', () => {
   // Store handlers for testing
@@ -129,6 +156,11 @@ describe('IPC Handlers', () => {
     // Clear mocks
     vi.clearAllMocks();
     handlers.clear();
+
+    vi.mocked(settingsService.getSettings).mockReturnValue(SETTINGS_DEFAULTS);
+    vi.mocked(sddTraceService.onStatusChange).mockReturnValue(() => undefined);
+    vi.mocked(sddTraceService.setEnabled).mockResolvedValue(undefined);
+    vi.mocked(sddWatcher.setEnabled).mockReturnValue(undefined);
 
     // Capture handlers registered via ipcMain.handle
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1043,7 +1075,7 @@ describe('IPC Handlers', () => {
   });
 
   describe('All handlers registered', () => {
-    it('should register all 40 expected IPC handlers', () => {
+    it('should register all 49 expected IPC handlers', () => {
       // Existing handlers (4)
       expect(handlers.has(IPC_CHANNELS.GET_VERSION)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.GET_SETTINGS)).toBe(true);
@@ -1080,6 +1112,17 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.SCM_UNSTAGE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SCM_COMMIT)).toBe(true);
 
+      // SDD handlers (9)
+      expect(handlers.has(IPC_CHANNELS.SDD_LIST_FEATURES)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_STATUS)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_START_RUN)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_STOP_RUN)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_SET_ACTIVE_TASK)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_GET_FILE_TRACE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_GET_TASK_TRACE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_GET_PARITY)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_OVERRIDE_UNTRACKED)).toBe(true);
+
       // Agent handlers (8)
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_GET)).toBe(true);
@@ -1100,8 +1143,8 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_REQUEST_SECRET_ACCESS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_AUDIT_LIST)).toBe(true);
 
-      // Total: 40 handlers
-      expect(handlers.size).toBe(40);
+      // Total: 49 handlers
+      expect(handlers.size).toBe(49);
     });
   });
 });

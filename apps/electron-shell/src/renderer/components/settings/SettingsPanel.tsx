@@ -29,6 +29,7 @@ const CATEGORIES: SettingsCategory[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'editor', label: 'Editor' },
   { id: 'terminal', label: 'Terminal' },
+  { id: 'sdd', label: 'SDD' },
   { id: 'connections', label: 'Connections' },
   { id: 'extensions', label: 'Extensions' },
 ];
@@ -216,6 +217,35 @@ const SETTINGS_DEFINITIONS: SettingDefinition[] = [
       { value: 'cmd', label: 'Command Prompt' },
     ],
   },
+  // SDD settings
+  {
+    key: 'sdd.enabled',
+    category: 'sdd',
+    label: 'Enable SDD',
+    description: 'Enable spec-driven tracing and parity metrics',
+    type: 'boolean',
+    getValue: (settings) => settings.sdd.enabled,
+    setValue: (settings, value) => ({
+      sdd: {
+        ...settings.sdd,
+        enabled: Boolean(value),
+      },
+    }),
+  },
+  {
+    key: 'sdd.blockCommitOnUntrackedCodeChanges',
+    category: 'sdd',
+    label: 'Block Commit on Untracked Changes',
+    description: 'Prevent commits when code changes are untracked',
+    type: 'boolean',
+    getValue: (settings) => settings.sdd.blockCommitOnUntrackedCodeChanges,
+    setValue: (settings, value) => ({
+      sdd: {
+        ...settings.sdd,
+        blockCommitOnUntrackedCodeChanges: Boolean(value),
+      },
+    }),
+  },
 ];
 
 /**
@@ -286,6 +316,7 @@ export function SettingsPanel() {
       editor: { ...settings.editor, ...updates.editor },
       terminal: { ...settings.terminal, ...updates.terminal },
       extensions: { ...settings.extensions, ...updates.extensions },
+      sdd: { ...settings.sdd, ...updates.sdd },
     };
     setSettings(newSettings);
     // Notify other UI consumers (menu bar, breadcrumbs) of setting updates.

@@ -1,4 +1,4 @@
-## Task 1: Add SDD contracts, IPC channels, settings schema, and layout icon support
+## Task 1: Add Spec Drvien Development (SDD) contracts, IPC channels, settings schema, and layout icon support
 **Files to create:**
 - `packages/api-contracts/src/types/sdd.ts`
 

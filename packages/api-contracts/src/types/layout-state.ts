@@ -43,6 +43,7 @@ export const LayoutStateSchema = z.object({
     'source-control',
     'run-debug',
     'extensions',
+    'sdd',
     'settings'
   ]).default('explorer'),
 });

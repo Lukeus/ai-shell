@@ -152,6 +152,37 @@ export const IPC_CHANNELS = {
   /** Commit staged changes */
   SCM_COMMIT: 'scm:commit',
 
+  // SDD traceability + parity
+  /** List available SDD features */
+  SDD_LIST_FEATURES: 'sdd:list-features',
+
+  /** Get current SDD status */
+  SDD_STATUS: 'sdd:status',
+
+  /** Start an SDD run */
+  SDD_START_RUN: 'sdd:start-run',
+
+  /** Stop the active SDD run */
+  SDD_STOP_RUN: 'sdd:stop-run',
+
+  /** Set active task without starting a run */
+  SDD_SET_ACTIVE_TASK: 'sdd:set-active-task',
+
+  /** Get file trace for a path */
+  SDD_GET_FILE_TRACE: 'sdd:get-file-trace',
+
+  /** Get task trace for a feature/task */
+  SDD_GET_TASK_TRACE: 'sdd:get-task-trace',
+
+  /** Get parity summary */
+  SDD_GET_PARITY: 'sdd:get-parity',
+
+  /** Override untracked changes for commit enforcement */
+  SDD_OVERRIDE_UNTRACKED: 'sdd:override-untracked',
+
+  /** SDD status changed event (main -> renderer) */
+  SDD_CHANGED: 'sdd:changed',
+
   // Agent runs + events
   /** List agent runs */
   AGENT_RUNS_LIST: 'agent:runs:list',

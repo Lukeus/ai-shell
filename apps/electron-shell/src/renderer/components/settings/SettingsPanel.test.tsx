@@ -44,6 +44,8 @@ describe('SettingsPanel', () => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(screen.getByText('Appearance')).toBeInTheDocument();
       expect(screen.getByText('Editor')).toBeInTheDocument();
+      expect(screen.getByText('Terminal')).toBeInTheDocument();
+      expect(screen.getByText('SDD')).toBeInTheDocument();
       expect(screen.getByText('Connections')).toBeInTheDocument();
       expect(screen.getByText('Extensions')).toBeInTheDocument();
     });
@@ -133,6 +135,21 @@ describe('SettingsPanel', () => {
 
       // Theme setting should not be visible in Editor category
       expect(screen.queryByText('Theme')).not.toBeInTheDocument();
+    });
+
+    it('should render SDD settings when category selected', async () => {
+      render(<SettingsPanel />);
+
+      await waitFor(() => {
+        expect(screen.getByText('SDD')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('SDD'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Enable SDD')).toBeInTheDocument();
+        expect(screen.getByText('Block Commit on Untracked Changes')).toBeInTheDocument();
+      });
     });
 
     it('should clear search when switching categories', async () => {

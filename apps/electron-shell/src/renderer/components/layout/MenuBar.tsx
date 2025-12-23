@@ -503,9 +503,9 @@ export function MenuBar({
           aria-label="App icon"
         >
           <svg
-            width="16"
+            width="30"
             height="16"
-            viewBox="0 0 16 16"
+            viewBox="0 0 14 16"
             fill="none"
             stroke="currentColor"
             strokeWidth="1"

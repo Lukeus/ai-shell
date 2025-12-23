@@ -1,4 +1,4 @@
-# SDD Traceability + Parity (ai-shell)
+# Spec Drvien Development (SDD) Traceability + Parity (ai-shell)
 
 ## Goals
 
