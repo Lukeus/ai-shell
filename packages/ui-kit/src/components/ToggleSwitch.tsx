@@ -81,7 +81,7 @@ export function ToggleSwitch({ checked, onChange, label, disabled = false }: Tog
         {/* Toggle indicator (circle that slides) */}
         <span
           className={`
-            inline-block h-4 w-4 transform rounded-full bg-primary
+            inline-block h-4 w-4 transform rounded-full bg-[var(--vscode-button-foreground)]
             transition-transform duration-200 ease-in-out
             ${checked ? 'translate-x-6' : 'translate-x-1'}
           `}

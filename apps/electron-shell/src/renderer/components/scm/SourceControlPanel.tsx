@@ -148,7 +148,7 @@ export function SourceControlPanel() {
 
   if (!workspace) {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
         <div
           className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
           style={{
@@ -168,9 +168,9 @@ export function SourceControlPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div className="flex flex-col h-full min-h-0 bg-surface">
       <div
-        className="border-b border-border-subtle bg-surface-secondary"
+        className="border-b border-border-subtle bg-surface-secondary shrink-0"
         style={{ padding: 'var(--vscode-space-3)' }}
       >
         <div className="flex items-center justify-between gap-3">
@@ -270,7 +270,7 @@ export function SourceControlPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto">
         {error && (
           <div
             className="text-status-error"
@@ -324,23 +324,31 @@ export function SourceControlPanel() {
                 No files.
               </div>
             ) : (
-              <div className="sm:flex shrink-0 sm:flex-col hidden">
+              <div className="flex flex-col">
                 {group.items.map((item) => (
                   <div
                     key={`${group.id}-${item.path}`}
-                    className="sm:flex items-center justify-between hover:bg-surface-hover"
+                    className="flex items-start justify-between gap-3 hover:bg-surface-hover"
                     style={{ padding: 'var(--vscode-space-2)' }}
                   >
                     <button
                       onClick={() => handleOpenFile(item.path)}
-                      className="flex items-center gap-2 text-left"
+                      className="flex items-start gap-2 text-left flex-1 min-w-0"
                     >
-                      <span className="codicon codicon-file text-secondary" aria-hidden="true" />
-                      <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-                        {formatPath(item.path)}
-                      </span>
-                      <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-                        {item.status}
+                      <span className="codicon codicon-file text-secondary mt-0.5" aria-hidden="true" />
+                      <span className="flex flex-col min-w-0">
+                        <span
+                          className="text-primary break-words"
+                          style={{ fontSize: 'var(--vscode-font-size-ui)' }}
+                        >
+                          {formatPath(item.path)}
+                        </span>
+                        <span
+                          className="text-tertiary"
+                          style={{ fontSize: 'var(--vscode-font-size-small)' }}
+                        >
+                          {item.status}
+                        </span>
                       </span>
                     </button>
                     {group.id === 'staged' ? (
@@ -350,6 +358,7 @@ export function SourceControlPanel() {
                           rounded-sm border border-border-subtle text-secondary
                           hover:bg-surface-hover hover:text-primary
                           active:opacity-90 transition-colors duration-150
+                          shrink-0
                         "
                         style={{
                           paddingLeft: 'var(--vscode-space-2)',
@@ -368,6 +377,7 @@ export function SourceControlPanel() {
                           rounded-sm border border-border-subtle text-secondary
                           hover:bg-surface-hover hover:text-primary
                           active:opacity-90 transition-colors duration-150
+                          shrink-0
                         "
                         style={{
                           paddingLeft: 'var(--vscode-space-2)',

@@ -20,6 +20,27 @@ export interface TerminalProps {
   sessionId: string;
 }
 
+const getThemeValue = (
+  styles: CSSStyleDeclaration,
+  name: string,
+  fallback: string
+): string => {
+  const value = styles.getPropertyValue(name).trim();
+  return value || fallback;
+};
+
+const buildTerminalTheme = () => {
+  const styles = getComputedStyle(document.documentElement);
+  const foreground = getThemeValue(styles, '--vscode-foreground', '#cccccc');
+
+  return {
+    background: getThemeValue(styles, '--vscode-editor-background', '#1e1e1e'),
+    foreground,
+    cursor: foreground,
+    selection: getThemeValue(styles, '--vscode-selection-background', '#264f78'),
+  };
+};
+
 export function Terminal({ sessionId }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,12 +94,7 @@ export function Terminal({ sessionId }: TerminalProps) {
       cursorBlink: true,
       fontSize: 14,
       fontFamily: '"Cascadia Code", "Courier New", monospace',
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#cccccc',
-        cursor: '#cccccc',
-        selection: '#264f78',
-      },
+      theme: buildTerminalTheme(),
       scrollback: 10000,
       allowTransparency: false,
     });
@@ -118,6 +134,40 @@ export function Terminal({ sessionId }: TerminalProps) {
       term.dispose();
     };
   }, [xterm, fitAddon, sessionId, writeToSession, resizeSession]);
+
+  useEffect(() => {
+    if (!terminal) return;
+
+    const applyTheme = () => {
+      terminal.setOption('theme', buildTerminalTheme());
+    };
+
+    applyTheme();
+
+    const observer = new MutationObserver(() => applyTheme());
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleMediaChange = () => applyTheme();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleMediaChange);
+    } else {
+      mediaQuery.addListener(handleMediaChange);
+    }
+
+    return () => {
+      observer.disconnect();
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+      } else {
+        mediaQuery.removeListener(handleMediaChange);
+      }
+    };
+  }, [terminal]);
 
   useEffect(() => {
     lastOutputLengthRef.current = 0;
@@ -196,7 +246,7 @@ export function Terminal({ sessionId }: TerminalProps) {
     return (
       <div className="flex items-center justify-center h-full bg-surface text-secondary">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4" />
           <p className="text-sm">Loading Terminal...</p>
         </div>
       </div>
@@ -207,7 +257,7 @@ export function Terminal({ sessionId }: TerminalProps) {
     <div
       ref={terminalRef}
       className="h-full w-full"
-      style={{ backgroundColor: '#1e1e1e' }}
+      style={{ backgroundColor: 'var(--vscode-editor-background)' }}
     />
   );
 }

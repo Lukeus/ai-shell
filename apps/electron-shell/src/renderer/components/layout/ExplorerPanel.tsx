@@ -68,7 +68,7 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
 
   if (activeView !== 'explorer') {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
         <div
           className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
           style={{
@@ -179,10 +179,10 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
   // Empty state: no workspace
   if (!workspace) {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
         {/* Header */}
         <div
-          className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
+          className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary shrink-0"
           style={{
             paddingLeft: 'var(--vscode-space-2)',
             paddingRight: 'var(--vscode-space-2)',
@@ -256,10 +256,10 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex flex-col h-full min-h-0 bg-surface">
         {/* Header */}
         <div
-          className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
+          className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary shrink-0"
           style={{
             paddingLeft: 'var(--vscode-space-2)',
             paddingRight: 'var(--vscode-space-2)',
@@ -343,10 +343,10 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
 
   // Normal state: workspace open
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div className="flex flex-col h-full min-h-0 bg-surface">
       {/* Header with actions */}
       <div
-        className="flex items-center gap-2 border-b border-border-subtle bg-surface-secondary"
+        className="flex items-center gap-2 border-b border-border-subtle bg-surface-secondary shrink-0"
         style={{
           paddingLeft: 'var(--vscode-space-2)',
           paddingRight: 'var(--vscode-space-2)',
@@ -425,7 +425,7 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
       </div>
 
       {/* File tree */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <FileTree
           inlineInputMode={inlineInputMode}
           inlineInputTargetPath={inlineInputTargetPath ?? workspace.path}

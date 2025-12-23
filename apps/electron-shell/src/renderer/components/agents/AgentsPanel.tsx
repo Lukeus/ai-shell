@@ -192,7 +192,7 @@ export function AgentsPanel() {
             disabled={isBusy}
             className="
               rounded-none uppercase tracking-wide
-              bg-accent text-white
+              bg-accent text-[var(--vscode-button-foreground)]
               disabled:opacity-60
             "
             style={{

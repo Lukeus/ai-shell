@@ -53,12 +53,15 @@ export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
           title={item.tooltip}
           className={`
             h-full inline-flex items-center gap-1.5
-            ${item.active ? 'text-white' : 'text-white/80'}
-            hover:bg-[var(--vscode-statusBar-hoverBackground)] hover:text-white
+            text-[var(--vscode-statusBar-foreground)]
+            ${item.active ? 'opacity-100' : 'opacity-80'}
+            hover:bg-[var(--vscode-statusBar-hoverBackground)] hover:opacity-100
             focus:outline-none focus:ring-1 focus:ring-accent
           `}
           style={{
-            borderLeft: index === 0 ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
+            borderLeft: index === 0
+              ? 'none'
+              : '1px solid color-mix(in srgb, var(--vscode-statusBar-foreground) 20%, transparent)',
             paddingLeft: 'var(--vscode-space-2)',
             paddingRight: 'var(--vscode-space-2)',
             fontSize: 'var(--vscode-font-size-small)',

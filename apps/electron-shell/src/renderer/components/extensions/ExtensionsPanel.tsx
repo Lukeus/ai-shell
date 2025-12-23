@@ -144,9 +144,9 @@ export function ExtensionsPanel() {
   }, [permissionTarget]);
 
   return (
-    <div className="flex flex-col h-full bg-surface">
+    <div className="flex flex-col h-full min-h-0 bg-surface">
       <div
-        className="border-b border-border-subtle bg-surface-secondary"
+        className="border-b border-border-subtle bg-surface-secondary shrink-0"
         style={{
           paddingLeft: 'var(--vscode-space-3)',
           paddingRight: 'var(--vscode-space-3)',
@@ -162,12 +162,12 @@ export function ExtensionsPanel() {
       </div>
 
       {error && (
-        <div className="px-4 py-2 text-xs text-status-error border-b border-border">
+        <div className="px-4 py-2 text-xs text-status-error border-b border-border shrink-0">
           {error}
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full text-secondary text-sm">
             Loading extensions...

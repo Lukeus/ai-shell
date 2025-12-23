@@ -14,7 +14,7 @@
  */
 export function AIAssistantPanel() {
   return (
-    <div className="flex items-center justify-center h-full text-gray-400">
+    <div className="flex items-center justify-center h-full text-tertiary">
       <div className="text-center">
         <p className="text-sm">AI Assistant</p>
       </div>
