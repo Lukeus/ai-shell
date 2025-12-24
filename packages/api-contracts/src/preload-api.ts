@@ -53,6 +53,11 @@ import type {
   SddFileTraceResponse,
   SddTaskTraceResponse,
   SddParity,
+  SddRunStartRequest,
+  SddRunControlRequest,
+  SddProposalApplyRequest,
+  SddTestsRunRequest,
+  SddRunEvent,
 } from './types/sdd';
 import type {
   PublishDiagnosticsRequest,
@@ -61,7 +66,17 @@ import type {
   ListDiagnosticsResponse,
   DiagnosticsUpdateEvent,
   DiagnosticsSummaryEvent,
+  ErrorReport,
+  DiagGetLogPathResponse,
+  DiagSetSafeModeRequest,
+  DiagSetSafeModeResponse,
+  DiagFatalEvent,
 } from './types/diagnostics';
+import type { Result } from './types/result';
+import type {
+  TestForceCrashRendererRequest,
+  TestForceCrashRendererResponse,
+} from './types/test-only';
 import type {
   AgentRunStartRequest,
   AgentRunStartResponse,
@@ -500,6 +515,37 @@ export interface PreloadAPI {
      * @returns Unsubscribe function (call to remove listener)
      */
     onSummary(callback: (event: DiagnosticsSummaryEvent) => void): () => void;
+
+    /**
+     * Reports a global error to diagnostics (crash/error reporting).
+     * 
+     * @param report - Sanitized error report
+     * @returns Promise resolving when the report is accepted
+     */
+    reportError(report: ErrorReport): Promise<void>;
+
+    /**
+     * Retrieves the diagnostics log path.
+     * 
+     * @returns Result with log path on success
+     */
+    getLogPath(): Promise<Result<DiagGetLogPathResponse>>;
+
+    /**
+     * Sets Safe Mode and relaunches the app.
+     * 
+     * @param request - Safe Mode toggle request
+     * @returns Result with the resulting Safe Mode state
+     */
+    setSafeMode(request: DiagSetSafeModeRequest): Promise<Result<DiagSetSafeModeResponse>>;
+
+    /**
+     * Subscribes to fatal diagnostics events.
+     * 
+     * @param callback - Function to call on fatal events
+     * @returns Unsubscribe function (call to remove listener)
+     */
+    onFatal(callback: (event: DiagFatalEvent) => void): () => void;
   };
 
   /**
@@ -599,6 +645,36 @@ export interface PreloadAPI {
      * Overrides untracked changes for commit enforcement.
      */
     overrideUntracked(reason: string): Promise<void>;
+  };
+
+  /**
+   * Spec-driven development workflow runs (spec/plan/tasks/implement/review).
+   */
+  sddRuns: {
+    /**
+     * Starts an SDD workflow run.
+     */
+    start(request: SddRunStartRequest): Promise<void>;
+
+    /**
+     * Controls an SDD workflow run (cancel/retry).
+     */
+    control(request: SddRunControlRequest): Promise<void>;
+
+    /**
+     * Applies a proposed patch/write set for a run.
+     */
+    applyProposal(request: SddProposalApplyRequest): Promise<void>;
+
+    /**
+     * Runs tests for a workflow run.
+     */
+    runTests(request: SddTestsRunRequest): Promise<void>;
+
+    /**
+     * Subscribes to SDD workflow events.
+     */
+    onEvent(callback: (event: SddRunEvent) => void): () => void;
   };
 
   /**
@@ -837,6 +913,18 @@ export interface PreloadAPI {
      * Subscribe to window state changes.
      */
     onStateChange(callback: (state: WindowState) => void): () => void;
+  };
+
+  /**
+   * Test-only APIs (guarded by NODE_ENV === 'test').
+   */
+  test: {
+    /**
+     * Forcefully crash the renderer process (test-only).
+     */
+    forceCrashRenderer(
+      request: TestForceCrashRendererRequest
+    ): Promise<Result<TestForceCrashRendererResponse>>;
   };
   
   // Future expansion:

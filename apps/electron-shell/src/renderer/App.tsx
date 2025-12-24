@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ShellLayout, ResizablePanel, ActivityBar, StatusBar, PanelHeader } from 'packages-ui-kit';
-import { IPC_CHANNELS, SETTINGS_DEFAULTS, type Settings } from 'packages-api-contracts';
+import {
+  IPC_CHANNELS,
+  SETTINGS_DEFAULTS,
+  type DiagFatalEvent,
+  type ErrorReport,
+  type Settings,
+} from 'packages-api-contracts';
 import { LayoutProvider, useLayoutContext } from './contexts/LayoutContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { FileTreeContextProvider, useFileTree, SETTINGS_TAB_ID } from './components/explorer/FileTreeContext';
@@ -97,6 +103,10 @@ function AppContent() {
   const [menuBarVisible, setMenuBarVisible] = useState(SETTINGS_DEFAULTS.appearance.menuBarVisible);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [branchName, setBranchName] = useState<string | null>(null);
+  const [fatalEvent, setFatalEvent] = useState<DiagFatalEvent | null>(null);
+  const [fatalLogPath, setFatalLogPath] = useState<string | null>(null);
+  const [fatalLogError, setFatalLogError] = useState<string | null>(null);
+  const [fatalLogLoading, setFatalLogLoading] = useState(false);
   const isMac = typeof navigator !== 'undefined'
     ? (navigator.platform || navigator.userAgent || '').toLowerCase().includes('mac')
     : false;
@@ -231,6 +241,83 @@ function AppContent() {
       window.removeEventListener('ai-shell:open-sdd', handleOpenSdd);
     };
   }, [setActiveActivityBarIcon]);
+
+  useEffect(() => {
+    if (typeof window.api?.diagnostics?.onFatal !== 'function') {
+      return;
+    }
+    const unsubscribe = window.api.diagnostics.onFatal((event) => {
+      setFatalEvent(event);
+      setFatalLogPath(null);
+      setFatalLogError(null);
+      setFatalLogLoading(false);
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  const handleFatalReload = useCallback(() => {
+    window.location.reload();
+  }, []);
+
+  const handleFatalSafeMode = useCallback(async () => {
+    if (typeof window.api?.diagnostics?.setSafeMode === 'function') {
+      const result = await window.api.diagnostics.setSafeMode({ enabled: true });
+      if (result.ok) {
+        return;
+      }
+    }
+
+    if (typeof window.api?.diagnostics?.reportError === 'function') {
+      const report: ErrorReport = {
+        source: 'renderer',
+        message: 'Safe Mode restart requested.',
+        timestamp: new Date().toISOString(),
+        context: { action: 'restart-safe-mode' },
+      };
+      void window.api.diagnostics.reportError(report);
+    }
+    window.location.reload();
+  }, []);
+
+  const handleFatalOpenLogs = useCallback(async () => {
+    if (typeof window.api?.diagnostics?.getLogPath !== 'function') {
+      setFatalLogError('Log path unavailable.');
+      return;
+    }
+    setFatalLogLoading(true);
+    setFatalLogError(null);
+    const result = await window.api.diagnostics.getLogPath();
+    if (result.ok) {
+      setFatalLogPath(result.value.path);
+      setFatalLogError(null);
+    } else {
+      setFatalLogPath(null);
+      setFatalLogError(result.error.message || 'Failed to load log path.');
+    }
+    setFatalLogLoading(false);
+  }, []);
+
+  const handleFatalCopyLogPath = useCallback(async () => {
+    if (!fatalLogPath) {
+      return;
+    }
+    try {
+      await navigator.clipboard?.writeText(fatalLogPath);
+    } catch {
+      // Ignore clipboard errors.
+    }
+  }, [fatalLogPath]);
+
+  const fatalMessage = fatalEvent?.report.message ?? null;
+  const fatalSummary = fatalMessage
+    ? fatalMessage.length > 160
+      ? `${fatalMessage.slice(0, 157).trimEnd()}...`
+      : fatalMessage
+    : null;
 
   const activeTabId =
     activeTabIndex >= 0 && activeTabIndex < openTabs.length ? openTabs[activeTabIndex] : null;
@@ -421,6 +508,122 @@ function AppContent() {
           onToggleSecondarySidebar={toggleSecondarySidebar}
           onToggleBottomPanel={toggleBottomPanel}
         />
+      )}
+      {fatalEvent && (
+        <div className="border-b border-border-subtle bg-surface-secondary">
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 text-secondary"
+            style={{ padding: 'var(--vscode-space-3)' }}
+          >
+            <div className="flex items-start gap-2">
+              <span className="codicon codicon-warning text-status-error" aria-hidden="true" />
+              <div className="flex flex-col gap-1">
+                <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
+                  Fatal error detected
+                </span>
+                {fatalSummary && (
+                  <span
+                    className="text-tertiary"
+                    style={{ fontSize: 'var(--vscode-font-size-small)' }}
+                  >
+                    {fatalSummary}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleFatalReload}
+                className="
+                  rounded-sm bg-accent text-primary
+                  hover:bg-accent-hover active:opacity-90
+                  transition-colors duration-150
+                "
+                style={{
+                  paddingLeft: 'var(--vscode-space-3)',
+                  paddingRight: 'var(--vscode-space-3)',
+                  paddingTop: 'var(--vscode-space-2)',
+                  paddingBottom: 'var(--vscode-space-2)',
+                  fontSize: 'var(--vscode-font-size-small)',
+                }}
+              >
+                Reload
+              </button>
+              <button
+                onClick={handleFatalSafeMode}
+                className="
+                  rounded-sm border border-border-subtle text-secondary
+                  hover:bg-surface-hover hover:text-primary
+                  active:opacity-90 transition-colors duration-150
+                "
+                style={{
+                  paddingLeft: 'var(--vscode-space-3)',
+                  paddingRight: 'var(--vscode-space-3)',
+                  paddingTop: 'var(--vscode-space-2)',
+                  paddingBottom: 'var(--vscode-space-2)',
+                  fontSize: 'var(--vscode-font-size-small)',
+                }}
+              >
+                Safe Mode
+              </button>
+              <button
+                onClick={handleFatalOpenLogs}
+                className="
+                  rounded-sm border border-border-subtle text-secondary
+                  hover:bg-surface-hover hover:text-primary
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                  active:opacity-90 transition-colors duration-150
+                "
+                disabled={fatalLogLoading}
+                style={{
+                  paddingLeft: 'var(--vscode-space-3)',
+                  paddingRight: 'var(--vscode-space-3)',
+                  paddingTop: 'var(--vscode-space-2)',
+                  paddingBottom: 'var(--vscode-space-2)',
+                  fontSize: 'var(--vscode-font-size-small)',
+                }}
+              >
+                {fatalLogLoading ? 'Loading logs...' : 'Open logs'}
+              </button>
+            </div>
+          </div>
+          {(fatalLogPath || fatalLogError) && (
+            <div
+              className="border-t border-border-subtle text-tertiary"
+              style={{
+                paddingLeft: 'var(--vscode-space-3)',
+                paddingRight: 'var(--vscode-space-3)',
+                paddingBottom: 'var(--vscode-space-3)',
+                fontSize: 'var(--vscode-font-size-small)',
+              }}
+            >
+              {fatalLogError ? (
+                <span className="text-status-error">{fatalLogError}</span>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 text-primary">
+                  <span className="break-all">{fatalLogPath}</span>
+                  <button
+                    onClick={handleFatalCopyLogPath}
+                    className="
+                      rounded-sm border border-border-subtle text-secondary
+                      hover:bg-surface-hover hover:text-primary
+                      active:opacity-90 transition-colors duration-150
+                    "
+                    style={{
+                      paddingLeft: 'var(--vscode-space-2)',
+                      paddingRight: 'var(--vscode-space-2)',
+                      paddingTop: 'var(--vscode-space-1)',
+                      paddingBottom: 'var(--vscode-space-1)',
+                      fontSize: 'var(--vscode-font-size-small)',
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
       <div className="flex-1 min-h-0">
         <ShellLayout

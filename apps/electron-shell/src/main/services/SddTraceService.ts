@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createHash, randomUUID } from 'crypto';
+import ignore, { type Ignore } from 'ignore';
 import type {
   SddDocRef,
   SddEvent,
@@ -36,6 +37,8 @@ const SDD_DIRNAME = '.ai-shell';
 const SDD_SUBDIR = 'sdd';
 const LEDGER_FILENAME = 'trace.jsonl';
 const INDEX_FILENAME = 'index.json';
+const GITIGNORE_FILENAME = '.gitignore';
+const DEFAULT_IGNORED_DIRS = new Set(['.ai-shell', '.git']);
 
 const FILE_EVENT_TYPES = new Set([
   'FILE_MODIFIED',
@@ -56,6 +59,8 @@ export class SddTraceService {
   private activeDocRefs: SddDocRef[] = [];
   private index: SddIndex | null = null;
   private selectedTask: { featureId: string; taskId: string } | null = null;
+  private ignoreMatcher: Ignore | null = null;
+  private ignoreMtimeMs: number | null = null;
   private statusListeners = new Set<(status: SddStatus) => void>();
   private commitOverride: { reason: string; createdAt: string } | null = null;
 
@@ -92,7 +97,7 @@ export class SddTraceService {
     const index = await this.ensureIndexLoaded();
     return {
       activeRun: this.activeRun,
-      parity: index.latestParitySnapshot,
+      parity: this.getParitySnapshot(index),
     };
   }
 
@@ -132,6 +137,7 @@ export class SddTraceService {
     await this.recordEvent(event, paths);
     this.activeRun = run;
     this.activeDocRefs = docRefs;
+    this.selectedTask = { featureId: run.featureId, taskId: run.taskId };
     await this.emitStatusChange();
     return run;
   }
@@ -192,6 +198,9 @@ export class SddTraceService {
     if (!this.enabled) {
       return;
     }
+    if (!this.isTrackingInitialized()) {
+      return;
+    }
 
     const paths = await this.ensureStorage();
     const validatedPath = await resolvePathWithinWorkspace(
@@ -199,6 +208,9 @@ export class SddTraceService {
       paths.workspaceRoot,
       { requireExisting: params.op !== 'deleted' }
     );
+    if (await this.isIgnoredPath(validatedPath, paths.workspaceRoot)) {
+      return;
+    }
 
     const hashAfter =
       params.op === 'deleted'
@@ -235,6 +247,7 @@ export class SddTraceService {
 
   public setActiveTask(featureId: string, taskId: string): void {
     this.selectedTask = { featureId, taskId };
+    void this.emitStatusChange();
   }
 
   public async overrideUntracked(reason: string, actor = 'human'): Promise<void> {
@@ -341,11 +354,12 @@ export class SddTraceService {
 
   public async getParity(): Promise<SddParity> {
     const index = await this.ensureIndexLoaded();
-    return index.latestParitySnapshot;
+    return this.getParitySnapshot(index);
   }
 
   public async rebuildIndexFromLedger(): Promise<SddIndex> {
     const paths = await this.ensureStorage();
+    await this.loadIgnoreMatcher(paths.workspaceRoot);
     const contents = await fs.promises.readFile(paths.ledgerPath, 'utf-8');
     const index = this.createEmptyIndex();
     const lines = contents.split('\n').filter((line) => line.trim().length > 0);
@@ -353,7 +367,7 @@ export class SddTraceService {
     for (const line of lines) {
       try {
         const event = JSON.parse(line) as SddEvent;
-        this.applyEventToIndex(index, event);
+        this.applyEventToIndex(index, event, paths.workspaceRoot);
       } catch {
         // Skip malformed lines
       }
@@ -374,12 +388,16 @@ export class SddTraceService {
 
   private async recordEvent(event: SddEvent, paths: StoragePaths): Promise<void> {
     const index = await this.ensureIndexLoaded();
-    this.applyEventToIndex(index, event);
+    this.applyEventToIndex(index, event, paths.workspaceRoot);
     await fs.promises.appendFile(paths.ledgerPath, `${JSON.stringify(event)}\n`, 'utf-8');
     await this.writeIndex(paths.indexPath, index);
   }
 
-  private applyEventToIndex(index: SddIndex, event: SddEvent): void {
+  private applyEventToIndex(
+    index: SddIndex,
+    event: SddEvent,
+    workspaceRoot: string
+  ): void {
     const updatedAt = event.ts;
     if (event.type === 'RUN_STARTED' && event.run) {
       index.runsById[event.run.runId] = {
@@ -405,14 +423,25 @@ export class SddTraceService {
     }
 
     if (FILE_EVENT_TYPES.has(event.type)) {
-      this.applyFileEvent(index, event, updatedAt);
+      this.applyFileEvent(index, event, updatedAt, workspaceRoot);
     }
 
     index.latestParitySnapshot.updatedAt = updatedAt;
   }
 
-  private applyFileEvent(index: SddIndex, event: SddEvent, updatedAt: string): void {
-    const files = event.files ?? [];
+  private applyFileEvent(
+    index: SddIndex,
+    event: SddEvent,
+    updatedAt: string,
+    workspaceRoot: string
+  ): void {
+    const files = (event.files ?? []).filter(
+      (file) => !this.isIgnoredPathSync(file.path, workspaceRoot)
+    );
+    if (files.length === 0) {
+      index.latestParitySnapshot.updatedAt = updatedAt;
+      return;
+    }
     const driftFiles = new Set(index.latestParitySnapshot.driftFiles);
     let trackedChanges = index.latestParitySnapshot.trackedFileChanges;
     let untrackedChanges = index.latestParitySnapshot.untrackedFileChanges;
@@ -529,7 +558,7 @@ export class SddTraceService {
 
     const status: SddStatus = {
       activeRun: this.activeRun,
-      parity: index.latestParitySnapshot,
+      parity: this.getParitySnapshot(index),
     };
 
     for (const listener of this.statusListeners) {
@@ -590,6 +619,74 @@ export class SddTraceService {
 
   private sanitizeReason(reason: string): string {
     return reason.trim().slice(0, 500);
+  }
+
+  private getParitySnapshot(index: SddIndex): SddParity {
+    if (!this.isTrackingInitialized()) {
+      return {
+        trackedFileChanges: 0,
+        untrackedFileChanges: 0,
+        trackedRatio: 1,
+        driftFiles: [],
+        staleDocs: [],
+      };
+    }
+    return index.latestParitySnapshot;
+  }
+
+  private isTrackingInitialized(): boolean {
+    return Boolean(this.activeRun || this.selectedTask);
+  }
+
+  private async isIgnoredPath(filePath: string, workspaceRoot: string): Promise<boolean> {
+    await this.loadIgnoreMatcher(workspaceRoot);
+    return this.isIgnoredPathSync(filePath, workspaceRoot);
+  }
+
+  private isIgnoredPathSync(filePath: string, workspaceRoot: string): boolean {
+    const relative = path.relative(workspaceRoot, filePath);
+    if (!relative || relative.startsWith('..')) {
+      return true;
+    }
+    if (this.isAlwaysIgnored(relative)) {
+      return true;
+    }
+    if (!this.ignoreMatcher) {
+      return false;
+    }
+    const normalized = relative.replace(/\\/g, '/');
+    return this.ignoreMatcher.ignores(normalized);
+  }
+
+  private isAlwaysIgnored(relativePath: string): boolean {
+    const segments = relativePath.split(/[\\/]/);
+    return segments.some((segment) => DEFAULT_IGNORED_DIRS.has(segment));
+  }
+
+  private async loadIgnoreMatcher(workspaceRoot: string): Promise<void> {
+    const gitignorePath = path.join(workspaceRoot, GITIGNORE_FILENAME);
+    let raw: string | null = null;
+    let mtimeMs: number | null = null;
+
+    try {
+      const stat = await fs.promises.stat(gitignorePath);
+      mtimeMs = stat.mtimeMs;
+      raw = await fs.promises.readFile(gitignorePath, 'utf-8');
+    } catch {
+      // No gitignore found; fall back to default ignores only.
+    }
+
+    if (this.ignoreMatcher && this.ignoreMtimeMs === mtimeMs) {
+      return;
+    }
+
+    const matcher = ignore();
+    matcher.add(Array.from(DEFAULT_IGNORED_DIRS, (dir) => `${dir}/`));
+    if (raw) {
+      matcher.add(raw);
+    }
+    this.ignoreMatcher = matcher;
+    this.ignoreMtimeMs = mtimeMs;
   }
 
   private async ensureStorage(): Promise<StoragePaths> {

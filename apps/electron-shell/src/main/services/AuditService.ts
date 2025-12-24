@@ -30,6 +30,14 @@ type ModelCallLogInput = {
   error?: string;
 };
 
+type SddProposalApplyLogInput = {
+  runId: string;
+  status: 'success' | 'error';
+  filesChanged: number;
+  files?: string[];
+  error?: string;
+};
+
 /**
  * AuditService - append-only audit log for sensitive actions.
  * 
@@ -91,6 +99,22 @@ export class AuditService {
       modelRef: input.modelRef,
       status: input.status,
       durationMs: input.durationMs,
+      error: input.error,
+      createdAt: new Date().toISOString(),
+    });
+
+    this.appendEvent(event);
+    return event;
+  }
+
+  public logSddProposalApply(input: SddProposalApplyLogInput): AuditEvent {
+    const event = AuditEventSchema.parse({
+      id: randomUUID(),
+      type: 'sdd.proposal.apply',
+      runId: input.runId,
+      status: input.status,
+      filesChanged: input.filesChanged,
+      files: input.files,
       error: input.error,
       createdAt: new Date().toISOString(),
     });

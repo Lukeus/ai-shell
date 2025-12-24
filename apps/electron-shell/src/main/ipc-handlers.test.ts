@@ -16,6 +16,9 @@ import { auditService } from './services/AuditService';
 import { agentRunStore } from './services/AgentRunStore';
 import { sddTraceService } from './services/SddTraceService';
 import { sddWatcher } from './services/SddWatcher';
+import { patchApplyService } from './services/PatchApplyService';
+import { sddRunCoordinator } from './services/SddRunCoordinator';
+import { diagnosticsService } from './services/DiagnosticsService';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -24,6 +27,8 @@ vi.mock('electron', () => ({
   },
   app: {
     getVersion: vi.fn(() => '1.0.0'),
+    relaunch: vi.fn(),
+    exit: vi.fn(),
   },
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -119,6 +124,7 @@ vi.mock('./services/ConsentService', () => ({
 vi.mock('./services/AuditService', () => ({
   auditService: {
     logSecretAccess: vi.fn(),
+    logSddProposalApply: vi.fn(),
     listEvents: vi.fn(),
   },
 }));
@@ -156,6 +162,27 @@ vi.mock('./services/SddWatcher', () => ({
   },
 }));
 
+vi.mock('./services/PatchApplyService', () => ({
+  patchApplyService: {
+    applyProposal: vi.fn(),
+  },
+}));
+
+vi.mock('./services/SddRunCoordinator', () => ({
+  sddRunCoordinator: {
+    attachAgentHost: vi.fn(),
+    startRun: vi.fn(),
+    controlRun: vi.fn(),
+  },
+}));
+
+vi.mock('./services/DiagnosticsService', () => ({
+  diagnosticsService: {
+    reportError: vi.fn(),
+    getLogPath: vi.fn(),
+  },
+}));
+
 vi.mock('./index', () => ({
   getAgentHostManager: vi.fn(() => null),
   getExtensionCommandService: vi.fn(() => null),
@@ -170,16 +197,20 @@ describe('IPC Handlers', () => {
   // Store handlers for testing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handlers = new Map<string, (...args: any[]) => Promise<any>>();
+  let originalNodeEnv: string | undefined;
 
   beforeEach(() => {
     // Clear mocks
     vi.clearAllMocks();
     handlers.clear();
+    originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'test';
 
     vi.mocked(settingsService.getSettings).mockReturnValue(SETTINGS_DEFAULTS);
     vi.mocked(sddTraceService.onStatusChange).mockReturnValue(() => undefined);
     vi.mocked(sddTraceService.setEnabled).mockResolvedValue(undefined);
     vi.mocked(sddWatcher.setEnabled).mockReturnValue(undefined);
+    vi.mocked(diagnosticsService.getLogPath).mockResolvedValue('C:\\logs\\ai-shell.log');
 
     // Capture handlers registered via ipcMain.handle
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,6 +224,7 @@ describe('IPC Handlers', () => {
   });
 
   afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
     vi.restoreAllMocks();
   });
 
@@ -679,6 +711,137 @@ describe('IPC Handlers', () => {
     it('should reject invalid commit request', async () => {
       const handler = getHandler(IPC_CHANNELS.SCM_COMMIT);
       await expect(handler(null, { message: '' })).rejects.toThrow();
+    });
+  });
+
+  describe('Diagnostics handlers', () => {
+    it('should register DIAG_REPORT_ERROR handler', () => {
+      expect(handlers.has(IPC_CHANNELS.DIAG_REPORT_ERROR)).toBe(true);
+    });
+
+    it('should register DIAG_GET_LOG_PATH handler', () => {
+      expect(handlers.has(IPC_CHANNELS.DIAG_GET_LOG_PATH)).toBe(true);
+    });
+
+    it('should register DIAG_SET_SAFE_MODE handler', () => {
+      expect(handlers.has(IPC_CHANNELS.DIAG_SET_SAFE_MODE)).toBe(true);
+    });
+
+    it('should report errors via DiagnosticsService', async () => {
+      const handler = getHandler(IPC_CHANNELS.DIAG_REPORT_ERROR);
+      const payload = {
+        source: 'renderer',
+        message: 'Crash',
+        timestamp: new Date().toISOString(),
+      };
+      const result = await handler(null, payload);
+
+      expect(diagnosticsService.reportError).toHaveBeenCalledWith(payload);
+      expect(result).toEqual({ ok: true, value: undefined });
+    });
+
+    it('should return log path via DiagnosticsService', async () => {
+      const handler = getHandler(IPC_CHANNELS.DIAG_GET_LOG_PATH);
+      const result = await handler(null, {});
+      expect(result).toEqual({ ok: true, value: { path: 'C:\\logs\\ai-shell.log' } });
+    });
+  });
+
+  describe('SDD handlers', () => {
+    it('should register SDD_PROPOSAL_APPLY handler', () => {
+      expect(handlers.has(IPC_CHANNELS.SDD_PROPOSAL_APPLY)).toBe(true);
+    });
+
+    it('should register SDD_RUNS_START and SDD_RUNS_CONTROL handlers', () => {
+      expect(handlers.has(IPC_CHANNELS.SDD_RUNS_START)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_RUNS_CONTROL)).toBe(true);
+    });
+
+    it('should apply a proposal and audit success', async () => {
+      vi.mocked(workspaceService.getWorkspace).mockReturnValue({
+        path: 'C:\\workspace',
+        name: 'workspace',
+      });
+      vi.mocked(patchApplyService.applyProposal).mockResolvedValue({
+        files: ['specs/151-sdd-workflow/spec.md'],
+        summary: { filesChanged: 1, additions: 1, deletions: 0 },
+      });
+
+      const handler = getHandler(IPC_CHANNELS.SDD_PROPOSAL_APPLY);
+      await handler(null, {
+        runId: '123e4567-e89b-12d3-a456-426614174000',
+        proposal: {
+          writes: [],
+          summary: { filesChanged: 0 },
+        },
+      });
+
+      expect(patchApplyService.applyProposal).toHaveBeenCalled();
+      expect(auditService.logSddProposalApply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: '123e4567-e89b-12d3-a456-426614174000',
+          status: 'success',
+          filesChanged: 1,
+        })
+      );
+    });
+
+    it('should start an SDD workflow run', async () => {
+      const handler = getHandler(IPC_CHANNELS.SDD_RUNS_START);
+      await handler(null, {
+        featureId: '151-sdd-workflow',
+        goal: 'Ship SDD workflow',
+      });
+
+      expect(sddRunCoordinator.attachAgentHost).toHaveBeenCalled();
+      expect(sddRunCoordinator.startRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          featureId: '151-sdd-workflow',
+          goal: 'Ship SDD workflow',
+        })
+      );
+    });
+
+    it('should control an SDD workflow run', async () => {
+      const handler = getHandler(IPC_CHANNELS.SDD_RUNS_CONTROL);
+      await handler(null, {
+        runId: '123e4567-e89b-12d3-a456-426614174000',
+        action: 'cancel',
+      });
+
+      expect(sddRunCoordinator.attachAgentHost).toHaveBeenCalled();
+      expect(sddRunCoordinator.controlRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: '123e4567-e89b-12d3-a456-426614174000',
+          action: 'cancel',
+        })
+      );
+    });
+
+    it('should audit failure when proposal apply errors', async () => {
+      vi.mocked(workspaceService.getWorkspace).mockReturnValue({
+        path: 'C:\\workspace',
+        name: 'workspace',
+      });
+      vi.mocked(patchApplyService.applyProposal).mockRejectedValue(new Error('boom'));
+
+      const handler = getHandler(IPC_CHANNELS.SDD_PROPOSAL_APPLY);
+      await expect(
+        handler(null, {
+          runId: '123e4567-e89b-12d3-a456-426614174000',
+          proposal: {
+            writes: [],
+            summary: { filesChanged: 0 },
+          },
+        })
+      ).rejects.toThrow('boom');
+
+      expect(auditService.logSddProposalApply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: '123e4567-e89b-12d3-a456-426614174000',
+          status: 'error',
+        })
+      );
     });
   });
 
@@ -1171,7 +1334,7 @@ describe('IPC Handlers', () => {
   });
 
   describe('All handlers registered', () => {
-    it('should register all 67 expected IPC handlers', () => {
+    it('should register all 74 expected IPC handlers', () => {
       // Existing handlers (4)
       expect(handlers.has(IPC_CHANNELS.GET_VERSION)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.GET_SETTINGS)).toBe(true);
@@ -1215,7 +1378,12 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.SCM_UNSTAGE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SCM_COMMIT)).toBe(true);
 
-      // SDD handlers (9)
+      // Diagnostics handlers (3)
+      expect(handlers.has(IPC_CHANNELS.DIAG_REPORT_ERROR)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.DIAG_GET_LOG_PATH)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.DIAG_SET_SAFE_MODE)).toBe(true);
+
+      // SDD handlers (12)
       expect(handlers.has(IPC_CHANNELS.SDD_LIST_FEATURES)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SDD_STATUS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SDD_START_RUN)).toBe(true);
@@ -1225,6 +1393,9 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.SDD_GET_TASK_TRACE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SDD_GET_PARITY)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SDD_OVERRIDE_UNTRACKED)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_PROPOSAL_APPLY)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_RUNS_START)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SDD_RUNS_CONTROL)).toBe(true);
 
       // Agent handlers (8)
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_LIST)).toBe(true);
@@ -1261,8 +1432,11 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.EXTENSIONS_RENDER_VIEW)).toBe(true);
 
-      // Total: 67 handlers
-      expect(handlers.size).toBe(67);
+      // Test-only handlers (1)
+      expect(handlers.has(IPC_CHANNELS.TEST_FORCE_CRASH_RENDERER)).toBe(true);
+
+      // Total: 74 handlers
+      expect(handlers.size).toBe(74);
     });
   });
 });

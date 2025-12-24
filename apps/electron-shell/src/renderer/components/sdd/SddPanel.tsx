@@ -1,22 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  SddDocRef,
   SddFeatureSummary,
   SddFileTraceResponse,
+  SddRunEvent,
+  SddStep,
+  Proposal,
 } from 'packages-api-contracts';
 import { useFileTree } from '../explorer/FileTreeContext';
 import { useSddStatus } from '../../hooks/useSddStatus';
+import { ProposalDiffView } from './ProposalDiffView';
+import { SddRunControls } from './SddRunControls';
 
 type SddTaskItem = {
   id: string;
   label: string;
-};
-
-const buildWorkspacePath = (workspacePath: string, relativePath: string): string => {
-  const separator = workspacePath.includes('\\') ? '\\' : '/';
-  const trimmedRoot = workspacePath.replace(/[\\/]+$/, '');
-  const trimmedRelative = relativePath.replace(/^[\\/]+/, '');
-  return `${trimmedRoot}${separator}${trimmedRelative}`;
 };
 
 const parseTasks = (content: string): SddTaskItem[] => {
@@ -41,12 +38,47 @@ const parseTasks = (content: string): SddTaskItem[] => {
   return tasks;
 };
 
-const hashContent = async (content: string): Promise<string> => {
-  const data = new TextEncoder().encode(content);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+const parseSlashCommand = (value: string): SddStep | null => {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed.startsWith('/')) {
+    return null;
+  }
+  const [command] = trimmed.split(/\s+/, 1);
+  if (command === '/spec') return 'spec';
+  if (command === '/plan') return 'plan';
+  if (command === '/tasks') return 'tasks';
+  if (command === '/implement') return 'implement';
+  if (command === '/review') return 'review';
+  return null;
+};
+
+const formatEventLabel = (event: SddRunEvent): string => {
+  switch (event.type) {
+    case 'started':
+      return `Started ${event.featureId} (${event.step})`;
+    case 'contextLoaded':
+      return 'Context loaded';
+    case 'stepStarted':
+      return `Step started: ${event.step}`;
+    case 'outputAppended':
+      return 'Output appended';
+    case 'proposalReady':
+      return 'Proposal ready';
+    case 'approvalRequired':
+      return 'Approval required';
+    case 'proposalApplied':
+      return 'Proposal applied';
+    case 'testsRequested':
+      return `Tests requested: ${event.command}`;
+    case 'testsCompleted':
+      return `Tests completed (${event.exitCode})`;
+    case 'runCompleted':
+      return 'Run completed';
+    case 'runFailed':
+      return `Run failed: ${event.message}`;
+    default:
+      return event.type;
+  }
 };
 
 export function SddPanel() {
@@ -59,17 +91,33 @@ export function SddPanel() {
   const [fileTrace, setFileTrace] = useState<SddFileTraceResponse | null>(null);
   const [isLoadingFeatures, setIsLoadingFeatures] = useState(false);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
-  const [isStartingRun, setIsStartingRun] = useState(false);
-  const [isStoppingRun, setIsStoppingRun] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [workflowFeatureId, setWorkflowFeatureId] = useState('');
+  const [workflowGoal, setWorkflowGoal] = useState('');
+  const [workflowStep, setWorkflowStep] = useState<SddStep>('spec');
+  const [workflowCommand, setWorkflowCommand] = useState('');
+  const [workflowRunId, setWorkflowRunId] = useState<string | null>(null);
+  const [workflowStatus, setWorkflowStatus] = useState<
+    'idle' | 'running' | 'completed' | 'failed'
+  >('idle');
+  const [workflowEvents, setWorkflowEvents] = useState<SddRunEvent[]>([]);
+  const [workflowProposal, setWorkflowProposal] = useState<Proposal | null>(null);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [isStartingWorkflow, setIsStartingWorkflow] = useState(false);
+  const [isApplyingProposal, setIsApplyingProposal] = useState(false);
 
   const activeRun = status?.activeRun ?? null;
+  const workflowRunIdRef = useRef<string | null>(null);
   const parity = status?.parity;
   const trackedChanges = parity?.trackedFileChanges ?? 0;
   const untrackedChanges = parity?.untrackedFileChanges ?? 0;
   const trackedRatio = parity?.trackedRatio ?? 1;
   const driftFiles = parity?.driftFiles ?? [];
   const staleDocs = parity?.staleDocs ?? [];
+
+  useEffect(() => {
+    workflowRunIdRef.current = workflowRunId;
+  }, [workflowRunId]);
 
   const selectedFeature = useMemo(
     () => features.find((feature) => feature.featureId === selectedFeatureId) ?? null,
@@ -240,79 +288,150 @@ export function SddPanel() {
     }
   };
 
-  const buildDocRefs = useCallback(async (): Promise<SddDocRef[]> => {
-    if (!workspace) {
-      return [];
-    }
-
-    const candidatePaths: Array<string | undefined> = [
-      buildWorkspacePath(workspace.path, 'memory/constitution.md'),
-      selectedFeature?.specPath,
-      selectedFeature?.planPath,
-      selectedFeature?.tasksPath,
-    ];
-
-    const refs: SddDocRef[] = [];
-    if (typeof window.api?.fs?.readFile !== 'function') {
-      return refs;
-    }
-
-    for (const docPath of candidatePaths) {
-      if (!docPath) {
-        continue;
-      }
-      try {
-        const response = await window.api.fs.readFile({ path: docPath });
-        const hash = await hashContent(response.content ?? '');
-        refs.push({ path: docPath, hash });
-      } catch (docError) {
-        console.error('Failed to read SDD doc:', docError);
-      }
-    }
-
-    return refs;
-  }, [selectedFeature, workspace]);
-
-  const handleStartRun = async () => {
-    if (!selectedFeatureId || !selectedTaskId || typeof window.api?.sdd?.startRun !== 'function') {
+  useEffect(() => {
+    if (!selectedFeatureId) {
       return;
     }
-    setError(null);
-    setIsStartingRun(true);
+    setWorkflowFeatureId((current) => (current.length === 0 ? selectedFeatureId : current));
+  }, [selectedFeatureId]);
+
+  useEffect(() => {
+    if (!enabled || typeof window.api?.sddRuns?.onEvent !== 'function') {
+      return;
+    }
+
+    const unsubscribe = window.api.sddRuns.onEvent((event) => {
+      const currentRunId = workflowRunIdRef.current;
+      if (event.type === 'started') {
+        setWorkflowRunId(event.runId);
+        setWorkflowStatus('running');
+        setWorkflowStep(event.step);
+        setWorkflowFeatureId(event.featureId);
+        setWorkflowGoal(event.goal);
+        setWorkflowProposal(null);
+        setWorkflowError(null);
+        setWorkflowEvents([event]);
+        return;
+      }
+
+      if (currentRunId && event.runId !== currentRunId) {
+        return;
+      }
+
+      setWorkflowEvents((prev) => [...prev, event].slice(-200));
+
+      if (event.type === 'stepStarted') {
+        setWorkflowStep(event.step);
+      }
+      if (event.type === 'proposalReady' || event.type === 'approvalRequired') {
+        setWorkflowProposal(event.proposal);
+      }
+      if (event.type === 'proposalApplied') {
+        setWorkflowProposal(null);
+      }
+      if (event.type === 'runCompleted') {
+        setWorkflowStatus('completed');
+      }
+      if (event.type === 'runFailed') {
+        setWorkflowStatus('failed');
+        setWorkflowError(event.message);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [enabled]);
+
+  const handleStartWorkflow = async () => {
+    if (typeof window.api?.sddRuns?.start !== 'function') {
+      return;
+    }
+    const stepOverride = parseSlashCommand(workflowCommand);
+    const step = stepOverride ?? workflowStep;
+    if (!workflowFeatureId.trim() || !workflowGoal.trim()) {
+      setWorkflowError('Feature ID and goal are required to start an SDD run.');
+      return;
+    }
+
+    setWorkflowError(null);
+    setIsStartingWorkflow(true);
     try {
-      const inputs = await buildDocRefs();
-      await window.api.sdd.startRun({
-        featureId: selectedFeatureId,
-        taskId: selectedTaskId,
-        inputs,
+      await window.api.sddRuns.start({
+        featureId: workflowFeatureId.trim(),
+        goal: workflowGoal.trim(),
+        step,
       });
     } catch (runError) {
-      console.error('Failed to start SDD run:', runError);
-      setError(runError instanceof Error ? runError.message : 'Failed to start SDD run.');
+      console.error('Failed to start SDD workflow run:', runError);
+      setWorkflowError(
+        runError instanceof Error ? runError.message : 'Failed to start SDD workflow run.'
+      );
     } finally {
-      setIsStartingRun(false);
+      setIsStartingWorkflow(false);
     }
   };
 
-  const handleStopRun = async () => {
-    if (typeof window.api?.sdd?.stopRun !== 'function') {
+  const handleCancelWorkflow = async () => {
+    if (!workflowRunId || typeof window.api?.sddRuns?.control !== 'function') {
       return;
     }
-    setError(null);
-    setIsStoppingRun(true);
+    setWorkflowError(null);
     try {
-      await window.api.sdd.stopRun();
-    } catch (runError) {
-      console.error('Failed to stop SDD run:', runError);
-      setError(runError instanceof Error ? runError.message : 'Failed to stop SDD run.');
+      await window.api.sddRuns.control({
+        runId: workflowRunId,
+        action: 'cancel',
+        reason: 'User canceled workflow run.',
+      });
+    } catch (controlError) {
+      console.error('Failed to cancel SDD workflow run:', controlError);
+      setWorkflowError(
+        controlError instanceof Error ? controlError.message : 'Failed to cancel SDD workflow run.'
+      );
+    }
+  };
+
+  const handleApplyProposal = async () => {
+    if (
+      !workflowRunId ||
+      !workflowProposal ||
+      typeof window.api?.sddRuns?.applyProposal !== 'function'
+    ) {
+      return;
+    }
+    setWorkflowError(null);
+    setIsApplyingProposal(true);
+    try {
+      await window.api.sddRuns.applyProposal({
+        runId: workflowRunId,
+        proposal: workflowProposal,
+      });
+    } catch (applyError) {
+      console.error('Failed to apply SDD proposal:', applyError);
+      setWorkflowError(
+        applyError instanceof Error ? applyError.message : 'Failed to apply SDD proposal.'
+      );
     } finally {
-      setIsStoppingRun(false);
+      setIsApplyingProposal(false);
     }
   };
 
   const handleOpenFile = (filePath: string) => {
     openFile(filePath);
   };
+
+  const workflowStatusLabel =
+    workflowStatus === 'running'
+      ? 'Running'
+      : workflowStatus === 'failed'
+      ? 'Failed'
+      : workflowStatus === 'completed'
+      ? 'Completed'
+      : 'Idle';
+  const workflowSupported = typeof window.api?.sddRuns?.start === 'function';
+  const visibleWorkflowEvents = workflowEvents.slice(-12);
 
   if (!workspace) {
     return (
@@ -373,66 +492,158 @@ export function SddPanel() {
             className="text-tertiary"
             style={{ fontSize: 'var(--vscode-font-size-small)' }}
           >
-            {activeRun ? 'Running' : 'Idle'}
+            Workflow: {workflowStatusLabel}
           </span>
         </div>
 
-        <div className="mt-3 flex flex-col gap-2">
-          <div
-            className="text-tertiary"
-            style={{ fontSize: 'var(--vscode-font-size-small)' }}
-          >
-            {activeRun
-              ? `Run: ${activeRun.featureId} / ${activeRun.taskId}`
-              : 'No active run.'}
-          </div>
-          <div className="flex items-center gap-2">
-            {!activeRun && (
-              <button
-                onClick={handleStartRun}
-                disabled={!selectedFeatureId || !selectedTaskId || isStartingRun}
-                className="
-                  rounded-sm bg-accent text-primary
-                  hover:bg-accent-hover active:opacity-90
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-colors duration-150
-                "
-                style={{
-                  paddingLeft: 'var(--vscode-space-3)',
-                  paddingRight: 'var(--vscode-space-3)',
-                  paddingTop: 'var(--vscode-space-2)',
-                  paddingBottom: 'var(--vscode-space-2)',
-                  fontSize: 'var(--vscode-font-size-ui)',
-                }}
-              >
-                {isStartingRun ? 'Starting...' : 'Start Run'}
-              </button>
-            )}
-            {activeRun && (
-              <button
-                onClick={handleStopRun}
-                disabled={isStoppingRun}
-                className="
-                  rounded-sm border border-border-subtle text-secondary
-                  hover:bg-surface-hover hover:text-primary
-                  active:opacity-90 transition-colors duration-150
-                "
-                style={{
-                  paddingLeft: 'var(--vscode-space-3)',
-                  paddingRight: 'var(--vscode-space-3)',
-                  paddingTop: 'var(--vscode-space-2)',
-                  paddingBottom: 'var(--vscode-space-2)',
-                  fontSize: 'var(--vscode-font-size-ui)',
-                }}
-              >
-                {isStoppingRun ? 'Stopping...' : 'Stop Run'}
-              </button>
-            )}
-          </div>
+        <div
+          className="mt-2 text-tertiary"
+          style={{ fontSize: 'var(--vscode-font-size-small)' }}
+        >
+          {workflowRunId ? `Run ID: ${workflowRunId.slice(0, 8)}...` : 'No active workflow run.'}
         </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto">
+        {workflowError && (
+          <div
+            className="text-status-error"
+            style={{
+              padding: 'var(--vscode-space-3)',
+              fontSize: 'var(--vscode-font-size-small)',
+            }}
+          >
+            {workflowError}
+          </div>
+        )}
+
+        {!workflowSupported && (
+          <div
+            className="text-tertiary"
+            style={{
+              padding: 'var(--vscode-space-3)',
+              fontSize: 'var(--vscode-font-size-small)',
+            }}
+          >
+            SDD workflow is unavailable in this build.
+          </div>
+        )}
+
+        <div className="border-b border-border-subtle">
+          <div
+            className="flex items-center justify-between text-secondary"
+            style={{ padding: 'var(--vscode-space-2)' }}
+          >
+            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
+              Workflow
+            </span>
+            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
+              {workflowStatusLabel}
+            </span>
+          </div>
+          <div style={{ padding: 'var(--vscode-space-3)' }}>
+            <SddRunControls
+              featureId={workflowFeatureId}
+              goal={workflowGoal}
+              step={workflowStep}
+              slashCommand={workflowCommand}
+              isRunning={workflowStatus === 'running'}
+              isStarting={isStartingWorkflow}
+              canStart={workflowSupported}
+              onFeatureIdChange={setWorkflowFeatureId}
+              onGoalChange={setWorkflowGoal}
+              onStepChange={setWorkflowStep}
+              onSlashCommandChange={setWorkflowCommand}
+              onStart={handleStartWorkflow}
+              onCancel={handleCancelWorkflow}
+            />
+          </div>
+        </div>
+
+        <div className="border-b border-border-subtle">
+          <div
+            className="flex items-center justify-between text-secondary"
+            style={{ padding: 'var(--vscode-space-2)' }}
+          >
+            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
+              Activity
+            </span>
+            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
+              {workflowEvents.length}
+            </span>
+          </div>
+
+          {visibleWorkflowEvents.length === 0 ? (
+            <div
+              className="text-tertiary"
+              style={{
+                paddingLeft: 'var(--vscode-space-3)',
+                paddingRight: 'var(--vscode-space-3)',
+                paddingBottom: 'var(--vscode-space-2)',
+                fontSize: 'var(--vscode-font-size-small)',
+              }}
+            >
+              No workflow events yet.
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {visibleWorkflowEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="text-secondary"
+                  style={{
+                    paddingLeft: 'var(--vscode-space-3)',
+                    paddingRight: 'var(--vscode-space-3)',
+                    paddingTop: 'var(--vscode-space-2)',
+                    paddingBottom: 'var(--vscode-space-2)',
+                    fontSize: 'var(--vscode-font-size-small)',
+                    borderTop: '1px solid var(--vscode-border-subtle)',
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-primary">{formatEventLabel(event)}</span>
+                    <span className="text-tertiary">
+                      {new Date(event.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  {event.type === 'outputAppended' && (
+                    <div className="text-tertiary" style={{ marginTop: 'var(--vscode-space-1)' }}>
+                      {event.content}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {workflowProposal && (
+          <div className="border-b border-border-subtle">
+            <div
+              className="flex items-center justify-between text-secondary"
+              style={{ padding: 'var(--vscode-space-2)' }}
+            >
+              <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
+                Proposal
+              </span>
+              <span
+                className="text-tertiary"
+                style={{ fontSize: 'var(--vscode-font-size-small)' }}
+              >
+                {workflowProposal.summary.filesChanged} files
+              </span>
+            </div>
+            <div style={{ padding: 'var(--vscode-space-3)' }}>
+              <ProposalDiffView
+                proposal={workflowProposal}
+                onApply={handleApplyProposal}
+                isApplying={isApplyingProposal}
+                canApply={Boolean(workflowRunId)}
+              />
+            </div>
+          </div>
+        )}
+
         {error && (
           <div
             className="text-status-error"

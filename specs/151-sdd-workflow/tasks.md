@@ -117,3 +117,15 @@
 - Verify: `pnpm test:e2e`
 - Invariants: no secrets in events/logs; apply only via main (P3/P1)
 - Done = end-to-end SDD workflow works and gating is enforced.
+
+## Task 9 - Parity: gitignore filtering + idle tracking
+- Files:
+  - `apps/electron-shell/src/main/services/SddTraceService.ts`
+  - `apps/electron-shell/src/main/services/SddTraceService.test.ts`
+- Work:
+  - Ignore paths matching workspace `.gitignore` when recording parity.
+  - Skip untracked tracking until a feature/task is selected or a run starts.
+  - Return idle parity in status when tracking is not initialized.
+- Verify: `pnpm --filter apps-electron-shell test`
+- Invariants: parity matches gitignore; no renderer FS access
+- Done = gitignored files never appear in drift, and idle runs do not show false untracked counts.

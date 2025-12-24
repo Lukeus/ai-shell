@@ -104,9 +104,29 @@ describe('SddTraceService', () => {
     expect(index.latestParitySnapshot.untrackedFileChanges).toBe(0);
   });
 
-  it('records untracked changes when no run is active', async () => {
+  it('ignores untracked changes before initialization', async () => {
     const service = SddTraceService.getInstance();
     await service.setEnabled(true);
+
+    const filePath = path.join(tempWorkspace, 'src', 'untracked.txt');
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.promises.writeFile(filePath, 'untracked', 'utf-8');
+
+    await service.recordFileChange({
+      path: filePath,
+      op: 'modified',
+      actor: 'human',
+    });
+
+    const status = await service.getStatus();
+    expect(status.parity.untrackedFileChanges).toBe(0);
+    expect(status.parity.driftFiles).not.toContain(filePath);
+  });
+
+  it('records untracked changes when a task is selected', async () => {
+    const service = SddTraceService.getInstance();
+    await service.setEnabled(true);
+    service.setActiveTask('140-sdd', 'task-1');
 
     const filePath = path.join(tempWorkspace, 'src', 'untracked.txt');
     await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
@@ -121,6 +141,28 @@ describe('SddTraceService', () => {
     const index = readIndex(tempWorkspace);
     expect(index.latestParitySnapshot.untrackedFileChanges).toBe(1);
     expect(index.latestParitySnapshot.driftFiles).toContain(filePath);
+  });
+
+  it('skips gitignored files when recording parity', async () => {
+    const service = SddTraceService.getInstance();
+    await service.setEnabled(true);
+    service.setActiveTask('140-sdd', 'task-1');
+
+    fs.writeFileSync(path.join(tempWorkspace, '.gitignore'), 'ignored/\n', 'utf-8');
+
+    const filePath = path.join(tempWorkspace, 'ignored', 'skip.txt');
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.promises.writeFile(filePath, 'ignored', 'utf-8');
+
+    await service.recordFileChange({
+      path: filePath,
+      op: 'modified',
+      actor: 'human',
+    });
+
+    const index = readIndex(tempWorkspace);
+    expect(index.latestParitySnapshot.untrackedFileChanges).toBe(0);
+    expect(index.latestParitySnapshot.driftFiles).not.toContain(filePath);
   });
 
   it('computes tracked ratio from parity totals', async () => {
@@ -162,6 +204,7 @@ describe('SddTraceService', () => {
   it('rejects file changes outside workspace boundaries', async () => {
     const service = SddTraceService.getInstance();
     await service.setEnabled(true);
+    service.setActiveTask('140-sdd', 'task-5');
 
     await expect(
       service.recordFileChange({

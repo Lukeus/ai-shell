@@ -55,6 +55,9 @@ Add to `packages/api-contracts`:
   - starts agent-host workflow run
   - routes `sdd:runs:event` stream to renderer
   - attaches resolved routing info to run records
+- `SddTraceService` parity gating:
+  - filter gitignored paths from drift tracking
+  - keep parity idle until a feature/task is selected or a run starts
 
 ## Agent-host workflow runtime
 - `SddWorkflowRunner` responsibilities:

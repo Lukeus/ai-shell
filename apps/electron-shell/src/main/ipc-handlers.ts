@@ -80,6 +80,9 @@ import {
   SddStatus,
   SddStatusSchema,
   SddStatusRequestSchema,
+  SddProposalApplyRequestSchema,
+  SddRunStartRequestSchema,
+  SddRunControlRequestSchema,
 } from 'packages-api-contracts';
 import { settingsService } from './services/SettingsService';
 import { workspaceService } from './services/WorkspaceService';
@@ -96,6 +99,10 @@ import { agentRunStore } from './services/AgentRunStore';
 import { sddTraceService } from './services/SddTraceService';
 import { sddWatcher } from './services/SddWatcher';
 import { resolvePathWithinWorkspace } from './services/workspace-paths';
+import { patchApplyService } from './services/PatchApplyService';
+import { sddRunCoordinator } from './services/SddRunCoordinator';
+import { registerDiagnosticsHandlers } from './ipc/diagnostics';
+import { registerTestOnlyHandlers } from './ipc/testOnly';
 import {
   getAgentHostManager,
   getExtensionCommandService,
@@ -350,6 +357,8 @@ export function registerIPCHandlers(): void {
   ensureAgentHostBindings();
   ensureSddBindings();
   void applySddSettings(settingsService.getSettings());
+  registerDiagnosticsHandlers();
+  registerTestOnlyHandlers();
   // Handler for GET_VERSION channel
   ipcMain.handle(IPC_CHANNELS.GET_VERSION, async (): Promise<AppInfo> => {
     const info: AppInfo = {
@@ -831,6 +840,57 @@ export function registerIPCHandlers(): void {
     async (_event, request: unknown): Promise<void> => {
       const validated = SddOverrideUntrackedRequestSchema.parse(request);
       await sddTraceService.overrideUntracked(validated.reason);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SDD_RUNS_START,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = SddRunStartRequestSchema.parse(request);
+      sddRunCoordinator.attachAgentHost(getAgentHostManager());
+      await sddRunCoordinator.startRun(validated);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SDD_RUNS_CONTROL,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = SddRunControlRequestSchema.parse(request);
+      sddRunCoordinator.attachAgentHost(getAgentHostManager());
+      await sddRunCoordinator.controlRun(validated);
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SDD_PROPOSAL_APPLY,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = SddProposalApplyRequestSchema.parse(request);
+      const workspace = workspaceService.getWorkspace();
+      if (!workspace) {
+        throw new Error('No workspace open. Open a folder first.');
+      }
+
+      try {
+        const result = await patchApplyService.applyProposal(
+          validated.proposal,
+          workspace.path
+        );
+        auditService.logSddProposalApply({
+          runId: validated.runId,
+          status: 'success',
+          filesChanged: result.summary.filesChanged,
+          files: result.files,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to apply proposal';
+        auditService.logSddProposalApply({
+          runId: validated.runId,
+          status: 'error',
+          filesChanged: 0,
+          error: message,
+        });
+        throw error;
+      }
     }
   );
 

@@ -204,3 +204,75 @@ export const DiagnosticsSummaryEventSchema = z.object({
  * DiagnosticsSummaryEvent type inferred from schema.
  */
 export type DiagnosticsSummaryEvent = z.infer<typeof DiagnosticsSummaryEventSchema>;
+
+/**
+ * Global error sources for diagnostics reporting.
+ */
+export const ErrorSourceSchema = z.enum([
+  'renderer',
+  'preload',
+  'main',
+  'agent-host',
+  'extension-host',
+]);
+
+export type ErrorSource = z.infer<typeof ErrorSourceSchema>;
+
+/**
+ * Sanitized error report payload.
+ */
+export const ErrorReportSchema = z.object({
+  source: ErrorSourceSchema,
+  message: z.string().min(1),
+  name: z.string().optional(),
+  stack: z.string().optional(),
+  timestamp: z.string().datetime(),
+  context: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))
+    .optional(),
+});
+
+export type ErrorReport = z.infer<typeof ErrorReportSchema>;
+
+/**
+ * Request to report an error to diagnostics.
+ */
+export const DiagReportErrorRequestSchema = ErrorReportSchema;
+
+export type DiagReportErrorRequest = z.infer<typeof DiagReportErrorRequestSchema>;
+
+/**
+ * Response payload for retrieving log path.
+ */
+export const DiagGetLogPathResponseSchema = z.object({
+  path: z.string().min(1),
+});
+
+export type DiagGetLogPathResponse = z.infer<typeof DiagGetLogPathResponseSchema>;
+
+/**
+ * Request to set Safe Mode state.
+ */
+export const DiagSetSafeModeRequestSchema = z.object({
+  enabled: z.boolean(),
+});
+
+export type DiagSetSafeModeRequest = z.infer<typeof DiagSetSafeModeRequestSchema>;
+
+/**
+ * Response for Safe Mode toggle.
+ */
+export const DiagSetSafeModeResponseSchema = z.object({
+  enabled: z.boolean(),
+});
+
+export type DiagSetSafeModeResponse = z.infer<typeof DiagSetSafeModeResponseSchema>;
+
+/**
+ * Fatal diagnostics event payload (main -> renderer).
+ */
+export const DiagFatalEventSchema = z.object({
+  report: ErrorReportSchema,
+});
+
+export type DiagFatalEvent = z.infer<typeof DiagFatalEventSchema>;

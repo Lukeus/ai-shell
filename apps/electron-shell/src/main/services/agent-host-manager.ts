@@ -8,9 +8,15 @@ import {
   JsonValueSchema,
   ModelGenerateRequestSchema,
   ModelGenerateResponseSchema,
+  SddRunEventSchema,
+  SddRunStartRequestSchema,
+  SddRunControlRequestSchema,
   ToolCallEnvelopeSchema,
   type AgentEvent,
   type AgentRunStartRequest,
+  type SddRunEvent,
+  type SddRunStartRequest,
+  type SddRunControlRequest,
   type ToolCallEnvelope,
   type ToolCallResult,
 } from 'packages-api-contracts';
@@ -50,6 +56,28 @@ type AgentHostRunErrorMessage = {
   message: string;
 };
 
+type AgentHostSddStartRunMessage = {
+  type: 'agent-host:sdd-start-run';
+  runId: string;
+  request: SddRunStartRequest;
+};
+
+type AgentHostSddControlRunMessage = {
+  type: 'agent-host:sdd-control-run';
+  request: SddRunControlRequest;
+};
+
+type AgentHostSddEventMessage = {
+  type: 'agent-host:sdd-event';
+  event: SddRunEvent;
+};
+
+type AgentHostSddRunErrorMessage = {
+  type: 'agent-host:sdd-run-error';
+  runId: string;
+  message: string;
+};
+
 type AgentHostToolCallMessage = {
   type: 'agent-host:tool-call';
   payload: ToolCallEnvelope;
@@ -63,6 +91,8 @@ type AgentHostToolResultMessage = {
 type AgentHostMessage =
   | AgentHostEventMessage
   | AgentHostRunErrorMessage
+  | AgentHostSddEventMessage
+  | AgentHostSddRunErrorMessage
   | AgentHostToolCallMessage
   | AgentHostToolResultMessage;
 
@@ -78,6 +108,8 @@ export class AgentHostManager {
   private childProcess: ChildProcess | null = null;
   private eventHandlers: Array<(event: AgentEvent) => void> = [];
   private runErrorHandlers: Array<(runId: string, message: string) => void> = [];
+  private sddEventHandlers: Array<(event: SddRunEvent) => void> = [];
+  private sddRunErrorHandlers: Array<(runId: string, message: string) => void> = [];
   private isShuttingDown = false;
   private builtInsRegistered = false;
 
@@ -151,6 +183,20 @@ export class AgentHostManager {
     };
   }
 
+  public onSddEvent(handler: (event: SddRunEvent) => void): () => void {
+    this.sddEventHandlers.push(handler);
+    return () => {
+      this.sddEventHandlers = this.sddEventHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  public onSddRunError(handler: (runId: string, message: string) => void): () => void {
+    this.sddRunErrorHandlers.push(handler);
+    return () => {
+      this.sddRunErrorHandlers = this.sddRunErrorHandlers.filter((h) => h !== handler);
+    };
+  }
+
   public async startRun(
     runId: string,
     request: AgentRunStartRequest,
@@ -165,6 +211,31 @@ export class AgentHostManager {
       runId,
       request: validatedRequest,
       toolCalls: validatedToolCalls,
+    };
+
+    this.childProcess?.send(message);
+  }
+
+  public async startSddRun(runId: string, request: SddRunStartRequest): Promise<void> {
+    await this.start();
+
+    const validatedRequest = SddRunStartRequestSchema.parse(request);
+    const message: AgentHostSddStartRunMessage = {
+      type: 'agent-host:sdd-start-run',
+      runId,
+      request: validatedRequest,
+    };
+
+    this.childProcess?.send(message);
+  }
+
+  public async controlSddRun(request: SddRunControlRequest): Promise<void> {
+    await this.start();
+
+    const validatedRequest = SddRunControlRequestSchema.parse(request);
+    const message: AgentHostSddControlRunMessage = {
+      type: 'agent-host:sdd-control-run',
+      request: validatedRequest,
     };
 
     this.childProcess?.send(message);
@@ -186,6 +257,20 @@ export class AgentHostManager {
 
     if (message.type === 'agent-host:run-error') {
       this.runErrorHandlers.forEach((handler) => handler(message.runId, message.message));
+      return;
+    }
+
+    if (message.type === 'agent-host:sdd-event') {
+      const parsed = SddRunEventSchema.safeParse(message.event);
+      if (!parsed.success) {
+        return;
+      }
+      this.sddEventHandlers.forEach((handler) => handler(parsed.data));
+      return;
+    }
+
+    if (message.type === 'agent-host:sdd-run-error') {
+      this.sddRunErrorHandlers.forEach((handler) => handler(message.runId, message.message));
       return;
     }
 

@@ -132,6 +132,19 @@ export const IPC_CHANNELS = {
   
   /** Diagnostics summary event (main → renderer) */
   DIAGNOSTICS_ON_SUMMARY: 'diagnostics:on-summary',
+
+  // Global diagnostics (crash/error reporting)
+  /** Report a global error to diagnostics */
+  DIAG_REPORT_ERROR: 'diag:report-error',
+
+  /** Get diagnostics log path */
+  DIAG_GET_LOG_PATH: 'diag:get-log-path',
+
+  /** Set Safe Mode flag and relaunch */
+  DIAG_SET_SAFE_MODE: 'diag:set-safe-mode',
+
+  /** Fatal error event (main -> renderer) */
+  DIAG_ON_FATAL: 'diag:on-fatal',
   // Search (workspace)
   /** Execute workspace search */
   SEARCH_QUERY: 'search:query',
@@ -182,6 +195,22 @@ export const IPC_CHANNELS = {
 
   /** SDD status changed event (main -> renderer) */
   SDD_CHANGED: 'sdd:changed',
+
+  // SDD workflow runs + proposals
+  /** Start an SDD workflow run */
+  SDD_RUNS_START: 'sdd:runs:start',
+
+  /** Control an SDD workflow run (cancel/retry) */
+  SDD_RUNS_CONTROL: 'sdd:runs:control',
+
+  /** Apply an SDD proposal */
+  SDD_PROPOSAL_APPLY: 'sdd:proposal:apply',
+
+  /** Run tests for an SDD workflow run */
+  SDD_TESTS_RUN: 'sdd:tests:run',
+
+  /** SDD run event stream (main -> renderer) */
+  SDD_RUNS_EVENT: 'sdd:runs:event',
 
   // Agent runs + events
   /** List agent runs */
@@ -285,6 +314,10 @@ export const IPC_CHANNELS = {
   
   /** Revoke a permission for an extension */
   EXTENSIONS_REVOKE_PERMISSION: 'extensions:revoke-permission',
+
+  // Test-only channels (guarded by NODE_ENV === 'test')
+  /** Forcefully crash the renderer for E2E tests */
+  TEST_FORCE_CRASH_RENDERER: 'test:force-crash-renderer',
 } as const;
 
 /**

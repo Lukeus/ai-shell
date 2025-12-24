@@ -14,6 +14,10 @@ const mockListFeatures = vi.fn();
 const mockStatus = vi.fn();
 const mockOnChange = vi.fn();
 const mockReadFile = vi.fn();
+const mockSddRunsStart = vi.fn();
+const mockSddRunsControl = vi.fn();
+const mockSddRunsApply = vi.fn();
+const mockSddRunsOnEvent = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -29,12 +33,20 @@ beforeEach(() => {
       stopRun: vi.fn(),
       getFileTrace: vi.fn(),
     },
+    sddRuns: {
+      start: mockSddRunsStart,
+      control: mockSddRunsControl,
+      applyProposal: mockSddRunsApply,
+      runTests: vi.fn(),
+      onEvent: mockSddRunsOnEvent,
+    },
     fs: {
       readFile: mockReadFile,
     },
   };
 
   mockOnChange.mockReturnValue(() => {});
+  mockSddRunsOnEvent.mockReturnValue(() => {});
 });
 
 describe('SddPanel', () => {
