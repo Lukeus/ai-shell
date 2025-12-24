@@ -214,3 +214,155 @@ export const SddOverrideUntrackedRequestSchema = z.object({
 });
 
 export type SddOverrideUntrackedRequest = z.infer<typeof SddOverrideUntrackedRequestSchema>;
+
+/**
+ * SDD workflow engine (runs, events, proposals).
+ */
+export const SddStepSchema = z.enum([
+  'spec',
+  'plan',
+  'tasks',
+  'implement',
+  'review',
+]);
+
+export type SddStep = z.infer<typeof SddStepSchema>;
+
+export const SddRunStartRequestSchema = z.object({
+  featureId: z.string().min(1),
+  goal: z.string().min(1),
+  connectionId: z.string().uuid().optional(),
+  step: SddStepSchema.optional(),
+});
+
+export type SddRunStartRequest = z.infer<typeof SddRunStartRequestSchema>;
+
+export const SddRunControlActionSchema = z.enum(['cancel', 'retry']);
+
+export type SddRunControlAction = z.infer<typeof SddRunControlActionSchema>;
+
+export const SddRunControlRequestSchema = z.object({
+  runId: z.string().uuid(),
+  action: SddRunControlActionSchema,
+  reason: z.string().min(1).optional(),
+});
+
+export type SddRunControlRequest = z.infer<typeof SddRunControlRequestSchema>;
+
+export const ProposalFileWriteSchema = z.object({
+  path: z.string().min(1),
+  content: z.string(),
+});
+
+export type ProposalFileWrite = z.infer<typeof ProposalFileWriteSchema>;
+
+export const ProposalSummarySchema = z.object({
+  filesChanged: z.number().int().nonnegative(),
+  additions: z.number().int().nonnegative().optional(),
+  deletions: z.number().int().nonnegative().optional(),
+});
+
+export type ProposalSummary = z.infer<typeof ProposalSummarySchema>;
+
+export const ProposalSchema = z.object({
+  writes: z.array(ProposalFileWriteSchema).default([]),
+  patch: z.string().optional(),
+  summary: ProposalSummarySchema,
+});
+
+export type Proposal = z.infer<typeof ProposalSchema>;
+
+export const SddProposalApplyRequestSchema = z.object({
+  runId: z.string().uuid(),
+  proposal: ProposalSchema,
+});
+
+export type SddProposalApplyRequest = z.infer<typeof SddProposalApplyRequestSchema>;
+
+export const SddTestsRunRequestSchema = z.object({
+  runId: z.string().uuid(),
+  command: z.string().min(1),
+});
+
+export type SddTestsRunRequest = z.infer<typeof SddTestsRunRequestSchema>;
+
+const SddRunEventBaseSchema = z.object({
+  id: z.string().uuid(),
+  runId: z.string().uuid(),
+  timestamp: z.string().datetime(),
+});
+
+export const SddRunStartedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('started'),
+  featureId: z.string().min(1),
+  goal: z.string().min(1),
+  step: SddStepSchema,
+});
+
+export const SddContextLoadedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('contextLoaded'),
+  step: SddStepSchema.optional(),
+});
+
+export const SddStepStartedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('stepStarted'),
+  step: SddStepSchema,
+});
+
+export const SddOutputAppendedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('outputAppended'),
+  content: z.string(),
+});
+
+export const SddProposalReadyEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('proposalReady'),
+  proposal: ProposalSchema,
+});
+
+export const SddApprovalRequiredEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('approvalRequired'),
+  proposal: ProposalSchema,
+});
+
+export const SddProposalAppliedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('proposalApplied'),
+  summary: ProposalSummarySchema,
+});
+
+export const SddTestsRequestedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('testsRequested'),
+  command: z.string().min(1),
+});
+
+export const SddTestsCompletedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('testsCompleted'),
+  command: z.string().min(1),
+  exitCode: z.number().int(),
+  durationMs: z.number().int().nonnegative().optional(),
+});
+
+export const SddRunCompletedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('runCompleted'),
+});
+
+export const SddRunFailedEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('runFailed'),
+  message: z.string().min(1),
+  code: z.string().optional(),
+});
+
+export const SddRunEventSchema = z.discriminatedUnion('type', [
+  SddRunStartedEventSchema,
+  SddContextLoadedEventSchema,
+  SddStepStartedEventSchema,
+  SddOutputAppendedEventSchema,
+  SddProposalReadyEventSchema,
+  SddApprovalRequiredEventSchema,
+  SddProposalAppliedEventSchema,
+  SddTestsRequestedEventSchema,
+  SddTestsCompletedEventSchema,
+  SddRunCompletedEventSchema,
+  SddRunFailedEventSchema,
+]);
+
+export type SddRunEvent = z.infer<typeof SddRunEventSchema>;

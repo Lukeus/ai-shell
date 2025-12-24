@@ -3,8 +3,14 @@ import {
   IPC_CHANNELS,
   PreloadAPI,
   WindowStateSchema,
+  type DiagGetLogPathResponse,
+  type DiagSetSafeModeResponse,
+  type DiagFatalEvent,
+  type ErrorReport,
   type SddStatus,
+  type TestForceCrashRendererResponse,
 } from 'packages-api-contracts';
+import { invokeSafe } from './invokeSafe';
 
 /**
  * Preload script that exposes a minimal, secure API to the renderer.
@@ -138,6 +144,21 @@ const api: PreloadAPI = {
         ipcRenderer.removeListener(IPC_CHANNELS.DIAGNOSTICS_ON_SUMMARY, listener);
       };
     },
+    reportError: async (report) => {
+      await invokeSafe<void>(IPC_CHANNELS.DIAG_REPORT_ERROR, report);
+    },
+    getLogPath: () => invokeSafe<DiagGetLogPathResponse>(IPC_CHANNELS.DIAG_GET_LOG_PATH),
+    setSafeMode: (request) =>
+      invokeSafe<DiagSetSafeModeResponse>(IPC_CHANNELS.DIAG_SET_SAFE_MODE, request),
+    onFatal: (callback) => {
+      const listener = (_event: IpcRendererEvent, data: DiagFatalEvent) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.DIAG_ON_FATAL, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.DIAG_ON_FATAL, listener);
+      };
+    },
   },
 
   // Search methods (workspace)
@@ -177,6 +198,23 @@ const api: PreloadAPI = {
     },
     overrideUntracked: (reason) =>
       ipcRenderer.invoke(IPC_CHANNELS.SDD_OVERRIDE_UNTRACKED, { reason }),
+  },
+
+  sddRuns: {
+    start: (request) => ipcRenderer.invoke(IPC_CHANNELS.SDD_RUNS_START, request),
+    control: (request) => ipcRenderer.invoke(IPC_CHANNELS.SDD_RUNS_CONTROL, request),
+    applyProposal: (request) => ipcRenderer.invoke(IPC_CHANNELS.SDD_PROPOSAL_APPLY, request),
+    runTests: (request) => ipcRenderer.invoke(IPC_CHANNELS.SDD_TESTS_RUN, request),
+    onEvent: (callback) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listener = (_event: IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      ipcRenderer.on(IPC_CHANNELS.SDD_RUNS_EVENT, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.SDD_RUNS_EVENT, listener);
+      };
+    },
   },
 
   // Agent runs + events (read-only stream + controls)
@@ -275,11 +313,65 @@ const api: PreloadAPI = {
       };
     },
   },
+
+  test: {
+    forceCrashRenderer: (request) =>
+      invokeSafe<TestForceCrashRendererResponse>(
+        IPC_CHANNELS.TEST_FORCE_CRASH_RENDERER,
+        request
+      ),
+  },
 };
 
 // P2 (Security defaults): Expose minimal API via contextBridge
 // This ensures the renderer cannot access raw ipcRenderer or Node.js APIs
 contextBridge.exposeInMainWorld('api', api);
+
+const preloadErrorFlag = '__aiShellPreloadErrorHandlersInstalled';
+const preloadGlobal = globalThis as typeof globalThis & {
+  __aiShellPreloadErrorHandlersInstalled?: boolean;
+};
+
+const buildPreloadErrorReport = (error: unknown): ErrorReport => {
+  if (error instanceof Error) {
+    return {
+      source: 'preload',
+      message: error.message || 'Unknown error',
+      name: error.name || undefined,
+      stack: error.stack || undefined,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return {
+      source: 'preload',
+      message: error.trim(),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  return {
+    source: 'preload',
+    message: 'Unknown error',
+    timestamp: new Date().toISOString(),
+  };
+};
+
+const reportPreloadError = (error: unknown): void => {
+  const report = buildPreloadErrorReport(error);
+  void invokeSafe<void>(IPC_CHANNELS.DIAG_REPORT_ERROR, report);
+};
+
+if (!preloadGlobal[preloadErrorFlag]) {
+  preloadGlobal[preloadErrorFlag] = true;
+  process.on('unhandledRejection', (reason) => {
+    reportPreloadError(reason);
+  });
+  process.on('uncaughtException', (error) => {
+    reportPreloadError(error);
+  });
+}
 
 const menuIpcHandlers = new Map<
   string,

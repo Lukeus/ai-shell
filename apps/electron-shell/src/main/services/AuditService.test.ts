@@ -81,6 +81,20 @@ describe('AuditService', () => {
     expect(appendedContent).not.toContain('secretValue');
   });
 
+  it('logs SDD proposal apply events', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const event = service.logSddProposalApply({
+      runId: '0f6c1e8d-4b2a-4c2f-8e4a-8f6e3d2c1a00',
+      status: 'success',
+      filesChanged: 2,
+      files: ['specs/151-sdd-workflow/spec.md', 'specs/151-sdd-workflow/plan.md'],
+    });
+
+    expect(event.type).toBe('sdd.proposal.apply');
+    expect(appendedContent).toContain('"type":"sdd.proposal.apply"');
+  });
+
   it('lists audit events with pagination', () => {
     const events = [
       service.logSecretAccess({

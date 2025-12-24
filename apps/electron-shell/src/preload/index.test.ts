@@ -34,6 +34,9 @@ const loadApi = async () => {
     sdd: {
       onChange: (handler: (...args: unknown[]) => void) => () => void;
     };
+    sddRuns: {
+      onEvent: (handler: (...args: unknown[]) => void) => () => void;
+    };
   };
 };
 
@@ -107,6 +110,24 @@ describe('preload sdd IPC listeners', () => {
 
     expect(ipcRendererMock.removeListener).toHaveBeenCalledWith(
       IPC_CHANNELS.SDD_CHANGED,
+      wrapped
+    );
+  });
+
+  it('returns unsubscribe for SDD run event listener', async () => {
+    const api = await loadApi();
+    const handler = vi.fn();
+
+    const unsubscribe = api.sddRuns.onEvent(handler);
+    const wrapped = ipcRendererMock.on.mock.calls[0]?.[1] as (...args: unknown[]) => void;
+
+    expect(wrapped).toBeDefined();
+    expect(wrapped).not.toBe(handler);
+
+    unsubscribe();
+
+    expect(ipcRendererMock.removeListener).toHaveBeenCalledWith(
+      IPC_CHANNELS.SDD_RUNS_EVENT,
       wrapped
     );
   });

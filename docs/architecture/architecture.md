@@ -269,6 +269,32 @@ export function App() {
 }
 ```
 
+### Global Error Handling + Safe Mode
+
+ai-shell uses contracts-first diagnostics IPC and a Result envelope to avoid
+unhandled errors crossing process boundaries.
+
+**Result envelope rule**
+- IPC handlers that can fail return `Result<T>` (`{ ok: true, value } | { ok: false, error }`).
+- Main uses `handleSafe()` to prevent throws across IPC boundaries.
+- Preload uses `invokeSafe()` so renderer always receives `Result<T>`.
+
+**Diagnostics IPC channels**
+- `diag:report-error` — fire-and-forget error reports from renderer/preload.
+- `diag:get-log-path` — returns the local diagnostics log path.
+- `diag:set-safe-mode` — toggles Safe Mode and relaunches the app.
+- `diag:on-fatal` — main -> renderer fatal error event.
+
+**Crash recovery policy**
+- Renderer crash (`render-process-gone`) triggers a reload first.
+- Repeated renderer crashes within a short window trigger window recreation.
+- Main fatal errors relaunch immediately; crash-loop detection enables Safe Mode.
+
+**Safe Mode behavior**
+- State is persisted in `userData/runtime-state.json` (non-secret).
+- When enabled, agent-host and extension-host are not started.
+- Safe Mode never weakens security flags (`contextIsolation`, `sandbox`, etc.).
+
 ## Security Model
 
 ### Defense in Depth

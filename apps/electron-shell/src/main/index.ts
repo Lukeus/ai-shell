@@ -1,11 +1,13 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { buildApplicationMenu } from './menu';
+import { attachWindowCrashRecovery, installGlobalErrorHandlers } from './global-errors';
 import { terminalService } from './services/TerminalService';
 import { sddTraceService } from './services/SddTraceService';
 import { sddWatcher } from './services/SddWatcher';
+import { runtimeStateService } from './services/RuntimeStateService';
 import { ExtensionHostManager } from './services/extension-host-manager';
 import { ExtensionRegistry } from './services/extension-registry';
 import { ExtensionCommandService } from './services/extension-command-service';
@@ -37,6 +39,12 @@ let extensionToolService: ExtensionToolService | null = null;
 let permissionService: PermissionService | null = null;
 let extensionStateManager: ExtensionStateManager | null = null;
 let agentHostManager: AgentHostManager | null = null;
+let stableRunTimer: NodeJS.Timeout | null = null;
+let isAppQuitting = false;
+
+const STABLE_RUN_DELAY_MS = 120_000;
+
+installGlobalErrorHandlers();
 
 // Export for IPC handlers
 export function getExtensionCommandService(): ExtensionCommandService | null {
@@ -169,12 +177,6 @@ const createWindow = (): void => {
     mainWindow.loadFile(prodPath);
   }
 
-  // Handle renderer process crashes
-  mainWindow.webContents.on('render-process-gone', (event, details) => {
-    console.error('Renderer process crashed:', details);
-    // Future: Send to telemetry service
-  });
-
   // Open DevTools in development
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.webContents.openDevTools();
@@ -200,10 +202,19 @@ const createWindow = (): void => {
   mainWindow.on('unmaximize', publishWindowState);
   mainWindow.on('enter-full-screen', publishWindowState);
   mainWindow.on('leave-full-screen', publishWindowState);
+
+  attachWindowCrashRecovery(mainWindow, () => {
+    if (!isAppQuitting) {
+      createWindow();
+    }
+  });
 };
 
 // P1 (Process isolation): Main process handles app lifecycle
 app.on('ready', () => {
+  const runtimeState = runtimeStateService.getState();
+  const safeModeEnabled = runtimeState.safeMode;
+
   // Register IPC handlers before creating window
   registerIPCHandlers();
   
@@ -250,56 +261,79 @@ app.on('ready', () => {
   // Initialize Extension State Manager
   // Task 9: Track and broadcast extension state changes
   extensionStateManager = new ExtensionStateManager();
-  
-  extensionHostManager = new ExtensionHostManager({
-    extensionHostPath,
-    extensionsDir,
-    stateManager: extensionStateManager,
-  });
-  
-  // Initialize Extension Command Service
-  extensionCommandService = new ExtensionCommandService(extensionHostManager);
-  
-  // Initialize Extension View Service
-  // Task 8: View aggregation and rendering
-  extensionViewService = new ExtensionViewService(extensionHostManager);
-  
-  // Initialize Extension Tool Service
-  // Task 8: Tool aggregation and execution for Agent Host
-  extensionToolService = new ExtensionToolService(extensionHostManager);
 
-  const agentHostPath = resolveAgentHostPath();
-  const BrokerMain = brokerMainModule.BrokerMain;
-  const brokerMain = new BrokerMain({
-    auditLogger: {
-      logAgentToolAccess: (input) => {
-        auditService.logAgentToolAccess(input);
+  if (!safeModeEnabled) {
+    extensionHostManager = new ExtensionHostManager({
+      extensionHostPath,
+      extensionsDir,
+      stateManager: extensionStateManager,
+    });
+
+    // Initialize Extension Command Service
+    extensionCommandService = new ExtensionCommandService(extensionHostManager);
+
+    // Initialize Extension View Service
+    // Task 8: View aggregation and rendering
+    extensionViewService = new ExtensionViewService(extensionHostManager);
+
+    // Initialize Extension Tool Service
+    // Task 8: Tool aggregation and execution for Agent Host
+    extensionToolService = new ExtensionToolService(extensionHostManager);
+
+    const agentHostPath = resolveAgentHostPath();
+    const BrokerMain = brokerMainModule.BrokerMain;
+    const brokerMain = new BrokerMain({
+      auditLogger: {
+        logAgentToolAccess: (input) => {
+          auditService.logAgentToolAccess(input);
+        },
       },
-    },
-  });
-  agentHostManager = new AgentHostManager({
-    agentHostPath,
-    brokerMain,
-    getExtensionToolService: () => extensionToolService,
-  });
+    });
+    agentHostManager = new AgentHostManager({
+      agentHostPath,
+      brokerMain,
+      getExtensionToolService: () => extensionToolService,
+    });
 
-  agentHostManager.start().catch((error) => {
-    console.error('[Main] Failed to start Agent Host:', error);
-  });
-  
-  // Start Extension Host (will be lazy-loaded when needed)
-  // For now, we start it on app launch. Later tasks will implement lazy loading.
-  extensionHostManager.start().catch((error) => {
-    console.error('[Main] Failed to start Extension Host:', error);
-  });
+    agentHostManager.start().catch((error) => {
+      console.error('[Main] Failed to start Agent Host:', error);
+    });
+
+    // Start Extension Host (will be lazy-loaded when needed)
+    // For now, we start it on app launch. Later tasks will implement lazy loading.
+    extensionHostManager.start().catch((error) => {
+      console.error('[Main] Failed to start Extension Host:', error);
+    });
+  } else {
+    console.warn('[Main] Safe Mode enabled: extension and agent hosts are disabled.');
+  }
   
   // Build application menu
   buildApplicationMenu();
   createWindow();
+
+  if (safeModeEnabled && mainWindow && !mainWindow.isDestroyed()) {
+    void dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Safe Mode enabled',
+      message: 'ai-shell started in Safe Mode.',
+      detail: 'Extensions and agents are disabled because a crash loop was detected.',
+      buttons: ['OK'],
+    });
+  }
+
+  stableRunTimer = setTimeout(() => {
+    runtimeStateService.markStableRun();
+  }, STABLE_RUN_DELAY_MS);
 });
 
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
+  isAppQuitting = true;
+  if (stableRunTimer) {
+    clearTimeout(stableRunTimer);
+    stableRunTimer = null;
+  }
   // Clean up terminal sessions before quitting
   terminalService.cleanup();
   sddWatcher.stop();
@@ -320,6 +354,14 @@ app.on('window-all-closed', () => {
   
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  isAppQuitting = true;
+  if (stableRunTimer) {
+    clearTimeout(stableRunTimer);
+    stableRunTimer = null;
   }
 });
 

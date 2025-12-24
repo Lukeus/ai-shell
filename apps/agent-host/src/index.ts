@@ -1,12 +1,35 @@
-import { AgentRunStartRequestSchema, ToolCallEnvelopeSchema } from 'packages-api-contracts';
-import type { AgentEvent, AgentRunStartRequest, ToolCallEnvelope } from 'packages-api-contracts';
-import { DeepAgentRunner, ToolExecutor } from 'packages-agent-runtime';
+import {
+  AgentRunStartRequestSchema,
+  SddRunControlRequestSchema,
+  SddRunStartRequestSchema,
+  ToolCallEnvelopeSchema,
+} from 'packages-api-contracts';
+import type {
+  AgentEvent,
+  AgentRunStartRequest,
+  SddRunControlRequest,
+  SddRunEvent,
+  SddRunStartRequest,
+  ToolCallEnvelope,
+} from 'packages-api-contracts';
+import { DeepAgentRunner, SddWorkflowRunner, ToolExecutor } from 'packages-agent-runtime';
 
 type StartRunMessage = {
   type: 'agent-host:start-run';
   runId: string;
   request: AgentRunStartRequest;
   toolCalls?: ToolCallEnvelope[];
+};
+
+type SddStartRunMessage = {
+  type: 'agent-host:sdd-start-run';
+  runId: string;
+  request: SddRunStartRequest;
+};
+
+type SddControlRunMessage = {
+  type: 'agent-host:sdd-control-run';
+  request: SddRunControlRequest;
 };
 
 type AgentEventMessage = {
@@ -20,7 +43,20 @@ type AgentRunErrorMessage = {
   message: string;
 };
 
-const sendToMain = (message: AgentEventMessage | AgentRunErrorMessage) => {
+type SddEventMessage = {
+  type: 'agent-host:sdd-event';
+  event: SddRunEvent;
+};
+
+type SddRunErrorMessage = {
+  type: 'agent-host:sdd-run-error';
+  runId: string;
+  message: string;
+};
+
+const sendToMain = (
+  message: AgentEventMessage | AgentRunErrorMessage | SddEventMessage | SddRunErrorMessage
+) => {
   if (typeof process.send === 'function') {
     process.send(message);
   }
@@ -62,15 +98,93 @@ const parseStartRunMessage = (message: unknown): StartRunMessage | null => {
   };
 };
 
+const parseSddStartRunMessage = (message: unknown): SddStartRunMessage | null => {
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+  const candidate = message as Partial<SddStartRunMessage>;
+  if (candidate.type !== 'agent-host:sdd-start-run' || !candidate.runId || !candidate.request) {
+    return null;
+  }
+  if (!isUuid(candidate.runId)) {
+    return null;
+  }
+
+  const request = SddRunStartRequestSchema.safeParse(candidate.request);
+  if (!request.success) {
+    return null;
+  }
+
+  return {
+    type: 'agent-host:sdd-start-run',
+    runId: candidate.runId,
+    request: request.data,
+  };
+};
+
+const parseSddControlRunMessage = (message: unknown): SddControlRunMessage | null => {
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+  const candidate = message as Partial<SddControlRunMessage>;
+  if (candidate.type !== 'agent-host:sdd-control-run' || !candidate.request) {
+    return null;
+  }
+
+  const request = SddRunControlRequestSchema.safeParse(candidate.request);
+  if (!request.success) {
+    return null;
+  }
+
+  return {
+    type: 'agent-host:sdd-control-run',
+    request: request.data,
+  };
+};
+
 const toolExecutor = new ToolExecutor();
 const runner = new DeepAgentRunner({
   toolExecutor,
   onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
 });
+const sddRunner = new SddWorkflowRunner({
+  toolExecutor,
+  onEvent: (event: SddRunEvent) => sendToMain({ type: 'agent-host:sdd-event', event }),
+});
 
 process.on('message', async (message: unknown) => {
   const startMessage = parseStartRunMessage(message);
   if (!startMessage) {
+    const sddStartMessage = parseSddStartRunMessage(message);
+    if (sddStartMessage) {
+      try {
+        await sddRunner.startRun(sddStartMessage.runId, sddStartMessage.request);
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : 'SDD run failed';
+        sendToMain({
+          type: 'agent-host:sdd-run-error',
+          runId: sddStartMessage.runId,
+          message: messageText,
+        });
+      }
+      return;
+    }
+
+    const sddControlMessage = parseSddControlRunMessage(message);
+    if (sddControlMessage) {
+      try {
+        sddRunner.controlRun(sddControlMessage.request);
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : 'SDD control failed';
+        sendToMain({
+          type: 'agent-host:sdd-run-error',
+          runId: sddControlMessage.request.runId,
+          message: messageText,
+        });
+      }
+      return;
+    }
+
     return;
   }
 

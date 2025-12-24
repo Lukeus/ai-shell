@@ -57,6 +57,7 @@
   - `/plan` requires `spec.md` exists (or generated in same run and applied)
   - `/tasks` requires `plan.md` exists
   - `/implement` requires `tasks.md` exists and task number is valid
+- Trace parity must ignore paths excluded by `.gitignore` and remain idle until a feature/task is selected or a run starts.
 - All filesystem mutations are **proposals** until approved:
   - agent-host produces proposal payload (files + diff)
   - renderer shows preview and requests apply
