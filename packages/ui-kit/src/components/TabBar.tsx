@@ -1,4 +1,5 @@
 import React from 'react';
+import { Tab, TabGroup, TabList } from '@headlessui/react';
 
 /**
  * Tab item configuration.
@@ -94,77 +95,47 @@ export function TabBar({
   const tabHeight = 'var(--tab-height, var(--vscode-tab-height))';
   const tabMinWidth = 'var(--tab-min-width, 120px)';
   const tabMaxWidth = 'var(--tab-max-width, 220px)';
-  /**
-   * Handle keyboard navigation between tabs.
-   */
-  const handleKeyDown = (e: React.KeyboardEvent, currentIndex: number) => {
-    const enabledTabs = tabs.filter(tab => !tab.disabled);
-    const currentEnabledIndex = enabledTabs.findIndex(tab => tab.id === tabs[currentIndex].id);
-    
-    let nextIndex = currentEnabledIndex;
-    
-    switch (e.key) {
-      case 'ArrowLeft':
-        e.preventDefault();
-        nextIndex = currentEnabledIndex > 0 ? currentEnabledIndex - 1 : enabledTabs.length - 1;
-        break;
-      case 'ArrowRight':
-        e.preventDefault();
-        nextIndex = currentEnabledIndex < enabledTabs.length - 1 ? currentEnabledIndex + 1 : 0;
-        break;
-      case 'Home':
-        e.preventDefault();
-        nextIndex = 0;
-        break;
-      case 'End':
-        e.preventDefault();
-        nextIndex = enabledTabs.length - 1;
-        break;
-      default:
-        return;
-    }
-    
-    if (enabledTabs[nextIndex]) {
-      onTabChange(enabledTabs[nextIndex].id);
-    }
-  };
+  const hasActiveTab = tabs.some(tab => tab.id === activeTabId);
+  const resolvedActiveId = hasActiveTab ? activeTabId : (tabs[0]?.id ?? '');
+  const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.id === resolvedActiveId));
   
   return (
-    <div
-      role="tablist"
-      className={`flex items-center min-w-0 bg-[var(--vscode-tab-inactiveBackground)] overflow-x-auto overflow-y-hidden hide-scrollbar ${className}`}
-      style={{ height: tabHeight }}
+    <TabGroup
+      selectedIndex={selectedIndex}
+      onChange={(index) => {
+        const tab = tabs[index];
+        if (tab && !tab.disabled) {
+          onTabChange(tab.id);
+        }
+      }}
     >
-      {tabs.map((tab, index) => {
-        const isActive = tab.id === activeTabId;
-        const isDisabled = tab.disabled || false;
-        const isDirty = tab.dirty;
-        const isPinned = tab.pinned;
-        const showClose = tab.closable !== false && !isPinned;
-        
-        return (
-          <button
+      <TabList
+        className={`flex items-center min-w-0 bg-[var(--vscode-tab-inactiveBackground)] overflow-x-auto overflow-y-hidden hide-scrollbar ${className}`}
+        style={{ height: tabHeight }}
+      >
+        {tabs.map((tab) => {
+          const isActive = tab.id === resolvedActiveId;
+          const isDisabled = tab.disabled || false;
+          const isDirty = tab.dirty;
+          const isPinned = tab.pinned;
+          const showClose = tab.closable !== false && !isPinned;
+
+          return (
+          <Tab
             key={tab.id}
-            role="tab"
             type="button"
             title={tab.title ?? tab.label}
-            aria-selected={isActive}
-            aria-controls={`tabpanel-${tab.id}`}
-            aria-disabled={isDisabled}
-            tabIndex={isActive ? 0 : -1}
             disabled={isDisabled}
-            onClick={() => !isDisabled && onTabChange(tab.id)}
             onContextMenu={(e) => {
               if (isDisabled) return;
               onTabContextMenu?.(tab.id, e);
               e.preventDefault();
             }}
-            onKeyDown={(e) => handleKeyDown(e, index)}
-            className={`
+            className={({ selected }) => `
               relative flex items-center gap-2 box-border
               text-[13px] font-normal transition-colors
               focus:outline-none focus:ring-1 focus:ring-accent focus:ring-inset
-              ${isActive ? 'text-primary z-10' : 'text-secondary hover:text-primary'}
+              ${selected ? 'text-primary z-10' : 'text-secondary hover:text-primary'}
               ${isDisabled
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer'
@@ -220,9 +191,10 @@ export function TabBar({
             )}
 
             <span className="sr-only">{isActive ? 'Active' : ''}</span>
-          </button>
-        );
-      })}
-    </div>
+          </Tab>
+          );
+        })}
+      </TabList>
+    </TabGroup>
   );
 }

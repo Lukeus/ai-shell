@@ -24,6 +24,7 @@ export * from './components/Input';
 // Export navigation and list components
 export * from './components/TabBar';
 export * from './components/VirtualizedList';
+export * from './components/Icon';
 
 // Package version
 export const UI_KIT_VERSION = '0.0.1';

@@ -1,3 +1,7 @@
+import { Tab, TabGroup, TabList } from '@headlessui/react';
+
+import { Icon, type IconProps } from './Icon';
+
 /**
  * Props for the ActivityBar component.
  */
@@ -15,7 +19,7 @@ export interface ActivityBarProps {
 interface ActivityIcon {
   id: string;
   label: string;
-  codicon: string;
+  iconName: IconProps['name'];
 }
 
 /**
@@ -26,37 +30,37 @@ const ACTIVITY_ICONS: ActivityIcon[] = [
   {
     id: 'explorer',
     label: 'Explorer',
-    codicon: 'codicon-files',
+    iconName: 'explorer',
   },
   {
     id: 'search',
     label: 'Search',
-    codicon: 'codicon-search',
+    iconName: 'search',
   },
   {
     id: 'source-control',
     label: 'Source Control',
-    codicon: 'codicon-source-control',
+    iconName: 'source-control',
   },
   {
     id: 'run-debug',
     label: 'Run and Debug',
-    codicon: 'codicon-debug-alt',
+    iconName: 'run-debug',
   },
   {
     id: 'extensions',
     label: 'Extensions',
-    codicon: 'codicon-extensions',
+    iconName: 'extensions',
   },
   {
     id: 'sdd',
     label: 'SDD',
-    codicon: 'codicon-checklist',
+    iconName: 'sdd',
   },
   {
     id: 'settings',
     label: 'Settings',
-    codicon: 'codicon-settings-gear',
+    iconName: 'settings',
   },
 ];
 
@@ -66,7 +70,7 @@ const ACTIVITY_ICONS: ActivityIcon[] = [
  * Features:
  * - Fixed width (48px)
  * - 7 placeholder icons (Explorer, Search, Source Control, Run & Debug, Extensions, SDD, Settings)
- * - Active icon highlighted with bg-blue-600
+ * - Active icon highlighted with accent border
  * - Click handler emits icon ID
  * 
  * Uses Tailwind 4 tokens for styling (P4: UI design system).
@@ -84,8 +88,10 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
   // Split icons into top (main) and bottom (settings)
   const topIcons = ACTIVITY_ICONS.filter(icon => icon.id !== 'settings');
   const bottomIcons = ACTIVITY_ICONS.filter(icon => icon.id === 'settings');
+  const allIcons = [...topIcons, ...bottomIcons];
   const itemSize = 'var(--size-activityBar-width, var(--vscode-activityBar-width))';
   const iconSize = 'var(--vscode-activityBar-iconSize)';
+  const selectedIndex = Math.max(0, allIcons.findIndex(icon => icon.id === activeIcon));
   
   return (
     <div
@@ -96,91 +102,89 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
         maxWidth: itemSize,
       }}
     >
-      {/* Top section - main icons */}
-      <div
-        className="flex flex-col items-center"
-        style={{
-          paddingTop: 'var(--vscode-space-1)',
-          gap: 'var(--vscode-space-1)',
+      <TabGroup
+        vertical
+        selectedIndex={selectedIndex}
+        onChange={(index) => {
+          const icon = allIcons[index];
+          if (icon) {
+            onIconClick(icon.id);
+          }
         }}
+        className="flex flex-col h-full w-full"
       >
-        {topIcons.map((icon) => {
-          const isActive = icon.id === activeIcon;
-          
-          return (
-            <button
-              key={icon.id}
-              onClick={() => onIconClick(icon.id)}
-              className={`
-                relative flex items-center justify-center
-                transition-colors duration-150 ease-out group
-                text-secondary
-                ${isActive ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
-              `}
-              style={{
-                width: itemSize,
-                height: itemSize,
-              }}
-              title={icon.label}
-              aria-label={icon.label}
-              aria-pressed={isActive}
-            >
-              <div
-                className={`codicon ${icon.codicon} text-lg`}
-                aria-hidden="true"
+        <TabList className="flex flex-col items-center flex-1 w-full">
+          {/* Top section - main icons */}
+          <div
+            className="flex flex-col items-center"
+            style={{
+              paddingTop: 'var(--vscode-space-1)',
+              gap: 'var(--vscode-space-1)',
+            }}
+          >
+            {topIcons.map((icon) => (
+              <Tab
+                key={icon.id}
+                className={({ selected }) => `
+                  relative flex items-center justify-center
+                  transition-colors duration-150 ease-out group
+                  text-secondary focus:outline-none focus-visible:ring-1 focus-visible:ring-accent
+                  ${selected ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
+                `}
                 style={{
-                  fontSize: iconSize,
+                  width: itemSize,
+                  height: itemSize,
                 }}
-              />
-            </button>
-          );
-        })}
-      </div>
-      
-      {/* Spacer to push bottom icons down */}
-      <div className="flex-1" />
-      
-      {/* Bottom section - settings and other bottom icons */}
-      <div
-        className="flex flex-col items-center border-t border-border-subtle"
-        style={{
-          paddingTop: 'var(--vscode-space-2)',
-          paddingBottom: 'var(--vscode-space-2)',
-          gap: 'var(--vscode-space-1)',
-        }}
-      >
-        {bottomIcons.map((icon) => {
-          const isActive = icon.id === activeIcon;
+                title={icon.label}
+                aria-label={icon.label}
+              >
+                <Icon
+                  name={icon.iconName}
+                  className="transition-colors duration-150 ease-out"
+                  size={iconSize}
+                />
+              </Tab>
+            ))}
+          </div>
           
-          return (
-            <button
-              key={icon.id}
-              onClick={() => onIconClick(icon.id)}
-              className={`
-                relative flex items-center justify-center
-                transition-colors duration-150 ease-out group
-                text-secondary
-                ${isActive ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
-              `}
-              style={{
-                width: itemSize,
-                height: itemSize,
-              }}
-              title={icon.label}
-              aria-label={icon.label}
-              aria-pressed={isActive}
-            >
-              <div
-                className={`codicon ${icon.codicon} text-lg`}
-                aria-hidden="true"
+          {/* Spacer to push bottom icons down */}
+          <div className="flex-1" aria-hidden="true" />
+          
+          {/* Bottom section - settings and other bottom icons */}
+          <div
+            className="flex flex-col items-center border-t border-border-subtle"
+            style={{
+              paddingTop: 'var(--vscode-space-2)',
+              paddingBottom: 'var(--vscode-space-2)',
+              gap: 'var(--vscode-space-1)',
+            }}
+          >
+            {bottomIcons.map((icon) => (
+              <Tab
+                key={icon.id}
+                className={({ selected }) => `
+                  relative flex items-center justify-center
+                  transition-colors duration-150 ease-out group
+                  text-secondary focus:outline-none focus-visible:ring-1 focus-visible:ring-accent
+                  ${selected ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
+                `}
                 style={{
-                  fontSize: iconSize,
+                  width: itemSize,
+                  height: itemSize,
                 }}
-              />
-            </button>
-          );
-        })}
-      </div>
+                title={icon.label}
+                aria-label={icon.label}
+              >
+                <Icon
+                  name={icon.iconName}
+                  className="transition-colors duration-150 ease-out"
+                  size={iconSize}
+                />
+              </Tab>
+            ))}
+          </div>
+        </TabList>
+      </TabGroup>
     </div>
   );
 }

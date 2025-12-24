@@ -20,9 +20,10 @@ describe('TabBar', () => {
       />
     );
 
-    expect(screen.getByText('Terminal')).toBeInTheDocument();
-    expect(screen.getByText('Output')).toBeInTheDocument();
-    expect(screen.getByText('Problems')).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: 'Terminal' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Output' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Problems' })).toBeInTheDocument();
   });
 
   it('should mark the active tab with aria-selected', () => {
@@ -54,7 +55,7 @@ describe('TabBar', () => {
       />
     );
 
-    const outputTab = screen.getByText('Output');
+    const outputTab = screen.getByRole('tab', { name: 'Output' });
     fireEvent.click(outputTab);
 
     expect(handleChange).toHaveBeenCalledWith('output');
@@ -76,7 +77,7 @@ describe('TabBar', () => {
       />
     );
 
-    const outputTab = screen.getByText('Output');
+    const outputTab = screen.getByRole('tab', { name: 'Output' });
     fireEvent.click(outputTab);
 
     expect(handleChange).not.toHaveBeenCalled();
@@ -213,7 +214,7 @@ describe('TabBar', () => {
     expect(handleChange).toHaveBeenCalledWith('problems');
   });
 
-  it('should have proper ARIA attributes', () => {
+  it('should expose tablist and tabs for accessibility', () => {
     const handleChange = vi.fn();
     
     const { container } = render(
@@ -229,9 +230,5 @@ describe('TabBar', () => {
 
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(3);
-
-    tabs.forEach((tab, index) => {
-      expect(tab).toHaveAttribute('aria-controls', `tabpanel-${mockTabs[index].id}`);
-    });
   });
 });

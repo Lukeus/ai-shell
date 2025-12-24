@@ -9,45 +9,46 @@ describe('ActivityBar', () => {
     mockOnIconClick.mockClear();
   });
 
-  it('renders 6 icons', () => {
+  it('renders 7 icons', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(6);
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(7);
   });
 
   it('renders all expected icon labels', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
-    expect(screen.getByRole('button', { name: 'Explorer' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Source Control' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Run and Debug' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Extensions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Explorer' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Search' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Source Control' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Run and Debug' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Extensions' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'SDD' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Settings' })).toBeInTheDocument();
   });
 
   it('applies active class to the active icon', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
-    const explorerButton = screen.getByRole('button', { name: 'Explorer' });
-    expect(explorerButton).toHaveClass('border-accent');
-    expect(explorerButton).toHaveClass('text-primary');
+    const explorerTab = screen.getByRole('tab', { name: 'Explorer' });
+    expect(explorerTab).toHaveClass('border-accent');
+    expect(explorerTab).toHaveClass('text-primary');
   });
 
   it('does not apply active class to inactive icons', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
-    const searchButton = screen.getByRole('button', { name: 'Search' });
-    expect(searchButton).not.toHaveClass('border-accent');
-    expect(searchButton).toHaveClass('text-secondary');
+    const searchTab = screen.getByRole('tab', { name: 'Search' });
+    expect(searchTab).not.toHaveClass('border-accent');
+    expect(searchTab).toHaveClass('text-secondary');
   });
 
   it('calls onIconClick with correct icon ID when icon is clicked', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
-    const searchButton = screen.getByRole('button', { name: 'Search' });
-    fireEvent.click(searchButton);
+    const searchTab = screen.getByRole('tab', { name: 'Search' });
+    fireEvent.click(searchTab);
     
     expect(mockOnIconClick).toHaveBeenCalledTimes(1);
     expect(mockOnIconClick).toHaveBeenCalledWith('search');
@@ -56,9 +57,9 @@ describe('ActivityBar', () => {
   it('calls onIconClick for multiple different icons', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
-    fireEvent.click(screen.getByRole('button', { name: 'Explorer' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Extensions' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Explorer' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Extensions' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Settings' }));
     
     expect(mockOnIconClick).toHaveBeenCalledTimes(3);
     expect(mockOnIconClick).toHaveBeenNthCalledWith(1, 'explorer');
@@ -66,17 +67,27 @@ describe('ActivityBar', () => {
     expect(mockOnIconClick).toHaveBeenNthCalledWith(3, 'settings');
   });
 
-  it('sets aria-pressed to true for active icon', () => {
-    render(<ActivityBar activeIcon="search" onIconClick={mockOnIconClick} />);
-    
-    const searchButton = screen.getByRole('button', { name: 'Search' });
-    expect(searchButton).toHaveAttribute('aria-pressed', 'true');
+  it('supports keyboard navigation with ArrowDown', () => {
+    render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
+
+    const explorerTab = screen.getByRole('tab', { name: 'Explorer' });
+    explorerTab.focus();
+    fireEvent.keyDown(explorerTab, { key: 'ArrowDown' });
+
+    expect(mockOnIconClick).toHaveBeenCalledWith('search');
   });
 
-  it('sets aria-pressed to false for inactive icons', () => {
+  it('sets aria-selected to true for active icon', () => {
     render(<ActivityBar activeIcon="search" onIconClick={mockOnIconClick} />);
     
-    const explorerButton = screen.getByRole('button', { name: 'Explorer' });
-    expect(explorerButton).toHaveAttribute('aria-pressed', 'false');
+    const searchTab = screen.getByRole('tab', { name: 'Search' });
+    expect(searchTab).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('sets aria-selected to false for inactive icons', () => {
+    render(<ActivityBar activeIcon="search" onIconClick={mockOnIconClick} />);
+    
+    const explorerTab = screen.getByRole('tab', { name: 'Explorer' });
+    expect(explorerTab).toHaveAttribute('aria-selected', 'false');
   });
 });

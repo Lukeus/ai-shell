@@ -1,3 +1,6 @@
+import { Disclosure, DisclosureButton } from '@headlessui/react';
+import { ChevronUpIcon } from '@heroicons/react/20/solid';
+
 /**
  * Props for the PanelHeader component.
  */
@@ -34,8 +37,14 @@ export interface PanelHeaderProps {
  * ```
  */
 export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderProps) {
+  // Remount to keep Disclosure open state aligned with controlled collapsed prop.
+  const disclosureKey = collapsed ? 'collapsed' : 'open';
+
   return (
-    <div
+    <Disclosure
+      key={disclosureKey}
+      defaultOpen={!collapsed}
+      as="div"
       className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
       style={{
         height: 'var(--vscode-panelHeader-height)',
@@ -43,43 +52,40 @@ export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderP
         paddingRight: 'var(--vscode-space-2)',
       }}
     >
-      {/* Panel title with icon */}
-      <div className="flex items-center gap-2">
-        <h2
-          className="font-semibold text-secondary uppercase"
-          style={{
-            fontSize: 'var(--vscode-font-size-small)',
-            letterSpacing: '0.08em',
-          }}
-        >
-          {title}
-        </h2>
-      </div>
-      
-      {/* Collapse/expand button */}
-      <button
-        onClick={onToggleCollapse}
-        className="
-          p-1 rounded-none transition-colors duration-150
-          hover:bg-surface-hover
-          group focus:outline-none focus:ring-1 focus:ring-accent
-        "
-        aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
-        aria-expanded={!collapsed}
-      >
-        <svg
-          className="w-4 h-4 text-secondary transition-transform duration-200 group-hover:text-primary"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          style={{
-            transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
-          }}
-        >
-          {/* Chevron up - rotates 180deg when collapsed */}
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-        </svg>
-      </button>
-    </div>
+      {({ open }) => (
+        <>
+          {/* Panel title with icon */}
+          <div className="flex items-center gap-2">
+            <h2
+              className="font-semibold text-secondary uppercase"
+              style={{
+                fontSize: 'var(--vscode-font-size-small)',
+                letterSpacing: '0.08em',
+              }}
+            >
+              {title}
+            </h2>
+          </div>
+
+          {/* Collapse/expand button */}
+          <DisclosureButton
+            onClick={onToggleCollapse}
+            className="
+              p-1 rounded-none transition-colors duration-150
+              hover:bg-surface-hover
+              group focus:outline-none focus:ring-1 focus:ring-accent
+            "
+            aria-label={open ? 'Collapse panel' : 'Expand panel'}
+          >
+            <ChevronUpIcon
+              className="w-4 h-4 text-secondary transition-transform duration-200 group-hover:text-primary"
+              style={{
+                transform: open ? 'rotate(0deg)' : 'rotate(180deg)',
+              }}
+            />
+          </DisclosureButton>
+        </>
+      )}
+    </Disclosure>
   );
 }

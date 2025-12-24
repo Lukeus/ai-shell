@@ -1,4 +1,5 @@
-import React, { useCallback } from 'react';
+
+import { Switch, Label, Field } from '@headlessui/react';
 
 /**
  * Props for the ToggleSwitch component.
@@ -39,67 +40,42 @@ export interface ToggleSwitchProps {
  * ```
  */
 export function ToggleSwitch({ checked, onChange, label, disabled = false }: ToggleSwitchProps) {
-  /**
-   * Handle toggle via keyboard (Space/Enter)
-   */
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (disabled) return;
-    
-    if (e.key === ' ' || e.key === 'Enter') {
-      e.preventDefault();
-      onChange(!checked);
-    }
-  }, [checked, disabled, onChange]);
-
-  /**
-   * Handle toggle via mouse click
-   */
-  const handleClick = useCallback(() => {
-    if (disabled) return;
-    onChange(!checked);
-  }, [checked, disabled, onChange]);
+  const switchClassName = `
+    relative inline-flex h-6 w-11 items-center rounded-full
+    transition-colors duration-200 ease-in-out
+    focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface
+    ${checked ? 'bg-accent' : 'bg-surface-secondary'}
+    ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+  `;
+  const thumbClassName = `
+    inline-block h-4 w-4 transform rounded-full bg-[var(--vscode-button-foreground)]
+    transition-transform duration-200 ease-in-out
+    ${checked ? 'translate-x-6' : 'translate-x-1'}
+  `;
 
   return (
-    <div className="flex items-center gap-3">
-      {/* Toggle switch button */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label || 'Toggle switch'}
+    <Field as="div" className="flex items-center gap-3">
+      <Switch
+        checked={checked}
+        onChange={onChange}
         disabled={disabled}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        className={`
-          relative inline-flex h-6 w-11 items-center rounded-full
-          transition-colors duration-200 ease-in-out
-          focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface
-          ${checked ? 'bg-accent' : 'bg-surface-secondary'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
+        className={switchClassName}
+        aria-label={label ? undefined : 'Toggle switch'}
       >
-        {/* Toggle indicator (circle that slides) */}
-        <span
-          className={`
-            inline-block h-4 w-4 transform rounded-full bg-[var(--vscode-button-foreground)]
-            transition-transform duration-200 ease-in-out
-            ${checked ? 'translate-x-6' : 'translate-x-1'}
-          `}
-        />
-      </button>
+        <span aria-hidden="true" className={thumbClassName} />
+      </Switch>
       
       {/* Optional label */}
       {label && (
-        <label
-          onClick={disabled ? undefined : handleClick}
+        <Label
           className={`
             text-sm text-primary select-none
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           `}
         >
           {label}
-        </label>
+        </Label>
       )}
-    </div>
+    </Field>
   );
 }
