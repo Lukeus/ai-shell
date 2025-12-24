@@ -70,18 +70,17 @@ const sampleConnection = {
 };
 
 beforeEach(() => {
-  (global as any).window = {
-    api: {
-      connections: {
-        listProviders: mockListProviders,
-        list: mockList,
-        create: mockCreate,
-        update: mockUpdate,
-        delete: mockDelete,
-        setSecret: mockSetSecret,
-        replaceSecret: mockReplaceSecret,
-        requestSecretAccess: mockRequestSecretAccess,
-      },
+  (globalThis as any).window = (globalThis as any).window || {};
+  (window as any).api = {
+    connections: {
+      listProviders: mockListProviders,
+      list: mockList,
+      create: mockCreate,
+      update: mockUpdate,
+      delete: mockDelete,
+      setSecret: mockSetSecret,
+      replaceSecret: mockReplaceSecret,
+      requestSecretAccess: mockRequestSecretAccess,
     },
   };
 

@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { safeStorage } from 'electron';
 import { SecretsService } from './SecretsService';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const mockUserDataPath = 'C:\\mock\\userdata';
+const mockUserDataPath = vi.hoisted(() => 'C:\\mock\\userdata');
 const mockSecretsPath = path.join(mockUserDataPath, 'secrets.json');
 
-let encryptedValue = '';
+const encryptedValue = vi.hoisted(() => ({ value: '' }));
 
 vi.mock('electron', () => ({
   app: {
@@ -15,8 +16,8 @@ vi.mock('electron', () => ({
   safeStorage: {
     isEncryptionAvailable: vi.fn(() => true),
     encryptString: vi.fn((value: string) => {
-      encryptedValue = `enc:${value}`;
-      return Buffer.from(encryptedValue);
+      encryptedValue.value = `enc:${value}`;
+      return Buffer.from(encryptedValue.value);
     }),
     decryptString: vi.fn((buffer: Buffer) => buffer.toString('utf-8').replace('enc:', '')),
   },
@@ -34,15 +35,15 @@ describe('SecretsService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    encryptedValue = '';
+    encryptedValue.value = '';
+    vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(true);
     // @ts-expect-error Reset singleton for tests
     SecretsService.instance = null;
     service = SecretsService.getInstance();
   });
 
   it('throws when safeStorage is unavailable', () => {
-    const { safeStorage } = require('electron');
-    safeStorage.isEncryptionAvailable.mockReturnValue(false);
+    vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValue(false);
 
     expect(() => service.setSecret('conn-1', 'top-secret')).toThrow(
       'safeStorage encryption is not available'
@@ -61,7 +62,7 @@ describe('SecretsService', () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     );
     const expectedCiphertext = Buffer.from('enc:top-secret').toString('base64');
-    expect(encryptedValue).toBe('enc:top-secret');
+    expect(encryptedValue.value).toBe('enc:top-secret');
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       mockSecretsPath,
       expect.stringContaining(expectedCiphertext),

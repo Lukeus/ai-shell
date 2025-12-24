@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ShellLayout, ResizablePanel, ActivityBar, StatusBar, PanelHeader, TabBar, type Tab } from 'packages-ui-kit';
+import { ShellLayout, ResizablePanel, ActivityBar, StatusBar, PanelHeader } from 'packages-ui-kit';
 import { IPC_CHANNELS, SETTINGS_DEFAULTS, type Settings } from 'packages-api-contracts';
 import { LayoutProvider, useLayoutContext } from './contexts/LayoutContext';
 import { ThemeProvider } from './components/ThemeProvider';
-import { FileTreeContextProvider, useFileTree } from './components/explorer/FileTreeContext';
+import { FileTreeContextProvider, useFileTree, SETTINGS_TAB_ID } from './components/explorer/FileTreeContext';
 import { ExplorerPanel } from './components/layout/ExplorerPanel';
 import { MenuBar } from './components/layout/MenuBar';
 import { EditorArea } from './components/editor/EditorArea';
 import { TerminalPanel } from './components/layout/TerminalPanel';
 import { SecondarySidebar } from './components/layout/SecondarySidebar';
-import { SettingsPanel } from './components/settings/SettingsPanel';
 import { TerminalContextProvider, useTerminal } from './contexts/TerminalContext';
 import { CommandPalette, type BuiltInCommand } from './components/command-palette/CommandPalette';
 
@@ -73,6 +72,7 @@ function AppContent() {
     dirtyTabs,
     saveFile,
     saveAllFiles,
+    openSettingsTab,
   } = useFileTree();
   const {
     activeSessionId,
@@ -100,15 +100,6 @@ function AppContent() {
   const isMac = typeof navigator !== 'undefined'
     ? (navigator.platform || navigator.userAgent || '').toLowerCase().includes('mac')
     : false;
-
-  const settingsTabs: Tab[] = [
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: <span className="codicon codicon-settings-gear" aria-hidden="true" />,
-      closable: false,
-    },
-  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -225,6 +216,12 @@ function AppContent() {
   }, [openWorkspace, closeWorkspace, refresh, toggleSecondarySidebar]);
 
   useEffect(() => {
+    if (state.activeActivityBarIcon === 'settings') {
+      openSettingsTab();
+    }
+  }, [openSettingsTab, state.activeActivityBarIcon]);
+
+  useEffect(() => {
     const handleOpenSdd = () => {
       setActiveActivityBarIcon('sdd');
     };
@@ -235,8 +232,9 @@ function AppContent() {
     };
   }, [setActiveActivityBarIcon]);
 
-  const activeFilePath =
+  const activeTabId =
     activeTabIndex >= 0 && activeTabIndex < openTabs.length ? openTabs[activeTabIndex] : null;
+  const activeFilePath = activeTabId === SETTINGS_TAB_ID ? null : activeTabId;
   const canSaveFile = Boolean(activeFilePath && dirtyTabs.has(activeFilePath));
   const canSaveAllFiles = dirtyTabs.size > 0;
 
@@ -457,22 +455,7 @@ function AppContent() {
               </div>
             </ResizablePanel>
           }
-          editorArea={
-            isSettingsView ? (
-              <div className="flex flex-col h-full bg-surface">
-                <TabBar
-                  tabs={settingsTabs}
-                  activeTabId="settings"
-                  onTabChange={() => {}}
-                />
-                <div className="flex-1 overflow-hidden bg-surface">
-                  <SettingsPanel />
-                </div>
-              </div>
-            ) : (
-              <EditorArea />
-            )
-          }
+          editorArea={<EditorArea />}
           secondarySidebar={
             <SecondarySidebar
               width={state.secondarySidebarWidth}
@@ -540,7 +523,11 @@ function AppContent() {
                 {
                   id: 'lang',
                   icon: 'codicon-file-code',
-                  label: activeTabIndex >= 0 ? openTabs[activeTabIndex].split('.').pop()?.toUpperCase() ?? 'Text' : 'Plain Text',
+                  label: activeTabId === SETTINGS_TAB_ID
+                    ? 'Settings'
+                    : activeTabId
+                      ? activeTabId.split('.').pop()?.toUpperCase() ?? 'Text'
+                      : 'Plain Text',
                   tooltip: 'Language',
                 },
                 {

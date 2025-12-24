@@ -90,48 +90,56 @@ export function Terminal({ sessionId }: TerminalProps) {
     if (!xterm || !fitAddon || !terminalRef.current) return;
 
     // Create terminal instance
-    const term = new xterm.Terminal({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: '"Cascadia Code", "Courier New", monospace',
-      theme: buildTerminalTheme(),
-      scrollback: 10000,
-      allowTransparency: false,
-    });
-
-    // Create fit addon
-    const fit = new fitAddon();
-    term.loadAddon(fit);
-
-    // Open terminal in DOM
-    term.open(terminalRef.current);
-    
-    // Fit terminal to container
+    let term: any;
+    let disposable: { dispose: () => void } | null = null;
     try {
-      fit.fit();
+      term = new xterm.Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: '"Cascadia Code", "Courier New", monospace',
+        theme: buildTerminalTheme(),
+        scrollback: 10000,
+        allowTransparency: false,
+      });
+
+      // Create fit addon
+      const fit = new fitAddon();
+      term.loadAddon(fit);
+
+      // Open terminal in DOM
+      term.open(terminalRef.current);
       
-      // Send initial size to backend
-      resizeSession(sessionId, term.cols, term.rows).catch(err => {
-        console.error('Failed to send initial terminal size:', err);
+      // Fit terminal to container
+      try {
+        fit.fit();
+        
+        // Send initial size to backend
+        resizeSession(sessionId, term.cols, term.rows).catch(err => {
+          console.error('Failed to send initial terminal size:', err);
+        });
+      } catch (err) {
+        console.error('Failed to fit terminal:', err);
+      }
+
+      setTerminal(term);
+      lastOutputLengthRef.current = 0;
+
+      // Handle user input - send to main process via IPC
+      disposable = term.onData((data: string) => {
+        // P1: Use IPC to send data to main process (no direct PTY access)
+        writeToSession(sessionId, data).catch(err => {
+          console.error('Failed to write to terminal:', err);
+        });
       });
     } catch (err) {
-      console.error('Failed to fit terminal:', err);
+      console.error('Failed to initialize terminal:', err);
+      setError('Failed to load terminal. Please refresh the page.');
+      return;
     }
 
-    setTerminal(term);
-    lastOutputLengthRef.current = 0;
-
-    // Handle user input - send to main process via IPC
-    const disposable = term.onData((data: string) => {
-      // P1: Use IPC to send data to main process (no direct PTY access)
-      writeToSession(sessionId, data).catch(err => {
-        console.error('Failed to write to terminal:', err);
-      });
-    });
-
     return () => {
-      disposable.dispose();
-      term.dispose();
+      disposable?.dispose();
+      term?.dispose();
     };
   }, [xterm, fitAddon, sessionId, writeToSession, resizeSession]);
 

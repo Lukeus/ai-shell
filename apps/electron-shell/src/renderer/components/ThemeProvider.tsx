@@ -167,7 +167,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    let mediaQuery: MediaQueryList;
+    try {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    } catch (error) {
+      console.warn('Failed to listen to OS theme changes:', error);
+      return;
+    }
 
     /**
      * Handle OS theme preference change.

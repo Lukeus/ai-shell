@@ -26,6 +26,8 @@
 - Ollama provider defaults to `http://localhost:11434` and a default model name.
 - Agents panel supports optional connection selection; if empty, the default is used.
 - Clear error states: missing connection, consent denied, and unreachable model endpoint.
+- Settings opens as a closable editor tab in the main open-tabs model (no dedicated settings view).
+- Settings categories share a consistent header layout (title + search when applicable).
 
 ## Functional requirements
 - Add a provider registry in main that exposes core providers (OpenAI + Ollama) and future

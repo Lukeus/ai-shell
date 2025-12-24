@@ -1,27 +1,61 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createRequire } from 'module';
 import { TerminalService } from './TerminalService';
-import { CreateTerminalRequest } from 'packages-api-contracts';
+import { CreateTerminalRequest, SETTINGS_DEFAULTS } from 'packages-api-contracts';
+
+const ptyMocks = vi.hoisted(() => {
+  const mockPtyProcess = {
+    onData: vi.fn(),
+    onExit: vi.fn(),
+    write: vi.fn(),
+    resize: vi.fn(),
+    kill: vi.fn(),
+  };
+  const mockSpawn = vi.fn(() => mockPtyProcess);
+  return { mockPtyProcess, mockSpawn };
+});
 
 // Mock node-pty module
-const mockPtyProcess = {
-  onData: vi.fn(),
-  onExit: vi.fn(),
-  write: vi.fn(),
-  resize: vi.fn(),
-  kill: vi.fn(),
-};
-
 vi.mock('node-pty', () => ({
-  spawn: vi.fn(() => mockPtyProcess),
+  spawn: ptyMocks.mockSpawn,
+}));
+
+vi.mock('@homebridge/node-pty-prebuilt-multiarch', () => ({
+  spawn: ptyMocks.mockSpawn,
 }));
 
 vi.mock('fs', () => ({
   realpathSync: vi.fn((value: string) => value),
 }));
 
-import * as pty from 'node-pty';
+vi.mock('./SettingsService', () => ({
+  settingsService: {
+    getSettings: vi.fn(() => SETTINGS_DEFAULTS),
+  },
+}));
 
 describe('TerminalService', () => {
+  const { mockSpawn, mockPtyProcess } = ptyMocks;
+  const requireForMocks = createRequire(import.meta.url);
+  const registerPtyMocks = () => {
+    const mockModule = { spawn: mockSpawn };
+    try {
+      const moduleId = requireForMocks.resolve('node-pty');
+      requireForMocks.cache[moduleId] = {
+        exports: mockModule,
+      } as NodeModule;
+    } catch {
+      // Module not available in this environment.
+    }
+    try {
+      const moduleId = requireForMocks.resolve('@homebridge/node-pty-prebuilt-multiarch');
+      requireForMocks.cache[moduleId] = {
+        exports: mockModule,
+      } as NodeModule;
+    } catch {
+      // Module not available in this environment.
+    }
+  };
   let terminalService: TerminalService;
   const mockWorkspaceRoot = 'C:\\mock\\workspace';
   const mockCwd = 'C:\\mock\\workspace\\project';
@@ -29,6 +63,7 @@ describe('TerminalService', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     vi.clearAllMocks();
+    registerPtyMocks();
 
     // Reset the singleton instance using reflection
     // @ts-expect-error Accessing private static field for testing
@@ -72,7 +107,7 @@ describe('TerminalService', () => {
       expect(session.cwd).toBe(mockCwd);
       expect(session.status).toBe('running');
       expect(session.createdAt).toBeDefined();
-      expect(pty.spawn).toHaveBeenCalledWith(
+      expect(mockSpawn).toHaveBeenCalledWith(
         expect.any(String),
         [],
         expect.objectContaining({
@@ -141,7 +176,7 @@ describe('TerminalService', () => {
       terminalService.createSession(request, mockWorkspaceRoot);
 
       // Assert
-      expect(pty.spawn).toHaveBeenCalledWith(
+      expect(mockSpawn).toHaveBeenCalledWith(
         expect.any(String), // Should be default shell
         [],
         expect.any(Object)
@@ -161,7 +196,7 @@ describe('TerminalService', () => {
       terminalService.createSession(request, mockWorkspaceRoot);
 
       // Assert
-      expect(pty.spawn).toHaveBeenCalledWith(
+      expect(mockSpawn).toHaveBeenCalledWith(
         'C:\\custom\\shell.exe',
         [],
         expect.any(Object)
@@ -183,7 +218,7 @@ describe('TerminalService', () => {
       terminalService.createSession(request, mockWorkspaceRoot);
 
       // Assert
-      const spawnCall = vi.mocked(pty.spawn).mock.calls[0];
+      const spawnCall = mockSpawn.mock.calls[0];
       const options = spawnCall[2];
       expect(options.env).toBeDefined();
       expect(options.env?.CUSTOM_VAR).toBe('value');

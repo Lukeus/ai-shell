@@ -28,6 +28,8 @@ vi.mock('xterm', () => ({
     write: vi.fn(),
     onData: vi.fn(() => ({ dispose: vi.fn() })),
     dispose: vi.fn(),
+    setOption: vi.fn(),
+    clear: vi.fn(),
     cols: 80,
     rows: 24,
     loadAddon: vi.fn(),
@@ -66,10 +68,34 @@ beforeEach(() => {
   (window as any).api = {
     terminal: mockTerminalApi,
     filetree: mockFileTreeApi,
+    workspace: {
+      getCurrent: vi.fn().mockResolvedValue(null),
+      open: vi.fn(),
+      close: vi.fn(),
+    },
+    fs: {
+      readDirectory: vi.fn().mockResolvedValue({ entries: [] }),
+      readFile: vi.fn().mockResolvedValue({ content: '', encoding: 'utf-8' }),
+      createFile: vi.fn().mockResolvedValue(undefined),
+      createDirectory: vi.fn().mockResolvedValue(undefined),
+      rename: vi.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
+    },
   };
   (window as any).mainWindow = {
     getCurrent: vi.fn(() => ({})),
   };
+
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
   
   // Default mock responses
   mockTerminalApi.list.mockResolvedValue({

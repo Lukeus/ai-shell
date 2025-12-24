@@ -23,7 +23,19 @@ describe('ContributionRegistry', () => {
         views: [{ id: 'sample.view', name: 'Sample View', location: 'panel' }],
         tools: [{ name: 'echo', description: 'Echo', inputSchema: { type: 'object' } }],
         settings: [{ key: 'sample.setting', type: 'string', default: 'value' }],
-        connectionProviders: [{ id: 'sample.provider', name: 'Sample', schema: { type: 'object' } }],
+        connectionProviders: [
+          {
+            id: 'sample.provider',
+            name: 'Sample',
+            fields: [
+              {
+                id: 'endpoint',
+                label: 'Endpoint',
+                type: 'string',
+              },
+            ],
+          },
+        ],
       },
     };
 

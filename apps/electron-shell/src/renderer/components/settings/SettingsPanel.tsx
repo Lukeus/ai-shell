@@ -277,6 +277,11 @@ export function SettingsPanel() {
   const [updateTimeoutId, setUpdateTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const isAgentsCategory = activeCategory === 'agents';
   const isConnectionsCategory = activeCategory === 'connections';
+  const supportsSearch = !isConnectionsCategory && !isAgentsCategory;
+  const activeCategoryLabel = useMemo(
+    () => CATEGORIES.find((cat) => cat.id === activeCategory)?.label ?? 'Settings',
+    [activeCategory]
+  );
 
   /**
    * Fetch settings on mount
@@ -446,18 +451,30 @@ export function SettingsPanel() {
       {/* Right content - Settings list or Connections panel */}
       <div className="flex-1 overflow-hidden flex flex-col">
         <div
-          className="flex items-center border-b border-border-subtle bg-surface-secondary"
+          className="flex items-center justify-between gap-3 border-b border-border-subtle bg-surface-secondary"
           style={{
             height: 'var(--vscode-panelHeader-height)',
             paddingLeft: 'var(--vscode-space-3)',
             paddingRight: 'var(--vscode-space-3)',
           }}
         >
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search settings..."
-          />
+          <div
+            className="text-primary"
+            style={{ fontSize: '14px', fontWeight: 600 }}
+          >
+            {supportsSearch && searchQuery.trim() ? 'Search Results' : activeCategoryLabel}
+          </div>
+          {supportsSearch ? (
+            <div className="w-full max-w-[320px]">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search settings..."
+              />
+            </div>
+          ) : (
+            <div className="w-full max-w-[320px]" />
+          )}
         </div>
         {isConnectionsCategory ? (
           <ConnectionsPanel />
@@ -476,20 +493,6 @@ export function SettingsPanel() {
               paddingBottom: 'var(--vscode-space-4)',
             }}
           >
-            {/* Category title (hidden when searching) */}
-            {!searchQuery && (
-              <h3
-                className="text-primary"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  marginBottom: 'var(--vscode-space-3)',
-                }}
-              >
-                {CATEGORIES.find((cat) => cat.id === activeCategory)?.label}
-              </h3>
-            )}
-
             {/* Settings list */}
             {filteredSettings.length === 0 ? (
               <p className="text-secondary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>

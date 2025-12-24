@@ -178,9 +178,8 @@ describe('EditorTabBar', () => {
         </TestWrapper>
       );
 
-      const tab = await screen.findByText('file.ts');
-      const tabContainer = tab.closest('div');
-      expect(tabContainer).toHaveAttribute('title', '/test/workspace/src/file.ts');
+      const tab = await screen.findByRole('tab', { name: /file\.ts/ });
+      expect(tab).toHaveAttribute('title', '/test/workspace/src/file.ts');
     });
   });
 
@@ -201,14 +200,12 @@ describe('EditorTabBar', () => {
         </TestWrapper>
       );
 
-      const file1Tab = (await screen.findByText('file1.ts')).closest('div');
-      const file2Tab = screen.getByText('file2.ts').closest('div');
+      const file1Tab = await screen.findByRole('tab', { name: /file1\.ts/ });
+      const file2Tab = screen.getByRole('tab', { name: /file2\.ts/ });
 
       // file2.ts should be active (last opened)
-      // Check that the borderBottomColor style is set (CSS variable value may not resolve in jsdom)
-      expect(file2Tab).toHaveStyle('border-bottom-color: var(--accent-color, #007acc)');
-      // Transparent is rendered as rgba(0, 0, 0, 0) in jsdom
-      expect(file1Tab).toHaveStyle('border-bottom-color: rgba(0, 0, 0, 0)');
+      expect(file2Tab).toHaveAttribute('aria-selected', 'true');
+      expect(file1Tab).toHaveAttribute('aria-selected', 'false');
     });
 
     it('should update active styling when tab is clicked', async () => {
@@ -227,23 +224,22 @@ describe('EditorTabBar', () => {
         </TestWrapper>
       );
 
-      let file1Tab = (await screen.findByText('file1.ts')).closest('div');
-      let file2Tab = screen.getByText('file2.ts').closest('div');
+      let file1Tab = await screen.findByRole('tab', { name: /file1\.ts/ });
+      let file2Tab = screen.getByRole('tab', { name: /file2\.ts/ });
 
       // Initially, file2 is active
-      expect(file2Tab).toHaveStyle('border-bottom-color: var(--accent-color, #007acc)');
+      expect(file2Tab).toHaveAttribute('aria-selected', 'true');
 
       // Click file1 tab
       fireEvent.click(file1Tab as HTMLElement);
 
       // Re-query elements after state change
-      file1Tab = screen.getByText('file1.ts').closest('div');
-      file2Tab = screen.getByText('file2.ts').closest('div');
+      file1Tab = screen.getByRole('tab', { name: /file1\.ts/ });
+      file2Tab = screen.getByRole('tab', { name: /file2\.ts/ });
 
       // Now file1 should be active
-      expect(file1Tab).toHaveStyle('border-bottom-color: var(--accent-color, #007acc)');
-      // Transparent is rendered as rgba(0, 0, 0, 0) in jsdom
-      expect(file2Tab).toHaveStyle('border-bottom-color: rgba(0, 0, 0, 0)');
+      expect(file1Tab).toHaveAttribute('aria-selected', 'true');
+      expect(file2Tab).toHaveAttribute('aria-selected', 'false');
     });
   });
 
@@ -264,13 +260,13 @@ describe('EditorTabBar', () => {
         </TestWrapper>
       );
 
-      const file1Tab = (await screen.findByText('file1.ts')).closest('div');
+      const file1Tab = await screen.findByRole('tab', { name: /file1\.ts/ });
 
       // Click should activate the tab
       fireEvent.click(file1Tab as HTMLElement);
 
       // Verify tab is now active (via styling)
-      expect(file1Tab).toHaveStyle('border-bottom-color: var(--accent-color, #007acc)');
+      expect(file1Tab).toHaveAttribute('aria-selected', 'true');
     });
 
     it('should have close button with aria-label', async () => {
@@ -383,7 +379,7 @@ describe('EditorTabBar', () => {
       expect(screen.getByText('file3.ts')).toBeInTheDocument();
 
       // Verify they're in a horizontal flex container
-      const container = screen.getByText('file1.ts').closest('div')?.parentElement;
+      const container = screen.getByRole('tablist');
       expect(container).toHaveClass('flex');
     });
 

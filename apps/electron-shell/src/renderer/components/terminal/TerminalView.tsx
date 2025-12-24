@@ -25,12 +25,19 @@ export interface TerminalViewProps {
 }
 
 export function TerminalView({ sessionId }: TerminalViewProps) {
-  const { sessions } = useTerminal();
+  const { sessions, isLoading } = useTerminal();
 
   // Check if session exists
   const session = sessions.find(s => s.sessionId === sessionId);
 
   if (!session) {
+    if (isLoading) {
+      return (
+        <div className="h-full w-full flex flex-col bg-surface">
+          <TerminalLoader message="Loading Terminal..." />
+        </div>
+      );
+    }
     return (
       <div className="flex items-center justify-center h-full bg-surface text-error">
         <div className="text-center p-4">

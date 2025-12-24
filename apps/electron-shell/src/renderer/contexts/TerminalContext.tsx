@@ -113,7 +113,7 @@ export function TerminalContextProvider({ children }: { children: React.ReactNod
   // Session state
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Terminal output accumulated in renderer

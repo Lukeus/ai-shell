@@ -7,7 +7,7 @@ import { SETTINGS_DEFAULTS } from 'packages-api-contracts';
 import { settingsService } from './SettingsService';
 import { sddTraceService } from './SddTraceService';
 
-const workspaceRoot = vi.hoisted(() => path.resolve('workspace-root'));
+const workspaceRoot = 'C:\\mock\\workspace';
 
 vi.mock('./WorkspaceService', () => ({
   WorkspaceService: {
@@ -20,9 +20,15 @@ vi.mock('./WorkspaceService', () => ({
   },
 }));
 
-vi.mock('child_process', () => ({
-  spawn: vi.fn(),
-}));
+vi.mock('child_process', () => {
+  const spawn = vi.fn();
+  return {
+    spawn,
+    default: {
+      spawn,
+    },
+  };
+});
 
 vi.mock('./SettingsService', () => ({
   settingsService: {

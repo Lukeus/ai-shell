@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { TabBar, type Tab } from 'packages-ui-kit';
 import type { SddFileTraceResponse } from 'packages-api-contracts';
-import { useFileTree } from '../explorer/FileTreeContext';
+import { useFileTree, SETTINGS_TAB_ID } from '../explorer/FileTreeContext';
 import { useSddStatus } from '../../hooks/useSddStatus';
 import { SddBadge } from '../sdd/SddBadge';
 
@@ -40,6 +40,10 @@ export function EditorTabBar() {
   const [traceByPath, setTraceByPath] = useState<Record<string, SddFileTraceResponse | null>>({});
 
   const hasTabs = openTabs.length > 0;
+  const fileTabs = useMemo(
+    () => openTabs.filter((path) => path !== SETTINGS_TAB_ID),
+    [openTabs]
+  );
 
   /**
    * Extract basename from file path.
@@ -68,6 +72,16 @@ export function EditorTabBar() {
 
   const tabs: Tab[] = useMemo(() => {
     return openTabs.map((path) => {
+      if (path === SETTINGS_TAB_ID) {
+        return {
+          id: path,
+          label: 'Settings',
+          title: 'Settings',
+          icon: <span className="codicon codicon-settings-gear" aria-hidden="true" />,
+          dirty: false,
+        };
+      }
+
       let badge: React.ReactNode | undefined;
       if (sddEnabled && sddStatus?.parity) {
         const isUntracked = untrackedSet.has(path);
@@ -105,6 +119,7 @@ export function EditorTabBar() {
       return {
         id: path,
         label: getBasename(path),
+        title: path,
         icon: <span className="codicon codicon-file" aria-hidden="true" />,
         dirty: dirtyTabs.has(path),
         badge,
@@ -119,21 +134,21 @@ export function EditorTabBar() {
     }
     setTraceByPath((prev) => {
       const next: Record<string, SddFileTraceResponse | null> = {};
-      openTabs.forEach((path) => {
+      fileTabs.forEach((path) => {
         if (prev[path]) {
           next[path] = prev[path];
         }
       });
       return next;
     });
-  }, [openTabs, sddEnabled]);
+  }, [fileTabs, sddEnabled]);
 
   useEffect(() => {
     if (!sddEnabled || typeof window.api?.sdd?.getFileTrace !== 'function') {
       return;
     }
 
-    const pathsToFetch = openTabs.filter(
+    const pathsToFetch = fileTabs.filter(
       (path) => !untrackedSet.has(path) && !traceByPath[path]
     );
     if (pathsToFetch.length === 0) {
@@ -165,7 +180,7 @@ export function EditorTabBar() {
       isMounted = false;
     };
   }, [
-    openTabs,
+    fileTabs,
     sddEnabled,
     sddStatus?.parity?.trackedFileChanges,
     sddStatus?.parity?.untrackedFileChanges,

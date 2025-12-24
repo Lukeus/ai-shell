@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ModelGatewayService } from './ModelGatewayService';
 
+vi.mock('electron', () => ({
+  app: {
+    getPath: vi.fn(() => 'C:\\temp'),
+  },
+  safeStorage: {
+    isEncryptionAvailable: vi.fn(() => true),
+  },
+}));
+
 const baseConnection = {
   metadata: {
     id: '11111111-1111-1111-1111-111111111111',

@@ -17,3 +17,4 @@ packages/api-contracts/src/**/*.js.map
 packages/api-contracts/src/**/*.d.ts
 packages/api-contracts/src/**/*.d.ts.map
 .ai-shell/
+apps/electron-shell/.vitest-report.json

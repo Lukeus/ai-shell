@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConsentService } from './ConsentService';
 import * as fs from 'fs';
-const mockUserDataPath = 'C:\\mock\\userdata';
+const mockUserDataPath = vi.hoisted(() => 'C:\\mock\\userdata');
 
 vi.mock('electron', () => ({
   app: {
@@ -24,6 +24,10 @@ describe('ConsentService', () => {
     // @ts-expect-error Reset singleton for tests
     ConsentService.instance = null;
     service = ConsentService.getInstance();
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
   });
 
   it('records and retrieves decisions', () => {
@@ -64,9 +68,9 @@ describe('ConsentService', () => {
   });
 
   it('returns null when no decision exists', () => {
-    vi.mocked(fs.readFileSync).mockImplementation(() => {
-      throw new Error('ENOENT');
-    });
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({ version: 1, decisions: {} })
+    );
     expect(service.evaluateAccess('conn-1', 'ext-1')).toBeNull();
   });
 

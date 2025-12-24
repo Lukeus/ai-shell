@@ -7,6 +7,7 @@ import { fsBrokerService } from './services/FsBrokerService';
 import { terminalService } from './services/TerminalService';
 import { searchService } from './services/SearchService';
 import { gitService } from './services/GitService';
+import { settingsService } from './services/SettingsService';
 import { connectionsService } from './services/ConnectionsService';
 import { connectionProviderRegistry } from './services/ConnectionProviderRegistry';
 import { secretsService } from './services/SecretsService';
@@ -69,6 +70,7 @@ vi.mock('./services/FsBrokerService', () => ({
   fsBrokerService: {
     readDirectory: vi.fn(),
     readFile: vi.fn(),
+    writeFile: vi.fn(),
     createFile: vi.fn(),
     createDirectory: vi.fn(),
     rename: vi.fn(),
@@ -152,6 +154,15 @@ vi.mock('./services/SddWatcher', () => ({
   sddWatcher: {
     setEnabled: vi.fn(),
   },
+}));
+
+vi.mock('./index', () => ({
+  getAgentHostManager: vi.fn(() => null),
+  getExtensionCommandService: vi.fn(() => null),
+  getExtensionRegistry: vi.fn(() => null),
+  getExtensionViewService: vi.fn(() => null),
+  getExtensionToolService: vi.fn(() => null),
+  getPermissionService: vi.fn(() => null),
 }));
 
 
@@ -1160,21 +1171,28 @@ describe('IPC Handlers', () => {
   });
 
   describe('All handlers registered', () => {
-    it('should register all 49 expected IPC handlers', () => {
+    it('should register all 67 expected IPC handlers', () => {
       // Existing handlers (4)
       expect(handlers.has(IPC_CHANNELS.GET_VERSION)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.GET_SETTINGS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.UPDATE_SETTINGS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.RESET_SETTINGS)).toBe(true);
 
+      // Window handlers (4)
+      expect(handlers.has(IPC_CHANNELS.WINDOW_MINIMIZE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.WINDOW_TOGGLE_MAXIMIZE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.WINDOW_CLOSE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.WINDOW_GET_STATE)).toBe(true);
+
       // Workspace handlers (3)
       expect(handlers.has(IPC_CHANNELS.WORKSPACE_OPEN)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.WORKSPACE_GET_CURRENT)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.WORKSPACE_CLOSE)).toBe(true);
 
-      // Filesystem handlers (6)
+      // Filesystem handlers (7)
       expect(handlers.has(IPC_CHANNELS.FS_READ_DIRECTORY)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.FS_READ_FILE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.FS_WRITE_FILE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.FS_CREATE_FILE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.FS_CREATE_DIRECTORY)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.FS_RENAME)).toBe(true);
@@ -1218,7 +1236,8 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.AGENT_EVENTS_UNSUBSCRIBE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_TRACE_LIST)).toBe(true);
 
-      // Connections handlers (8)
+      // Connections handlers (9)
+      expect(handlers.has(IPC_CHANNELS.CONNECTIONS_PROVIDERS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_CREATE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_UPDATE)).toBe(true);
@@ -1228,8 +1247,22 @@ describe('IPC Handlers', () => {
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_REQUEST_SECRET_ACCESS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_AUDIT_LIST)).toBe(true);
 
-      // Total: 49 handlers
-      expect(handlers.size).toBe(49);
+      // Extensions handlers (12)
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_LIST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_GET)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_ENABLE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_DISABLE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_UNINSTALL)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_EXECUTE_COMMAND)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_LIST_COMMANDS)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_REQUEST_PERMISSION)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_LIST_PERMISSIONS)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_REVOKE_PERMISSION)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.EXTENSIONS_RENDER_VIEW)).toBe(true);
+
+      // Total: 67 handlers
+      expect(handlers.size).toBe(67);
     });
   });
 });

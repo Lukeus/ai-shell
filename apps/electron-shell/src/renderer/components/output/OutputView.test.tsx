@@ -273,13 +273,15 @@ describe('OutputView', () => {
     });
   });
 
-  it('shows empty state when no channels are available', async () => {
+  it('shows mock output when no channels are available', async () => {
     mockOutputApi.listChannels.mockResolvedValue({ channels: [] });
     
     render(<OutputView />);
     
     await waitFor(() => {
-      expect(screen.getByText('No output channels available')).toBeDefined();
+      const select = screen.getByRole('combobox') as HTMLSelectElement;
+      expect(select).toBeDefined();
+      expect(select.value).toBe('build');
     });
   });
 

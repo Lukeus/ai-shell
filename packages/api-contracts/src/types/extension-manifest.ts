@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ConnectionProviderSchema } from './connections';
 
 /**
  * Extension manifest schema.
@@ -57,11 +58,7 @@ export const ExtensionManifestSchema = z.object({
       enum: z.array(z.string()).optional(),
     })).optional(),
     
-    connectionProviders: z.array(z.object({
-      id: z.string(),
-      name: z.string(),
-      schema: z.record(z.unknown()),
-    })).optional(),
+    connectionProviders: z.array(ConnectionProviderSchema).optional(),
     
     tools: z.array(z.object({
       name: z.string(),

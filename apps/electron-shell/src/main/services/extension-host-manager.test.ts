@@ -3,20 +3,19 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ExtensionHostManager } from './extension-host-manager';
 import type { ChildProcess } from 'child_process';
+import { PassThrough } from 'stream';
 
 // Create mock fork function
-const mockFork = vi.fn();
+const mockFork = vi.hoisted(() => vi.fn());
 
 // Mock child_process module
-vi.mock('child_process', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('child_process')>();
-  return {
-    ...actual,
+vi.mock('child_process', () => ({
+  fork: mockFork,
+  default: {
     fork: mockFork,
-  };
-});
+  },
+}));
 
 // Mock electron app
 vi.mock('electron', () => ({
@@ -26,7 +25,8 @@ vi.mock('electron', () => ({
 }));
 
 describe('ExtensionHostManager', () => {
-  let manager: ExtensionHostManager;
+  let ExtensionHostManager: typeof import('./extension-host-manager').ExtensionHostManager;
+  let manager: InstanceType<typeof import('./extension-host-manager').ExtensionHostManager>;
   let mockChildProcess: Partial<ChildProcess>;
   let originalEnv: NodeJS.ProcessEnv;
 
@@ -37,28 +37,26 @@ describe('ExtensionHostManager', () => {
     Object.assign(process.env, env);
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     originalEnv = { ...process.env };
 
     // Reset mocks
     vi.clearAllMocks();
+    await vi.resetModules();
 
     // Create mock child process
     mockChildProcess = {
       pid: 12345,
       killed: false,
-      stdin: {
-        write: vi.fn(),
-      } as any,
-      stdout: {
-        on: vi.fn(),
-        once: vi.fn(),
-      } as any,
-      stderr: {
-        on: vi.fn(),
-      } as any,
+      stdin: new PassThrough(),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
       on: vi.fn(),
-      once: vi.fn(),
+      once: vi.fn((event: string, handler: () => void) => {
+        if (event === 'exit') {
+          handler();
+        }
+      }),
       kill: vi.fn(),
     };
 
@@ -66,6 +64,7 @@ describe('ExtensionHostManager', () => {
     mockFork.mockReturnValue(mockChildProcess);
 
     // Create manager instance
+    ({ ExtensionHostManager } = await import('./extension-host-manager'));
     manager = new ExtensionHostManager({
       extensionHostPath: '/path/to/extension-host.js',
       extensionsDir: '/path/to/extensions',
@@ -152,8 +151,13 @@ describe('ExtensionHostManager', () => {
         writable: true,
         configurable: true,
       });
+      mockChildProcess.once = vi.fn();
 
-      await manager.stop();
+      vi.useFakeTimers();
+      const stopPromise = manager.stop();
+      await vi.advanceTimersByTimeAsync(5000);
+      await stopPromise;
+      vi.useRealTimers();
 
       expect(mockChildProcess.kill).toHaveBeenCalledWith('SIGKILL');
     });
@@ -168,6 +172,7 @@ describe('ExtensionHostManager', () => {
   describe('crash recovery', () => {
     it('should implement exponential backoff on restart', async () => {
       vi.useFakeTimers();
+      const timeoutSpy = vi.spyOn(global, 'setTimeout');
 
       await manager.start();
 
@@ -180,14 +185,16 @@ describe('ExtensionHostManager', () => {
         exitHandler(1, null);
 
         // Should schedule restart with first timeout (100ms)
-        expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 100);
+        expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 100);
       }
 
+      timeoutSpy.mockRestore();
       vi.useRealTimers();
     });
 
     it('should stop auto-restart after 5 crashes in 1 minute', async () => {
       vi.useFakeTimers();
+      const timeoutSpy = vi.spyOn(global, 'setTimeout');
 
       await manager.start();
 
@@ -203,13 +210,14 @@ describe('ExtensionHostManager', () => {
         }
 
         // After 5th crash, should not schedule another restart
-        const setTimeoutCallCount = (setTimeout as any).mock.calls.length;
+        const setTimeoutCallCount = timeoutSpy.mock.calls.length;
         exitHandler(1, null);
 
         // Should not have added new setTimeout call
-        expect((setTimeout as any).mock.calls.length).toBeLessThanOrEqual(setTimeoutCallCount + 1);
+        expect(timeoutSpy.mock.calls.length).toBeLessThanOrEqual(setTimeoutCallCount + 1);
       }
 
+      timeoutSpy.mockRestore();
       vi.useRealTimers();
     });
   });

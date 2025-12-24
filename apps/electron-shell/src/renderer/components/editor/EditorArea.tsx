@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import { SETTINGS_DEFAULTS, type Settings } from 'packages-api-contracts';
 import { useLayoutContext } from '../../contexts/LayoutContext';
-import { useFileTree } from '../explorer/FileTreeContext';
+import { useFileTree, SETTINGS_TAB_ID } from '../explorer/FileTreeContext';
 import { EditorTabBar } from './EditorTabBar';
 import { EditorPlaceholder } from './EditorPlaceholder';
 import { EditorLoader } from './EditorLoader';
 import { BreadcrumbsBar, type BreadcrumbSegment } from './BreadcrumbsBar';
 import type { BreadcrumbPosition, BreadcrumbSymbol, MonacoEditorHandle } from './MonacoEditor';
+import { SettingsPanel } from '../settings/SettingsPanel';
 
 /**
  * EditorArea - Main editor container component with Monaco Editor integration.
@@ -49,8 +50,10 @@ export function EditorArea() {
   const { state: layoutState } = useLayoutContext();
 
   // Determine active file path
-  const activeFilePath =
+  const activeTabId =
     activeTabIndex >= 0 && activeTabIndex < openTabs.length ? openTabs[activeTabIndex] : null;
+  const isSettingsTab = activeTabId === SETTINGS_TAB_ID;
+  const activeFilePath = isSettingsTab ? null : activeTabId;
 
   useEffect(() => {
     let isMounted = true;
@@ -460,7 +463,9 @@ export function EditorArea() {
 
       {/* Editor content area - NO extra padding/margin */}
       <div className="flex-1 overflow-hidden min-h-0 bg-surface">
-        {!activeFilePath ? (
+        {isSettingsTab ? (
+          <SettingsPanel />
+        ) : !activeFilePath ? (
           // Empty state: no file open
           <EditorPlaceholder filePath={null} />
         ) : error ? (
