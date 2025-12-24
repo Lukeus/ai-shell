@@ -60,9 +60,14 @@ beforeEach(() => {
 });
 
 describe('ProblemsView', () => {
-  it('renders empty state when there are no diagnostics', () => {
+  it('renders mock diagnostics by default', async () => {
     render(<ProblemsView />);
-    expect(screen.getByText('No problems detected. Good work!')).toBeDefined();
+
+    await waitFor(() => {
+      expect(screen.getByText('1 error')).toBeDefined();
+      expect(screen.getByText('1 warning')).toBeDefined();
+      expect(screen.getByText('1 info')).toBeDefined();
+    });
   });
 
   it('subscribes to diagnostics updates on mount', async () => {

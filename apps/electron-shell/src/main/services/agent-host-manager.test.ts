@@ -16,8 +16,8 @@ vi.mock('electron', () => ({
   },
 }));
 
-vi.mock('child_process', () => ({
-  fork: vi.fn(() => {
+vi.mock('child_process', () => {
+  const fork = vi.fn(() => {
     const emitter = new EventEmitter() as EventEmitter & {
       send: (message: unknown) => void;
       kill: (signal?: string) => void;
@@ -27,9 +27,18 @@ vi.mock('child_process', () => ({
     emitter.kill = vi.fn();
     emitter.killed = false;
     return emitter;
-  }),
-  spawn: vi.fn(),
-}));
+  });
+  const spawn = vi.fn();
+
+  return {
+    fork,
+    spawn,
+    default: {
+      fork,
+      spawn,
+    },
+  };
+});
 
 vi.mock('packages-broker-main', () => {
   class BrokerMain {
@@ -119,6 +128,7 @@ describe('AgentHostManager built-in tools', () => {
         'workspace.write',
         'workspace.update',
         'repo.search',
+        'model.generate',
       ])
     );
   });
@@ -133,7 +143,7 @@ describe('AgentHostManager built-in tools', () => {
     };
     const tools = broker.lastInstance?.tools.map((tool) => tool.id) ?? [];
 
-    expect(tools).toHaveLength(4);
+    expect(tools).toHaveLength(5);
   });
 
   it('should allowlist environment variables for child process', async () => {

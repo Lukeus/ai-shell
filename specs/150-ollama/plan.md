@@ -32,6 +32,8 @@
 - Add a default connection selector to Settings (new Agents section or a field in
   Connections settings).
 - Add an optional connection selector to the Agents panel run form.
+- Render Settings as a closable editor tab within the main open-tabs model.
+- Align Settings header layout (category title + search where supported).
 
 ## Data model changes
 - Settings: add `agents.defaultConnectionId` (nullable, optional).

@@ -127,3 +127,23 @@
 - Invariants:
   - No secret leakage in logs/events (P3)
   - Renderer uses preload API only (P1)
+
+## Task 7 - Settings tab integration + layout consistency
+- Files:
+  - `apps/electron-shell/src/renderer/App.tsx`
+  - `apps/electron-shell/src/renderer/components/editor/EditorArea.tsx`
+  - `apps/electron-shell/src/renderer/components/editor/EditorTabBar.tsx`
+  - `apps/electron-shell/src/renderer/components/explorer/FileTreeContext.tsx`
+  - `apps/electron-shell/src/renderer/components/settings/SettingsPanel.tsx`
+  - `apps/electron-shell/src/renderer/components/settings/AgentsSettingsPanel.tsx`
+  - `apps/electron-shell/src/renderer/components/explorer/FileTreeContext.test.tsx`
+- Work:
+  - Add a settings pseudo-tab in the open-tabs model and open it from activity bar/shortcut.
+  - Render Settings in `EditorArea` when the settings tab is active.
+  - Keep file-only logic (breadcrumbs, Monaco, SDD) scoped to file tabs.
+  - Normalize settings header layout and remove duplicate headings.
+  - Ensure settings tabs do not persist into file tab localStorage state.
+- Verify: `pnpm --filter apps/electron-shell test`
+- Invariants:
+  - UI uses token-based styling (P4)
+  - Monaco remains lazy-loaded (P5)

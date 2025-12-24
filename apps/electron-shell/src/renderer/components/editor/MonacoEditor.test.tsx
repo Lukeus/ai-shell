@@ -3,16 +3,25 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MonacoEditor } from './MonacoEditor';
 
 // Mock monaco-editor module to avoid loading real Monaco in tests
-vi.mock('monaco-editor', () => {
+const createMonacoMock = vi.hoisted(() => () => {
   const mockEditor = {
     getValue: vi.fn(() => 'mock content'),
     setValue: vi.fn(),
     dispose: vi.fn(),
+    focus: vi.fn(),
+    setPosition: vi.fn(),
+    revealRangeInCenter: vi.fn(),
     getModel: vi.fn(() => ({
       uri: { toString: () => 'file:///test.ts' },
     })),
     layout: vi.fn(),
     onDidChangeModelContent: vi.fn(() => ({
+      dispose: vi.fn(),
+    })),
+    onDidChangeCursorPosition: vi.fn(() => ({
+      dispose: vi.fn(),
+    })),
+    onDidChangeModel: vi.fn(() => ({
       dispose: vi.fn(),
     })),
   };
@@ -21,8 +30,41 @@ vi.mock('monaco-editor', () => {
     editor: {
       create: vi.fn(() => mockEditor),
       setModelLanguage: vi.fn(),
+      setTheme: vi.fn(),
     },
   };
+});
+
+vi.mock('monaco-editor', createMonacoMock);
+
+const monacoContribModules = [
+  'monaco-editor/esm/vs/basic-languages/bat/bat.contribution',
+  'monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution',
+  'monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution',
+  'monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile.contribution',
+  'monaco-editor/esm/vs/basic-languages/go/go.contribution',
+  'monaco-editor/esm/vs/basic-languages/ini/ini.contribution',
+  'monaco-editor/esm/vs/basic-languages/java/java.contribution',
+  'monaco-editor/esm/vs/basic-languages/less/less.contribution',
+  'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution',
+  'monaco-editor/esm/vs/basic-languages/php/php.contribution',
+  'monaco-editor/esm/vs/basic-languages/powershell/powershell.contribution',
+  'monaco-editor/esm/vs/basic-languages/python/python.contribution',
+  'monaco-editor/esm/vs/basic-languages/ruby/ruby.contribution',
+  'monaco-editor/esm/vs/basic-languages/rust/rust.contribution',
+  'monaco-editor/esm/vs/basic-languages/scss/scss.contribution',
+  'monaco-editor/esm/vs/basic-languages/shell/shell.contribution',
+  'monaco-editor/esm/vs/basic-languages/sql/sql.contribution',
+  'monaco-editor/esm/vs/basic-languages/xml/xml.contribution',
+  'monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution',
+  'monaco-editor/esm/vs/language/css/monaco.contribution',
+  'monaco-editor/esm/vs/language/html/monaco.contribution',
+  'monaco-editor/esm/vs/language/json/monaco.contribution',
+  'monaco-editor/esm/vs/language/typescript/monaco.contribution',
+];
+
+monacoContribModules.forEach((modulePath) => {
+  vi.doMock(modulePath, () => ({}));
 });
 
 describe('MonacoEditor', () => {
@@ -34,6 +76,24 @@ describe('MonacoEditor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    if (!window.matchMedia) {
+      window.matchMedia = vi.fn().mockImplementation(() => ({
+        matches: false,
+        media: '',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+    }
+    if (!global.ResizeObserver) {
+      global.ResizeObserver = class {
+        observe() {}
+        disconnect() {}
+      };
+    }
   });
 
   afterEach(() => {
@@ -61,9 +121,11 @@ describe('MonacoEditor', () => {
 
     await waitFor(() => {
       // Editor container should be rendered after Monaco loads
-      const editorDiv = container.querySelector('div[class*="h-full w-full"]');
+      const editorDiv = container.querySelector('div.h-full.w-full');
       expect(editorDiv).toBeInTheDocument();
     });
+    const monaco = await import('monaco-editor');
+    expect(monaco.editor.create).toHaveBeenCalled();
   });
 
   it('should pass correct options to monaco.editor.create', async () => {
@@ -86,8 +148,9 @@ describe('MonacoEditor', () => {
   it('should update editor content when props change', async () => {
     const { rerender } = render(<MonacoEditor {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.queryByText('Loading Editor...')).not.toBeInTheDocument();
+    await waitFor(async () => {
+      const monaco = await import('monaco-editor');
+      expect(monaco.editor.create).toHaveBeenCalled();
     });
 
     // Update content prop
@@ -95,7 +158,7 @@ describe('MonacoEditor', () => {
 
     await waitFor(async () => {
       const monaco = await import('monaco-editor');
-      const mockEditor = monaco.editor.create(null as any, {} as any);
+      const mockEditor = vi.mocked(monaco.editor.create).mock.results[0]?.value;
       expect(mockEditor.setValue).toHaveBeenCalledWith('const y = 100;');
     });
   });
@@ -103,8 +166,9 @@ describe('MonacoEditor', () => {
   it('should update language when props change', async () => {
     const { rerender } = render(<MonacoEditor {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.queryByText('Loading Editor...')).not.toBeInTheDocument();
+    await waitFor(async () => {
+      const monaco = await import('monaco-editor');
+      expect(monaco.editor.create).toHaveBeenCalled();
     });
 
     // Update language prop
@@ -119,12 +183,13 @@ describe('MonacoEditor', () => {
   it('should dispose editor on unmount', async () => {
     const { unmount } = render(<MonacoEditor {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.queryByText('Loading Editor...')).not.toBeInTheDocument();
+    await waitFor(async () => {
+      const monaco = await import('monaco-editor');
+      expect(monaco.editor.create).toHaveBeenCalled();
     });
 
     const monaco = await import('monaco-editor');
-    const mockEditor = monaco.editor.create(null as any, {} as any);
+    const mockEditor = vi.mocked(monaco.editor.create).mock.results[0]?.value;
 
     unmount();
 
@@ -134,12 +199,13 @@ describe('MonacoEditor', () => {
   it('should handle resize events', async () => {
     render(<MonacoEditor {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.queryByText('Loading Editor...')).not.toBeInTheDocument();
+    await waitFor(async () => {
+      const monaco = await import('monaco-editor');
+      expect(monaco.editor.create).toHaveBeenCalled();
     });
 
     const monaco = await import('monaco-editor');
-    const mockEditor = monaco.editor.create(null as any, {} as any);
+    const mockEditor = vi.mocked(monaco.editor.create).mock.results[0]?.value;
 
     // Trigger resize event
     const resizeEvent = new (window as any).Event('resize');
@@ -154,12 +220,13 @@ describe('MonacoEditor', () => {
     const onChange = vi.fn();
     render(<MonacoEditor {...defaultProps} onChange={onChange} />);
 
-    await waitFor(() => {
-      expect(screen.queryByText('Loading Editor...')).not.toBeInTheDocument();
+    await waitFor(async () => {
+      const monaco = await import('monaco-editor');
+      expect(monaco.editor.create).toHaveBeenCalled();
     });
 
     const monaco = await import('monaco-editor');
-    const mockEditor = monaco.editor.create(null as any, {} as any);
+    const mockEditor = vi.mocked(monaco.editor.create).mock.results[0]?.value;
 
     // Simulate content change
     const mockFn = vi.mocked(mockEditor.onDidChangeModelContent);
@@ -172,16 +239,20 @@ describe('MonacoEditor', () => {
   });
 
   it('should display error message when Monaco fails to load', async () => {
-    // Mock import to throw error
+    vi.resetModules();
     vi.doMock('monaco-editor', () => {
       throw new Error('Failed to load Monaco');
     });
 
-    render(<MonacoEditor {...defaultProps} />);
+    const { MonacoEditor: MonacoEditorWithError } = await import('./MonacoEditor');
+    render(<MonacoEditorWithError {...defaultProps} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Failed to load Monaco Editor/)).toBeInTheDocument();
     });
+
+    vi.doMock('monaco-editor', createMonacoMock);
+    vi.resetModules();
   });
 
   it('should not update state after unmount', async () => {

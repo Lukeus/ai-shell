@@ -11,12 +11,14 @@ import { registerConnectionProvider } from 'packages-extension-sdk';
 registerConnectionProvider({
   id: 'acme.provider',
   name: 'Acme Provider',
-  schema: {
-    type: 'object',
-    properties: {
-      apiKey: { type: 'string' }
-    }
-  }
+  fields: [
+    {
+      id: 'apiKey',
+      label: 'API key',
+      type: 'secret',
+      required: true,
+    },
+  ],
 });
 ```
 

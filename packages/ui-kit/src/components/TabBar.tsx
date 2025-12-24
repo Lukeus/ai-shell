@@ -9,6 +9,9 @@ export interface Tab {
   
   /** Display label for the tab */
   label: string;
+
+  /** Optional title for hover tooltip */
+  title?: string;
   
   /** Optional icon element to display before the label */
   icon?: React.ReactNode;
@@ -144,6 +147,7 @@ export function TabBar({
             key={tab.id}
             role="tab"
             type="button"
+            title={tab.title ?? tab.label}
             aria-selected={isActive}
             aria-controls={`tabpanel-${tab.id}`}
             aria-disabled={isDisabled}

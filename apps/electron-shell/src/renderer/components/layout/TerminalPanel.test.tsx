@@ -87,9 +87,9 @@ describe('TerminalPanel', () => {
     );
 
     // Check that all three tabs are rendered
-    expect(screen.getByRole('tab', { name: 'Terminal' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Output' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Problems' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Terminal/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Output/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Problems/ })).toBeInTheDocument();
   });
 
   it('should default to Terminal tab', async () => {
@@ -100,7 +100,7 @@ describe('TerminalPanel', () => {
     );
 
     // Terminal tab should be active
-    const terminalTab = screen.getByRole('tab', { name: 'Terminal' });
+    const terminalTab = screen.getByRole('tab', { name: /Terminal/ });
     expect(terminalTab).toHaveAttribute('aria-selected', 'true');
 
     // Empty terminal state should be visible
@@ -115,7 +115,7 @@ describe('TerminalPanel', () => {
     );
 
     // Click Output tab
-    const outputTab = screen.getByRole('tab', { name: 'Output' });
+    const outputTab = screen.getByRole('tab', { name: /Output/ });
     fireEvent.click(outputTab);
 
     // Output tab should be active
@@ -133,7 +133,7 @@ describe('TerminalPanel', () => {
     );
 
     // Click Problems tab
-    const problemsTab = screen.getByRole('tab', { name: 'Problems' });
+    const problemsTab = screen.getByRole('tab', { name: /Problems/ });
     fireEvent.click(problemsTab);
 
     // Problems tab should be active
@@ -151,7 +151,7 @@ describe('TerminalPanel', () => {
     );
 
     // Switch to Output tab
-    const outputTab = screen.getByRole('tab', { name: 'Output' });
+    const outputTab = screen.getByRole('tab', { name: /Output/ });
     fireEvent.click(outputTab);
 
     // Wait for localStorage to be updated
@@ -172,7 +172,7 @@ describe('TerminalPanel', () => {
     );
 
     // Problems tab should be active
-    const problemsTab = screen.getByRole('tab', { name: 'Problems' });
+    const problemsTab = screen.getByRole('tab', { name: /Problems/ });
     expect(problemsTab).toHaveAttribute('aria-selected', 'true');
 
     // Problems view should be visible
@@ -197,7 +197,7 @@ describe('TerminalPanel', () => {
     });
 
     // Switch to Output tab
-    const outputTab = screen.getByRole('tab', { name: 'Output' });
+    const outputTab = screen.getByRole('tab', { name: /Output/ });
     fireEvent.click(outputTab);
 
     // Wait for localStorage to be updated
@@ -221,7 +221,7 @@ describe('TerminalPanel', () => {
     );
 
     // Switch to Output tab
-    const outputTab = screen.getByRole('tab', { name: 'Output' });
+    const outputTab = screen.getByRole('tab', { name: /Output/ });
     fireEvent.click(outputTab);
 
     // Wait for localStorage to be updated
@@ -239,14 +239,14 @@ describe('TerminalPanel', () => {
     );
 
     // Focus Terminal tab
-    const terminalTab = screen.getByRole('tab', { name: 'Terminal' });
+    const terminalTab = screen.getByRole('tab', { name: /Terminal/ });
     terminalTab.focus();
 
     // Press ArrowRight to move to Output tab
     fireEvent.keyDown(terminalTab, { key: 'ArrowRight' });
 
     // Output tab should be active
-    const outputTab = screen.getByRole('tab', { name: 'Output' });
+    const outputTab = screen.getByRole('tab', { name: /Output/ });
     expect(outputTab).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -263,7 +263,7 @@ describe('TerminalPanel', () => {
     expect(terminalPanel).toHaveAttribute('aria-labelledby', 'tab-terminal');
 
     // Switch to Output
-    const outputTab = screen.getByRole('tab', { name: 'Output' });
+    const outputTab = screen.getByRole('tab', { name: /Output/ });
     fireEvent.click(outputTab);
 
     // Check tabpanel attributes for Output
@@ -283,7 +283,7 @@ describe('TerminalPanel', () => {
     );
 
     // Should default to Terminal tab
-    const terminalTab = screen.getByRole('tab', { name: 'Terminal' });
+    const terminalTab = screen.getByRole('tab', { name: /Terminal/ });
     expect(terminalTab).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -302,7 +302,7 @@ describe('TerminalPanel', () => {
     );
 
     // Should still render with default tab
-    const terminalTab = screen.getByRole('tab', { name: 'Terminal' });
+    const terminalTab = screen.getByRole('tab', { name: /Terminal/ });
     expect(terminalTab).toHaveAttribute('aria-selected', 'true');
 
     // Restore original
@@ -328,7 +328,7 @@ describe('TerminalPanel', () => {
     );
 
     // Switch to Output tab
-    const outputTab = screen.getByRole('tab', { name: 'Output' });
+    const outputTab = screen.getByRole('tab', { name: /Output/ });
     fireEvent.click(outputTab);
 
     // Output view should be visible
@@ -343,7 +343,7 @@ describe('TerminalPanel', () => {
     );
 
     // Switch to Problems tab
-    const problemsTab = screen.getByRole('tab', { name: 'Problems' });
+    const problemsTab = screen.getByRole('tab', { name: /Problems/ });
     fireEvent.click(problemsTab);
 
     // Problems view should be visible

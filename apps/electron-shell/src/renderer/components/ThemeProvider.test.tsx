@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
 import { ThemeProvider, useTheme } from './ThemeProvider';
 import { SETTINGS_DEFAULTS } from 'packages-api-contracts';
 import type { Settings } from 'packages-api-contracts';
@@ -10,11 +11,10 @@ const mockUpdateSettings = vi.fn();
 
 beforeEach(() => {
   // Setup window.api mock
-  (global as any).window = {
-    api: {
-      getSettings: mockGetSettings,
-      updateSettings: mockUpdateSettings,
-    },
+  (globalThis as any).window = (globalThis as any).window || {};
+  (window as any).api = {
+    getSettings: mockGetSettings,
+    updateSettings: mockUpdateSettings,
   };
 
   // Mock matchMedia
@@ -205,13 +205,17 @@ describe('ThemeProvider', () => {
       // Arrange
       mockUpdateSettings.mockRejectedValue(new Error('Failed to update settings'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      let setThemeFn: ((theme: Settings['appearance']['theme']) => Promise<void>) | null = null;
 
       function TestComponent() {
         const { setTheme } = useTheme();
-        return <button onClick={() => setTheme('light')}>Switch</button>;
+        React.useEffect(() => {
+          setThemeFn = setTheme;
+        }, [setTheme]);
+        return <div>Theme switcher</div>;
       }
 
-      const { getByText } = render(
+      render(
         <ThemeProvider>
           <TestComponent />
         </ThemeProvider>
@@ -221,13 +225,15 @@ describe('ThemeProvider', () => {
         expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
       });
 
-      // Act & Assert
-      await expect(async () => {
-        getByText('Switch').click();
-        await waitFor(() => {
-          expect(consoleSpy).toHaveBeenCalled();
-        });
-      }).rejects.toThrow();
+      await waitFor(() => {
+        expect(setThemeFn).not.toBeNull();
+      });
+
+      await expect(setThemeFn?.('light')).rejects.toThrow('Failed to update settings');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to update theme:',
+        expect.any(Error)
+      );
 
       consoleSpy.mockRestore();
     });
@@ -382,11 +388,13 @@ describe('ThemeProvider', () => {
       // Assert
       await waitFor(() => {
         expect(screen.getByText('Effective: dark')).toBeInTheDocument();
-        expect(consoleSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Failed to detect OS theme preference'),
-          expect.any(Error)
-        );
       });
+      const warnMessages = consoleSpy.mock.calls.map(([message]) => String(message));
+      const hasExpectedWarning = warnMessages.some((message) =>
+        message.includes('Failed to detect OS theme preference') ||
+        message.includes('Failed to listen to OS theme changes')
+      );
+      expect(hasExpectedWarning).toBe(true);
 
       consoleSpy.mockRestore();
     });

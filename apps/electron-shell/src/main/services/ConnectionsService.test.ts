@@ -3,8 +3,9 @@ import { ConnectionsService } from './ConnectionsService';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const mockUserDataPath = 'C:\\mock\\userdata';
+const mockUserDataPath = vi.hoisted(() => 'C:\\mock\\userdata');
 const mockConnectionsPath = path.join(mockUserDataPath, 'connections.json');
+let storeJson = JSON.stringify({ version: 1, connections: {} });
 
 vi.mock('electron', () => ({
   app: {
@@ -27,14 +28,15 @@ describe('ConnectionsService', () => {
     // @ts-expect-error Reset singleton for tests
     ConnectionsService.instance = null;
     service = ConnectionsService.getInstance();
+    storeJson = JSON.stringify({ version: 1, connections: {} });
+    vi.mocked(fs.readFileSync).mockImplementation(() => storeJson);
+    vi.mocked(fs.writeFileSync).mockImplementation((_path, content) => {
+      storeJson = content as string;
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
   });
 
   it('creates and lists connections', () => {
-    vi.mocked(fs.readFileSync).mockImplementation(() => {
-      throw new Error('ENOENT');
-    });
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-
     const created = service.createConnection({
       providerId: 'mcp',
       scope: 'user',
@@ -51,10 +53,6 @@ describe('ConnectionsService', () => {
       'utf-8'
     );
 
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      (vi.mocked(fs.writeFileSync).mock.calls[0][1] as string)
-    );
-
     const list = service.listConnections();
     expect(list).toHaveLength(1);
     expect(list[0].metadata.id).toBe(created.metadata.id);
@@ -67,10 +65,6 @@ describe('ConnectionsService', () => {
       displayName: 'Old Name',
       config: { host: 'localhost' },
     });
-
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      (vi.mocked(fs.writeFileSync).mock.calls[0][1] as string)
-    );
 
     const updated = service.updateConnection({
       id: existing.metadata.id,
@@ -91,10 +85,6 @@ describe('ConnectionsService', () => {
       config: { host: 'localhost' },
     });
 
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      (vi.mocked(fs.writeFileSync).mock.calls[0][1] as string)
-    );
-
     const updated = service.setSecretRef(created.metadata.id, 'secret-ref-1');
     expect(updated.metadata.secretRef).toBe('secret-ref-1');
     expect(JSON.stringify(updated)).not.toContain('secretValue');
@@ -107,10 +97,6 @@ describe('ConnectionsService', () => {
       displayName: 'To Delete',
       config: { host: 'localhost' },
     });
-
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      (vi.mocked(fs.writeFileSync).mock.calls[0][1] as string)
-    );
 
     service.deleteConnection(created.metadata.id);
     const list = service.listConnections();

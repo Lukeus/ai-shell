@@ -9,6 +9,8 @@ import React, {
 } from 'react';
 import type { Workspace, FileEntry } from 'packages-api-contracts';
 
+export const SETTINGS_TAB_ID = '__settings__';
+
 /**
  * FileTreeContext - React context for workspace and file tree state management.
  *
@@ -57,6 +59,7 @@ export interface FileTreeContextValue {
 
   // File operations
   openFile: (path: string) => void;
+  openSettingsTab: () => void;
   closeTab: (index: number) => void;
   closeOtherTabs: (index: number) => void;
   closeTabsToRight: (index: number) => void;
@@ -143,8 +146,9 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
           setExpandedFolders(new Set(expanded));
         }
         if (Array.isArray(tabs)) {
-          setOpenTabs(tabs);
-          if (tabs.length > 0) {
+          const sanitizedTabs = tabs.filter((tab) => tab !== SETTINGS_TAB_ID);
+          setOpenTabs(sanitizedTabs);
+          if (sanitizedTabs.length > 0) {
             setActiveTabIndex(0);
           }
         }
@@ -163,7 +167,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     try {
       const data = {
         expandedFolders: Array.from(expandedFolders),
-        openTabs,
+        openTabs: openTabs.filter((tab) => tab !== SETTINGS_TAB_ID),
       };
       localStorage.setItem(localStorageKey, JSON.stringify(data));
     } catch (err) {
@@ -367,6 +371,18 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
       // Add new tab
       setActiveTabIndex(prev.length);
       return [...prev, path];
+    });
+  }, []);
+
+  const openSettingsTab = useCallback(() => {
+    setOpenTabs((prev) => {
+      const existingIndex = prev.indexOf(SETTINGS_TAB_ID);
+      if (existingIndex !== -1) {
+        setActiveTabIndex(existingIndex);
+        return prev;
+      }
+      setActiveTabIndex(prev.length);
+      return [...prev, SETTINGS_TAB_ID];
     });
   }, []);
 
@@ -710,6 +726,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     loadDirectory,
     refresh,
     openFile,
+    openSettingsTab,
     closeTab,
     closeOtherTabs,
     closeTabsToRight,

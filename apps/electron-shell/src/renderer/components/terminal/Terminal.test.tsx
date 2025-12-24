@@ -28,6 +28,8 @@ const mockTerminal = {
   write: vi.fn(),
   onData: vi.fn(() => ({ dispose: vi.fn() })),
   dispose: vi.fn(),
+  setOption: vi.fn(),
+  clear: vi.fn(),
   cols: 80,
   rows: 24,
   loadAddon: vi.fn(),
@@ -71,10 +73,34 @@ beforeEach(() => {
   (window as any).api = {
     terminal: mockTerminalApi,
     filetree: mockFileTreeApi,
+    workspace: {
+      getCurrent: vi.fn().mockResolvedValue(null),
+      open: vi.fn(),
+      close: vi.fn(),
+    },
+    fs: {
+      readDirectory: vi.fn().mockResolvedValue({ entries: [] }),
+      readFile: vi.fn().mockResolvedValue({ content: '', encoding: 'utf-8' }),
+      createFile: vi.fn().mockResolvedValue(undefined),
+      createDirectory: vi.fn().mockResolvedValue(undefined),
+      rename: vi.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
+    },
   };
   (window as any).mainWindow = {
     getCurrent: vi.fn(() => ({})),
   };
+
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
   
   // Default mock responses
   mockTerminalApi.list.mockResolvedValue({
@@ -159,13 +185,9 @@ describe('Terminal', () => {
 
   it('writes output from TerminalContext to xterm', async () => {
     const testOutput = 'Hello from terminal\r\n';
-    
-    mockTerminalApi.onData.mockReturnValue(vi.fn());
-    mockTerminalApi.onData.mockImplementation(() => {
-      // Simulate data event
-      setTimeout(() => {
-        // Would normally trigger callback, but this test just verifies setup
-      }, 100);
+    let dataHandler: ((event: { sessionId: string; data: string }) => void) | null = null;
+    mockTerminalApi.onData.mockImplementation((handler) => {
+      dataHandler = handler;
       return vi.fn();
     });
     
@@ -175,6 +197,8 @@ describe('Terminal', () => {
     await waitFor(() => {
       expect(mockTerminal.open).toHaveBeenCalled();
     }, { timeout: 3000 });
+
+    dataHandler?.({ sessionId: 'test-session-1', data: testOutput });
     
     // Wait for output to be written
     await waitFor(() => {
@@ -216,11 +240,10 @@ describe('Terminal', () => {
   });
 
   it('handles xterm.js load failure gracefully', async () => {
-    // Mock import failure
-    vi.doMock('xterm', () => {
-      throw new Error('Failed to load xterm');
+    mockTerminal.open.mockImplementationOnce(() => {
+      throw new Error('Failed to open terminal');
     });
-    
+
     const { container } = render(<Terminal sessionId="test-session-1" />, { wrapper: TestWrapper });
     
     // Should show loading state or error

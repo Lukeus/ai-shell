@@ -5,7 +5,7 @@
  * This registry aggregates all contributions for lookup and execution.
  */
 
-import { ExtensionManifest } from 'packages-api-contracts';
+import type { ConnectionProvider, ExtensionManifest } from 'packages-api-contracts';
 
 /**
  * Command contribution from an extension.
@@ -55,12 +55,9 @@ export interface SettingContribution {
 /**
  * Connection provider contribution from an extension.
  */
-export interface ConnectionProviderContribution {
-  id: string;
-  name: string;
-  schema: Record<string, unknown>;
+export type ConnectionProviderContribution = ConnectionProvider & {
   extensionId: string;
-}
+};
 
 /**
  * ContributionRegistry tracks all contributions from extensions.

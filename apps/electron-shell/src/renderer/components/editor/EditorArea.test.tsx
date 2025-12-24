@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
+import { SETTINGS_DEFAULTS } from 'packages-api-contracts';
 import { EditorArea } from './EditorArea';
 import { FileTreeContextProvider } from '../explorer/FileTreeContext';
 import { LayoutProvider } from '../../contexts/LayoutContext';
@@ -34,6 +35,7 @@ vi.mock('./EditorTabBar', () => ({
 const mockReadFile = vi.fn();
 (globalThis as any).window = (globalThis as any).window || {};
 (globalThis as any).window.api = {
+  getSettings: vi.fn().mockResolvedValue(SETTINGS_DEFAULTS),
   fs: {
     readFile: mockReadFile,
   },
@@ -54,12 +56,14 @@ describe('EditorArea', () => {
     vi.clearAllTimers();
   });
 
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <LayoutProvider>
+      <FileTreeContextProvider>{children}</FileTreeContextProvider>
+    </LayoutProvider>
+  );
+
   const renderWithContext = (ui: React.ReactElement) => {
-    return render(
-      <LayoutProvider>
-        <FileTreeContextProvider>{ui}</FileTreeContextProvider>
-      </LayoutProvider>
-    );
+    return render(ui, { wrapper: Wrapper });
   };
 
   it('should render EditorTabBar', () => {
@@ -190,18 +194,10 @@ describe('EditorArea', () => {
 
     // Simulate rapid file switches
     mockReadFile.mockResolvedValue({ content: 'file1' });
-    rerender(
-      <FileTreeContextProvider>
-        <EditorArea />
-      </FileTreeContextProvider>
-    );
+    rerender(<EditorArea />);
 
     mockReadFile.mockResolvedValue({ content: 'file2' });
-    rerender(
-      <FileTreeContextProvider>
-        <EditorArea />
-      </FileTreeContextProvider>
-    );
+    rerender(<EditorArea />);
 
     // Should handle without errors
     await waitFor(() => {

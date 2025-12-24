@@ -56,7 +56,15 @@ Connection providers:
 
 - `id`: provider ID
 - `name`: provider label
-- `schema`: JSON schema for provider configuration
+- `description`: optional provider description
+- `icon`: optional icon identifier
+- `fields`: array of configuration fields
+  - `id`: field key
+  - `label`: human-readable label
+  - `type`: `string` | `number` | `boolean` | `secret` | `select`
+  - `required`: optional boolean
+  - `defaultValue`: optional default value
+  - `options`: optional list of `{ value, label }` for `select`
 
 ## Activation events
 

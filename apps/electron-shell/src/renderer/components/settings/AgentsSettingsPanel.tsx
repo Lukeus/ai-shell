@@ -76,17 +76,6 @@ export function AgentsSettingsPanel({ settings, onSettingsUpdate }: AgentsSettin
         paddingBottom: 'var(--vscode-space-4)',
       }}
     >
-      <h3
-        className="text-primary"
-        style={{
-          fontSize: '14px',
-          fontWeight: 600,
-          marginBottom: 'var(--vscode-space-3)',
-        }}
-      >
-        Agents
-      </h3>
-
       {error && (
         <div className="mb-3 text-xs text-status-error border border-border-subtle px-3 py-2">
           {error}

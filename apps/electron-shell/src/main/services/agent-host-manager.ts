@@ -223,9 +223,16 @@ export class AgentHostManager {
     }
 
     const result = await this.brokerMain.handleAgentToolCall(envelope);
+    
+    // Validate output conforms to JsonValue before sending over IPC
+    const validatedResult: ToolCallResult = {
+      ...result,
+      output: result.output !== undefined ? JsonValueSchema.parse(result.output) : undefined,
+    };
+    
     const response: AgentHostToolResultMessage = {
       type: 'agent-host:tool-result',
-      payload: result,
+      payload: validatedResult,
     };
     this.childProcess?.send(response);
   }

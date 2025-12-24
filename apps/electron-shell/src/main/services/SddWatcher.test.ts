@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { SddWatcher, setSddWatchForTesting } from './SddWatcher';
 
-const recordFileChange = vi.fn();
+const recordFileChange = vi.hoisted(() => vi.fn());
 let tempWorkspace = '';
 
 vi.mock('./SddTraceService', () => ({
@@ -14,6 +14,14 @@ vi.mock('./SddTraceService', () => ({
     }),
   },
 }));
+
+vi.mock('./workspace-paths', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./workspace-paths')>();
+  return {
+    ...actual,
+    resolvePathWithinWorkspace: vi.fn(async (value: string) => value),
+  };
+});
 
 vi.mock('./WorkspaceService', () => {
   let workspacePath: string | null = null;
@@ -41,6 +49,7 @@ describe('SddWatcher', () => {
   let setWorkspacePath: ((value: string | null) => void) | null = null;
 
   beforeEach(async () => {
+    vi.useRealTimers();
     const workspaceModule = await import('./WorkspaceService');
     setWorkspacePath = (workspaceModule as any).__setWorkspacePath;
     tempWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-watch-'));
@@ -80,7 +89,6 @@ describe('SddWatcher', () => {
   });
 
   it('debounces change events and records a single modification', async () => {
-    vi.useFakeTimers();
     const watcher = SddWatcher.getInstance();
     watcher.start({ debounceMs: 50 });
 
@@ -95,18 +103,16 @@ describe('SddWatcher', () => {
 
     expect(recordFileChange).not.toHaveBeenCalled();
 
-    await vi.advanceTimersByTimeAsync(60);
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     expect(recordFileChange).toHaveBeenCalledTimes(1);
     expect(recordFileChange).toHaveBeenCalledWith(
       expect.objectContaining({ path: filePath, op: 'modified', actor: 'human' })
     );
 
-    vi.useRealTimers();
   });
 
   it('records delete operations for rename events when file is missing', async () => {
-    vi.useFakeTimers();
     const watcher = SddWatcher.getInstance();
     watcher.start({ debounceMs: 10 });
 
@@ -115,17 +121,15 @@ describe('SddWatcher', () => {
     fs.unlinkSync(filePath);
 
     watchers[0]?.callback('rename', path.relative(tempWorkspace, filePath));
-    await vi.advanceTimersByTimeAsync(20);
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(recordFileChange).toHaveBeenCalledWith(
       expect.objectContaining({ path: filePath, op: 'deleted', actor: 'human' })
     );
 
-    vi.useRealTimers();
   });
 
   it('ignores changes inside the SDD storage directory', async () => {
-    vi.useFakeTimers();
     const watcher = SddWatcher.getInstance();
     watcher.start({ debounceMs: 10 });
 
@@ -134,11 +138,10 @@ describe('SddWatcher', () => {
     fs.writeFileSync(sddPath, 'event', 'utf-8');
 
     watchers[0]?.callback('change', path.relative(tempWorkspace, sddPath));
-    await vi.advanceTimersByTimeAsync(20);
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(recordFileChange).not.toHaveBeenCalled();
 
-    vi.useRealTimers();
   });
 
   it('stops watching when disabled', () => {

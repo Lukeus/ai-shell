@@ -6,7 +6,9 @@ import {
   type AgentEvent,
   type AgentRunStartRequest,
   type AgentRunStatus,
+  type JsonValue,
   type ToolCallEnvelope,
+  type ToolCallResult,
 } from 'packages-api-contracts';
 
 export type ToolExecutor = {
@@ -132,7 +134,7 @@ export class DeepAgentRunner {
       toolId: 'model.generate',
       requesterId: 'agent-host',
       runId,
-      input,
+      input: input as JsonValue,
       reason: 'Generate model response',
     };
   }

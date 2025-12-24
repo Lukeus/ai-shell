@@ -91,11 +91,11 @@ export class SearchService {
           matchText,
         };
 
-        const existing = results.get(filePath);
+        const existing = results.get(fileText);
         if (existing) {
           existing.push(searchMatch);
         } else {
-          results.set(filePath, [searchMatch]);
+          results.set(fileText, [searchMatch]);
         }
 
         totalMatches += 1;
@@ -316,6 +316,7 @@ export class SearchService {
       let stderr = '';
       let buffer = '';
       let finished = false;
+      let timedOut = false;
 
       const finalize = (
         outcome: 'completed' | 'stopped' | null,
@@ -334,8 +335,13 @@ export class SearchService {
       };
 
       const timeoutId = setTimeout(() => {
-        child.kill();
         finalize(null, new Error('ripgrep timed out'));
+        timedOut = true;
+        try {
+          child.kill();
+        } catch (error) {
+          console.warn('Failed to kill ripgrep after timeout:', error);
+        }
       }, RIPGREP_TIMEOUT_MS);
 
       child.stdout.on('data', (data: Buffer) => {
@@ -379,6 +385,9 @@ export class SearchService {
       });
 
       child.on('close', (code, signal) => {
+        if (timedOut) {
+          return;
+        }
         if (buffer && onMatch) {
           try {
             const parsed = JSON.parse(buffer) as RipgrepMatch;

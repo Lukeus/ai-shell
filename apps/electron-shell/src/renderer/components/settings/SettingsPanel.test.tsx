@@ -8,14 +8,19 @@ const mockGetSettings = vi.fn();
 const mockUpdateSettings = vi.fn();
 const mockResetSettings = vi.fn();
 
+vi.mock('../ThemeProvider', () => ({
+  useTheme: () => ({
+    setTheme: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 beforeEach(() => {
   // Setup window.api mock
-  (global as any).window = {
-    api: {
-      getSettings: mockGetSettings,
-      updateSettings: mockUpdateSettings,
-      resetSettings: mockResetSettings,
-    },
+  (globalThis as any).window = (globalThis as any).window || {};
+  (window as any).api = {
+    getSettings: mockGetSettings,
+    updateSettings: mockUpdateSettings,
+    resetSettings: mockResetSettings,
   };
 
   // Clear all mocks
@@ -24,6 +29,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('SettingsPanel', () => {
@@ -41,14 +47,14 @@ describe('SettingsPanel', () => {
       });
 
       // Verify categories are rendered
-      expect(screen.getByText('Settings')).toBeInTheDocument();
-      expect(screen.getByText('Appearance')).toBeInTheDocument();
-      expect(screen.getByText('Editor')).toBeInTheDocument();
-      expect(screen.getByText('Terminal')).toBeInTheDocument();
-      expect(screen.getByText('Agents')).toBeInTheDocument();
-      expect(screen.getByText('SDD')).toBeInTheDocument();
-      expect(screen.getByText('Connections')).toBeInTheDocument();
-      expect(screen.getByText('Extensions')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Editor' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Terminal' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'SDD' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Connections' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Extensions' })).toBeInTheDocument();
     });
 
     it('should display loading state before settings are loaded', () => {
@@ -125,7 +131,7 @@ describe('SettingsPanel', () => {
       });
 
       // Click Editor category
-      fireEvent.click(screen.getByText('Editor'));
+      fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
 
       // Assert
       await waitFor(() => {
@@ -142,10 +148,10 @@ describe('SettingsPanel', () => {
       render(<SettingsPanel />);
 
       await waitFor(() => {
-        expect(screen.getByText('SDD')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'SDD' })).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('SDD'));
+      fireEvent.click(screen.getByRole('button', { name: 'SDD' }));
 
       await waitFor(() => {
         expect(screen.getByText('Enable SDD')).toBeInTheDocument();
@@ -169,7 +175,7 @@ describe('SettingsPanel', () => {
       expect(searchInput.value).toBe('theme');
 
       // Switch category
-      fireEvent.click(screen.getByText('Editor'));
+      fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
 
       // Assert
       await waitFor(() => {
@@ -293,9 +299,6 @@ describe('SettingsPanel', () => {
     });
 
     it('should call updateSettings with debounce when setting changes', async () => {
-      // Use fake timers
-      vi.useFakeTimers();
-
       // Act
       render(<SettingsPanel />);
 
@@ -304,11 +307,14 @@ describe('SettingsPanel', () => {
       });
 
       // Find and click a toggle switch (e.g., Word Wrap in Editor category)
-      fireEvent.click(screen.getByText('Editor'));
+      fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
 
       await waitFor(() => {
         expect(screen.getByText('Word Wrap')).toBeInTheDocument();
       });
+
+      // Use fake timers for debounce timing
+      vi.useFakeTimers();
 
       // Get the toggle button (role="switch")
       const toggles = screen.getAllByRole('switch');
@@ -322,19 +328,16 @@ describe('SettingsPanel', () => {
 
       // Fast-forward time by 300ms (debounce delay)
       vi.advanceTimersByTime(300);
+      await vi.runOnlyPendingTimersAsync();
 
       // Assert: updateSettings should now be called
-      await waitFor(() => {
-        expect(mockUpdateSettings).toHaveBeenCalledWith(
-          expect.objectContaining({
-            editor: expect.objectContaining({
-              wordWrap: true,
-            }),
-          })
-        );
-      });
-
-      vi.useRealTimers();
+      expect(mockUpdateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          editor: expect.objectContaining({
+            wordWrap: true,
+          }),
+        })
+      );
     });
 
     it('should update local state immediately for responsiveness', async () => {
@@ -346,7 +349,7 @@ describe('SettingsPanel', () => {
       });
 
       // Switch to Editor category
-      fireEvent.click(screen.getByText('Editor'));
+      fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
 
       await waitFor(() => {
         expect(screen.getByText('Word Wrap')).toBeInTheDocument();
@@ -372,36 +375,35 @@ describe('SettingsPanel', () => {
       // Arrange
       mockUpdateSettings.mockRejectedValue(new Error('Update failed'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.useFakeTimers();
 
       // Act
       render(<SettingsPanel />);
 
       await waitFor(() => {
-        expect(screen.getByText('Editor')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Editor' })).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Editor'));
+      fireEvent.click(screen.getByRole('button', { name: 'Editor' }));
 
       await waitFor(() => {
         expect(screen.getByText('Word Wrap')).toBeInTheDocument();
       });
+
+      // Use fake timers for debounce timing
+      vi.useFakeTimers();
 
       const toggles = screen.getAllByRole('switch');
       fireEvent.click(toggles[0]);
 
       // Fast-forward debounce
       vi.advanceTimersByTime(300);
+      await vi.runOnlyPendingTimersAsync();
 
       // Assert
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'Failed to update settings:',
-          expect.any(Error)
-        );
-      });
-
-      vi.useRealTimers();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to update settings:',
+        expect.any(Error)
+      );
       consoleSpy.mockRestore();
     });
   });

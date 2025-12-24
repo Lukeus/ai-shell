@@ -5,6 +5,7 @@ import {
   FileTreeContextProvider,
   useFileTree,
 } from './FileTreeContext';
+import { SETTINGS_TAB_ID } from './FileTreeContext';
 import type { Workspace, FileEntry } from 'packages-api-contracts';
 
 // Mock window.api
@@ -312,6 +313,32 @@ describe('FileTreeContext', () => {
       const data = JSON.parse(stored!);
       expect(data.expandedFolders).toContain('/test/workspace/folder1');
       expect(data.openTabs).toContain('/test/workspace/file1.txt');
+    });
+
+    it('should not persist the settings tab', async () => {
+      mockApi.workspace.getCurrent.mockResolvedValue(mockWorkspace);
+
+      const { result } = renderHook(() => useFileTree(), {
+        wrapper: FileTreeContextProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.workspace).toEqual(mockWorkspace);
+      });
+
+      act(() => {
+        result.current.openSettingsTab();
+      });
+
+      await waitFor(() => {
+        const keys = Object.keys(localStorage);
+        expect(keys.length).toBeGreaterThan(0);
+      });
+
+      const stored = localStorage.getItem(Object.keys(localStorage)[0]);
+      expect(stored).toBeTruthy();
+      const data = JSON.parse(stored!);
+      expect(data.openTabs).not.toContain(SETTINGS_TAB_ID);
     });
 
     it('should load persisted state on mount', async () => {

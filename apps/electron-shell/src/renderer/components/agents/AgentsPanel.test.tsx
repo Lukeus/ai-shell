@@ -57,7 +57,7 @@ describe('AgentsPanel', () => {
 
     mockApi.agents.listRuns
       .mockResolvedValueOnce({ runs: [] })
-      .mockResolvedValueOnce({ runs: [run] });
+      .mockResolvedValue({ runs: [run] });
     mockApi.agents.startRun.mockResolvedValue({ run });
 
     render(<AgentsPanel />);
