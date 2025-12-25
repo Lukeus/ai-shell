@@ -341,8 +341,10 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
           // Error already handled in loadDirectory
         }
       } else {
-        // Refresh all expanded directories
-        const paths = Array.from(expandedFolders);
+        // Refresh root and all expanded directories
+        const paths = [workspace?.path, ...Array.from(expandedFolders)].filter(
+          (p): p is string => Boolean(p)
+        );
         for (const dirPath of paths) {
           try {
             await loadDirectory(dirPath);
@@ -352,8 +354,33 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
         }
       }
     },
-    [expandedFolders, loadDirectory]
+    [workspace?.path, expandedFolders, loadDirectory]
   );
+
+  /**
+   * Load directory contents for all expanded folders on initialization.
+   */
+  useEffect(() => {
+    if (!workspace || expandedFolders.size === 0) return;
+
+    // Load directories that are expanded but not in cache
+    const loadMissingDirectories = async () => {
+      const foldersToLoad = Array.from(expandedFolders).filter((path) => !directoryCache.has(path));
+      if (foldersToLoad.length === 0) return;
+
+      // Use a flag to prevent multiple overlapping loads if needed, 
+      // but loadDirectory is already safe and updates cache.
+      for (const path of foldersToLoad) {
+        try {
+          await loadDirectory(path);
+        } catch (err) {
+          console.warn(`Failed to auto-load expanded directory ${path}:`, err);
+        }
+      }
+    };
+
+    loadMissingDirectories();
+  }, [workspace, expandedFolders, directoryCache, loadDirectory]);
 
   /**
    * Open file in editor.

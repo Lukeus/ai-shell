@@ -15,6 +15,11 @@ export * from './components/ResizablePanel';
 export * from './components/ActivityBar';
 export * from './components/StatusBar';
 export * from './components/PanelHeader';
+export * from './components/Modal';
+export * from './components/CommandPalette';
+export * from './components/Menu';
+export * from './components/Badge';
+export * from './components/Breadcrumbs';
 
 // Export form control components
 export * from './components/ToggleSwitch';

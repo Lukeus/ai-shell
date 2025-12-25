@@ -1,4 +1,5 @@
 import React from 'react';
+import { Badge, type BadgeVariant } from 'packages-ui-kit';
 
 type SddBadgeStatus = 'tracked' | 'untracked';
 
@@ -9,39 +10,40 @@ interface SddBadgeProps {
   as?: 'button' | 'span';
 }
 
+const STATUS_CONFIG: Record<SddBadgeStatus, { label: string; variant: BadgeVariant }> = {
+  tracked: { label: 'Tracked', variant: 'success' },
+  untracked: { label: 'Untracked', variant: 'warning' },
+};
+
 export function SddBadge({ status, title, onClick, as }: SddBadgeProps) {
-  const label = status === 'tracked' ? 'Tracked' : 'Untracked';
-  const toneClass =
-    status === 'tracked'
-      ? 'border-status-success text-status-success'
-      : 'border-border-subtle text-status-warning';
-  const baseClass =
-    `inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide`;
-
+  const { label, variant } = STATUS_CONFIG[status];
   const elementType = as ?? (onClick ? 'button' : 'span');
-  const className = `${baseClass} ${toneClass}`;
+  const interactiveClassName = onClick ? 'cursor-pointer hover:bg-surface-hover' : '';
 
-  if (elementType === 'button') {
+  if (elementType === 'span') {
     return (
-      <button
-        type="button"
+      <span
+        role={onClick ? 'button' : undefined}
         onClick={onClick}
-        title={title}
-        className={`${className} hover:bg-surface-hover`}
+        className="inline-flex"
       >
-        {label}
-      </button>
+        <Badge
+          label={label}
+          variant={variant}
+          title={title}
+          className={interactiveClassName}
+        />
+      </span>
     );
   }
 
   return (
-    <span
+    <Badge
+      label={label}
+      variant={variant}
       title={title}
-      className={className}
-      role={onClick ? 'button' : undefined}
-      onClick={onClick}
-    >
-      {label}
-    </span>
+      onClick={onClick ? (event) => onClick(event) : undefined}
+      className={interactiveClassName}
+    />
   );
 }
