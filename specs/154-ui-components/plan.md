@@ -29,6 +29,10 @@
    - Replace renderer components one by one to reduce regressions.
    - Keep existing data and command execution logic in electron-shell.
 
+6. VS Code density alignment
+   - Tune TabBar and Breadcrumbs spacing using existing VS Code tokens.
+   - Keep truncation and separators consistent with VS Code visuals.
+
 ## Interfaces / component APIs
 ### Modal
 - Props: open, onClose, title, description?, children, initialFocus?, size?

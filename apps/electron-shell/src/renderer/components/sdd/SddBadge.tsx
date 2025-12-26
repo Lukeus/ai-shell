@@ -10,15 +10,27 @@ interface SddBadgeProps {
   as?: 'button' | 'span';
 }
 
-const STATUS_CONFIG: Record<SddBadgeStatus, { label: string; variant: BadgeVariant }> = {
-  tracked: { label: 'Tracked', variant: 'success' },
-  untracked: { label: 'Untracked', variant: 'warning' },
+const STATUS_CONFIG: Record<
+  SddBadgeStatus,
+  { label: string; variant: BadgeVariant; className: string }
+> = {
+  tracked: {
+    label: 'Tracked',
+    variant: 'muted',
+    className: 'text-status-success border-border-subtle bg-surface-elevated normal-case tracking-normal text-[10px] rounded-sm px-1.5 py-0',
+  },
+  untracked: {
+    label: 'Untracked',
+    variant: 'muted',
+    className: 'text-status-warning border-border-subtle bg-surface-elevated normal-case tracking-normal text-[10px] rounded-sm px-1.5 py-0',
+  },
 };
 
 export function SddBadge({ status, title, onClick, as }: SddBadgeProps) {
-  const { label, variant } = STATUS_CONFIG[status];
+  const { label, variant, className } = STATUS_CONFIG[status];
   const elementType = as ?? (onClick ? 'button' : 'span');
   const interactiveClassName = onClick ? 'cursor-pointer hover:bg-surface-hover' : '';
+  const combinedClassName = `${className} ${interactiveClassName}`.trim();
 
   if (elementType === 'span') {
     return (
@@ -31,7 +43,7 @@ export function SddBadge({ status, title, onClick, as }: SddBadgeProps) {
           label={label}
           variant={variant}
           title={title}
-          className={interactiveClassName}
+          className={combinedClassName}
         />
       </span>
     );
@@ -43,7 +55,7 @@ export function SddBadge({ status, title, onClick, as }: SddBadgeProps) {
       variant={variant}
       title={title}
       onClick={onClick ? (event) => onClick(event) : undefined}
-      className={interactiveClassName}
+      className={combinedClassName}
     />
   );
 }

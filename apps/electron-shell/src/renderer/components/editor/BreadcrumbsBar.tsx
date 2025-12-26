@@ -40,19 +40,18 @@ export function BreadcrumbsBar({ fileSegments, symbolSegments }: BreadcrumbsBarP
 
   return (
     <div
-      className="flex items-center border-b text-secondary"
+      className="flex items-center text-secondary border-b border-border"
       style={{
-        height: 'var(--vscode-breadcrumbs-height, var(--vscode-list-rowHeight))',
+        height: 'var(--vscode-breadcrumbs-height)',
         backgroundColor: 'var(--vscode-editor-background)',
-        borderColor: 'var(--vscode-border-subtle)',
-        fontSize: 'var(--vscode-font-size-ui)',
+        fontSize: 'var(--vscode-font-size-small)',
         paddingLeft: 'var(--vscode-space-2)',
         paddingRight: 'var(--vscode-space-2)',
       }}
     >
       <Breadcrumbs
         items={items}
-        className="flex min-w-0 items-center overflow-x-auto hide-scrollbar gap-1"
+        className="flex min-w-0 flex-1 items-center overflow-hidden gap-1"
       />
     </div>
   );

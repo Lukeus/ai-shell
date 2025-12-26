@@ -164,7 +164,7 @@ export function SearchPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-surface">
+    <div className="flex flex-col h-full w-full min-h-0 bg-surface">
       <div
         className="border-b border-border-subtle bg-surface-secondary shrink-0"
         style={{

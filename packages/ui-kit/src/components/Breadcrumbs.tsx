@@ -1,5 +1,4 @@
 import React, { type ReactNode } from 'react';
-import { ChevronRightIcon } from '@heroicons/react/20/solid';
 
 export interface BreadcrumbItem {
   label: string;
@@ -21,24 +20,24 @@ export function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
   }
 
   return (
-    <nav aria-label="Breadcrumb" className={className}>
-      <ol className="flex w-max items-center text-[var(--vscode-font-size-ui)] leading-[var(--vscode-line-height-ui)] text-secondary">
+    <nav aria-label="Breadcrumb" className={`min-w-0 ${className}`}>
+      <ol className="flex min-w-0 flex-1 items-center text-[var(--vscode-font-size-small)] leading-[1.2] text-secondary">
         {items.map((item, index) => {
           const isCurrent = Boolean(item.current);
           const title = item.title ?? item.label;
           const elementClassName = `
-            inline-flex flex-none items-center gap-1 whitespace-nowrap
+            inline-flex min-w-0 items-center gap-1 whitespace-nowrap
             ${isCurrent ? 'text-primary' : 'text-secondary'}
-            ${item.onClick || item.href ? 'hover:text-primary' : ''}
+            ${item.onClick || item.href ? 'hover:text-primary transition-colors' : ''}
           `;
           const content = (
             <>
               {item.icon && (
-                <span className="flex h-4 w-4 items-center text-tertiary">
+                <span className="flex h-3.5 w-3.5 items-center justify-center text-[12px] text-tertiary/80">
                   {item.icon}
                 </span>
               )}
-              <span>{item.label}</span>
+              <span className="min-w-0 max-w-[240px] truncate opacity-90">{item.label}</span>
             </>
           );
 
@@ -80,14 +79,16 @@ export function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
           }
 
           return (
-            <li key={`${item.label}-${index}`} className="flex flex-none items-center">
+            <li key={`${item.label}-${index}`} className="flex min-w-0 items-center">
               {node}
               {index < items.length - 1 && (
-                <ChevronRightIcon
-                  className="mx-1 h-1.5 w-1.5 text-tertiary"
+                <span
+                  className="mx-1 text-[11px] text-tertiary"
                   aria-hidden="true"
                   data-testid="breadcrumb-separator"
-                />
+                >
+                  &gt;
+                </span>
               )}
             </li>
           );

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as monacoType from 'monaco-editor';
 
 /**
  * MonacoEditor - Code editor component with lazy-loaded Monaco Editor.
@@ -46,8 +47,16 @@ export interface MonacoEditorProps {
   filePath: string;
   /** File content to display in editor */
   content: string;
-  /** Monaco language identifier (e.g., 'typescript', 'javascript', 'json') */
-  language: string;
+  /** Editor font size */
+  fontSize?: number;
+  /** Tab size in spaces */
+  tabSize?: number;
+  /** Whether line numbers are shown */
+  lineNumbers?: boolean;
+  /** Whether minimap is enabled */
+  minimap?: boolean;
+  /** Whether word wrap is enabled */
+  wordWrap?: boolean;
   /** Optional callback when content changes (for future save functionality) */
   onChange?: (content: string) => void;
   /** Optional callback when editor instance is ready */
@@ -83,16 +92,23 @@ const resolveMonacoTheme = (): string => {
 export function MonacoEditor({
   filePath,
   content,
-  language,
+  fontSize = 14,
+  tabSize = 2,
+  lineNumbers = true,
+  minimap = true,
+  wordWrap = false,
   onChange,
   onEditorReady,
   onCursorChange,
   onSymbolsChange,
 }: MonacoEditorProps) {
   const editorRef = useRef<React.ElementRef<'div'>>(null);
-  const [editor, setEditor] = useState<any>(null);
-  const [monaco, setMonaco] = useState<any>(null);
+  const [editor, setEditor] = useState<monacoType.editor.IStandaloneCodeEditor | null>(null);
+  const [monaco, setMonaco] = useState<typeof monacoType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const modelUsageRef = useRef<Map<string, number>>(new Map());
+  const MAX_MODELS = 50;
+  
   const symbolUpdateTimeoutRef = useRef<number | null>(null);
   const symbolRequestIdRef = useRef(0);
   const symbolTokenRef = useRef<{ cancel?: () => void; dispose?: () => void } | null>(null);
@@ -267,25 +283,49 @@ export function MonacoEditor({
   useEffect(() => {
     if (!monaco || !editorRef.current || editor) return;
 
+    // Set default compiler options for TypeScript
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+      target: monaco.languages.typescript.ScriptTarget.ES2022,
+      module: monaco.languages.typescript.ModuleKind.ESNext,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      jsx: monaco.languages.typescript.JsxEmit.React,
+      allowNonTsExtensions: true,
+      resolveJsonModule: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      allowJs: true,
+      typeRoots: ['node_modules/@types'],
+    });
+
+    // Enable eager model sync to help with cross-model diagnostics
+    monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+
+    const uri = monaco.Uri.file(filePath);
+    let model = monaco.editor.getModel(uri);
+
+    if (!model) {
+      model = monaco.editor.createModel(content, undefined, uri);
+    }
+
     // Create editor instance with all features enabled
     // Worker configuration is handled in src/renderer/monaco/monacoWorkers.ts
     const editorInstance = monaco.editor.create(editorRef.current, {
-      value: content,
-      language: language,
+      model: model,
       theme: resolveMonacoTheme(),
       automaticLayout: false, // We'll handle layout manually
       readOnly: false,
-      minimap: { enabled: true },
+      minimap: { enabled: minimap },
       scrollBeyondLastLine: false,
       fontFamily: 'var(--vscode-editor-font-family)',
-      fontSize: 14,
-      lineNumbers: 'on',
+      fontSize: fontSize,
+      lineNumbers: lineNumbers ? 'on' : 'off',
       renderWhitespace: 'selection',
-      tabSize: 2,
+      tabSize: tabSize,
+      wordWrap: wordWrap ? 'on' : 'off',
     });
 
     setEditor(editorInstance);
-  }, [monaco, editor, content, language]);
+  }, [monaco, editor, filePath, content, minimap, lineNumbers, wordWrap, fontSize, tabSize]);
 
   useEffect(() => {
     if (!monaco) {
@@ -401,33 +441,62 @@ export function MonacoEditor({
     };
   }, [editor, onSymbolsChange, scheduleSymbolUpdate]);
 
-  // Update editor content when filePath or content changes
+  // Update editor content and model when filePath or content changes
   useEffect(() => {
     if (!editor || !monaco) return;
 
-    const currentValue = editor.getValue();
-    if (currentValue !== content) {
-      editor.setValue(content);
+    const uri = monaco.Uri.file(filePath);
+    let model = monaco.editor.getModel(uri);
+
+    if (!model) {
+      // P5 (Performance budgets): Leverage Monaco's built-in language detection from extension
+      model = monaco.editor.createModel(content, undefined, uri);
+    } else {
+      if (model.getValue() !== content) {
+        model.setValue(content);
+      }
     }
 
-    // Update language if changed
-    const model = editor.getModel();
-    if (model) {
-      monaco.editor.setModelLanguage(model, language);
+    // Update model usage for LRU cache
+    modelUsageRef.current.set(filePath, Date.now());
+
+    // Clean up old models if limit exceeded
+    if (modelUsageRef.current.size > MAX_MODELS) {
+      const sortedModels = Array.from(modelUsageRef.current.entries())
+        .sort((a, b) => a[1] - b[1]);
+      
+      const toRemoveCount = modelUsageRef.current.size - MAX_MODELS;
+      for (let i = 0; i < toRemoveCount; i++) {
+        const [pathToRemove] = sortedModels[i];
+        if (pathToRemove !== filePath) {
+          const modelToRemove = monaco.editor.getModel(monaco.Uri.file(pathToRemove));
+          if (modelToRemove) {
+            modelToRemove.dispose();
+          }
+          modelUsageRef.current.delete(pathToRemove);
+        }
+      }
     }
+
+    if (editor.getModel() !== model) {
+      editor.setModel(model);
+    }
+
+    // Update options if changed
+    editor.updateOptions({
+      lineNumbers: lineNumbers ? 'on' : 'off',
+      minimap: { enabled: minimap },
+      wordWrap: wordWrap ? 'on' : 'off',
+      fontSize: fontSize,
+      tabSize: tabSize,
+    });
 
     scheduleSymbolUpdate(0);
-  }, [editor, monaco, content, language, filePath, scheduleSymbolUpdate]);
+  }, [editor, monaco, content, filePath, lineNumbers, minimap, wordWrap, fontSize, tabSize, scheduleSymbolUpdate]);
 
   // Handle resize events
   useEffect(() => {
     if (!editor) return;
-
-    const handleResize = () => {
-      editor.layout();
-    };
-
-    window.addEventListener('resize', handleResize);
 
     let observer: ResizeObserver | null = null;
     if (editorRef.current && typeof ResizeObserver !== 'undefined') {
@@ -443,7 +512,6 @@ export function MonacoEditor({
     }, 0);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
       if (observer) {
         observer.disconnect();
       }
@@ -462,6 +530,11 @@ export function MonacoEditor({
       if (editor) {
         editor.dispose();
       }
+      // Models are kept in memory for performance as requested in the task.
+      // They are indexed by URI (filePath) and will be reused if the file is reopened.
+      // This allows Monaco to maintain diagnostic state across file switches.
+      // Note: We don't dispose models here because we want to preserve their state (markers, undo stack)
+      // when switching between tabs in the UI.
     };
   }, [editor]);
 
@@ -484,16 +557,16 @@ export function MonacoEditor({
   if (!monaco) {
     return (
       <div 
-        className="flex items-center justify-center h-full"
+        className="flex items-center justify-center h-full animate-pulse"
         style={{ 
-          backgroundColor: 'var(--editor-bg)',
-          color: 'var(--secondary-fg)',
+          backgroundColor: 'var(--vscode-editor-background)',
+          color: 'var(--vscode-descriptionForeground)',
         }}
       >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" 
-               style={{ borderColor: 'var(--primary-fg)' }} />
-          <p className="text-md">Loading Editor...</p>
+          <div className="h-8 w-8 border-2 mx-auto mb-4 border-t-accent rounded-full animate-spin" 
+               style={{ borderColor: 'var(--vscode-editor-foreground) var(--vscode-editor-foreground) var(--vscode-editor-foreground) var(--vscode-button-background)' }} />
+          <p className="text-sm opacity-80">Loading Editor...</p>
         </div>
       </div>
     );

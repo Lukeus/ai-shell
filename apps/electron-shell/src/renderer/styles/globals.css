@@ -53,6 +53,21 @@ body,
   --color-surface-elevated: var(--vscode-activityBar-background);
   --color-surface-hover: var(--vscode-hover-background);
   
+  /* Status Bar - mapped from VS Code status bar */
+  --color-status-bar: var(--vscode-statusBar-background);
+  --color-status-bar-foreground: var(--vscode-statusBar-foreground);
+  --color-status-bar-hover: var(--vscode-statusBar-hoverBackground);
+
+  /* Tabs - mapped from VS Code tabs */
+  --color-tab-active: var(--vscode-tab-activeBackground);
+  --color-tab-inactive: var(--vscode-tab-inactiveBackground);
+  --color-tab-border: var(--vscode-tab-border);
+  --color-tab-active-border-top: var(--vscode-tab-activeBorderTop);
+
+  /* Activity Bar - mapped from VS Code activity bar */
+  --color-activity-bar: var(--vscode-activityBar-background);
+  --color-activity-bar-active-border: var(--vscode-tab-activeBorderTop);
+  
   /* Border colors - mapped from VS Code borders */
   --color-border: var(--vscode-border);
   --color-border-subtle: var(--vscode-border-subtle);
@@ -103,6 +118,7 @@ body,
   --size-tab-height: var(--vscode-tab-height);
   --size-statusBar-height: var(--vscode-statusBar-height);
   --size-list-row: var(--vscode-list-rowHeight);
+
 }
 
 /* ===================================================================
@@ -280,6 +296,22 @@ body,
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Menubar spacing fix (ensures padding even if utility classes are missing). */
+.menubar-menu-button {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.menubar-menu-title {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--vscode-space-2);
 }
 
 /* ===================================================================

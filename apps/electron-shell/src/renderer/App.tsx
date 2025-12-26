@@ -10,7 +10,7 @@ import {
 import { LayoutProvider, useLayoutContext } from './contexts/LayoutContext';
 import { ThemeProvider } from './components/ThemeProvider';
 import { FileTreeContextProvider, useFileTree, SETTINGS_TAB_ID } from './components/explorer/FileTreeContext';
-import { ExplorerPanel } from './components/layout/ExplorerPanel';
+import { PrimarySidebarView } from './components/layout/PrimarySidebarView';
 import { MenuBar } from './components/layout/MenuBar';
 import { EditorArea } from './components/editor/EditorArea';
 import { TerminalPanel } from './components/layout/TerminalPanel';
@@ -487,6 +487,14 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    const handleFocusExplorer = () => {
+      setActiveActivityBarIcon('explorer');
+    };
+    window.addEventListener('ai-shell:focus-explorer', handleFocusExplorer);
+    return () => window.removeEventListener('ai-shell:focus-explorer', handleFocusExplorer);
+  }, [setActiveActivityBarIcon]);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface text-primary">
       {!isMac && menuBarVisible && (
@@ -654,7 +662,7 @@ function AppContent() {
                   collapsed={state.primarySidebarCollapsed}
                   onToggleCollapse={togglePrimarySidebar}
                 />
-                <ExplorerPanel activeView={primarySidebarView} />
+                <PrimarySidebarView activeView={primarySidebarView} />
               </div>
             </ResizablePanel>
           }

@@ -198,7 +198,27 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@20.19.27)(jsdom@23.2.0)(lightningcss@1.30.2)(terser@5.44.1)
 
-  packages/agent-memory: {}
+  packages/agent-memory:
+    dependencies:
+      packages-api-contracts:
+        specifier: workspace:*
+        version: link:../api-contracts
+    devDependencies:
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.0.0
+        version: 8.50.0(@typescript-eslint/parser@8.50.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.7.2))(eslint@9.39.2(jiti@2.6.1))(typescript@5.7.2)
+      '@typescript-eslint/parser':
+        specifier: ^8.0.0
+        version: 8.50.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.7.2)
+      eslint:
+        specifier: ^9.0.0
+        version: 9.39.2(jiti@2.6.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.3)(jsdom@23.2.0)(lightningcss@1.30.2)(terser@5.44.1)
 
   packages/agent-policy: {}
 
@@ -265,7 +285,27 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.3)(jsdom@23.2.0)(lightningcss@1.30.2)(terser@5.44.1)
 
-  packages/broker-client: {}
+  packages/broker-client:
+    dependencies:
+      packages-api-contracts:
+        specifier: workspace:*
+        version: link:../api-contracts
+    devDependencies:
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.0.0
+        version: 8.50.0(@typescript-eslint/parser@8.50.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.7.2))(eslint@9.39.2(jiti@2.6.1))(typescript@5.7.2)
+      '@typescript-eslint/parser':
+        specifier: ^8.0.0
+        version: 8.50.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.7.2)
+      eslint:
+        specifier: ^9.0.0
+        version: 9.39.2(jiti@2.6.1)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.2
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.3)(jsdom@23.2.0)(lightningcss@1.30.2)(terser@5.44.1)
 
   packages/broker-main:
     dependencies:

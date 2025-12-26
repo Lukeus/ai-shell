@@ -77,7 +77,7 @@ export function EditorTabBar() {
           id: path,
           label: 'Settings',
           title: 'Settings',
-          icon: <span className="codicon codicon-settings-gear" aria-hidden="true" />,
+          icon: <span className="codicon codicon-settings-gear text-[14px]" aria-hidden="true" />,
           dirty: false,
         };
       }
@@ -120,7 +120,7 @@ export function EditorTabBar() {
         id: path,
         label: getBasename(path),
         title: path,
-        icon: <span className="codicon codicon-file" aria-hidden="true" />,
+        icon: <span className="codicon codicon-file text-[14px]" aria-hidden="true" />,
         dirty: dirtyTabs.has(path),
         badge,
       };
@@ -261,7 +261,7 @@ export function EditorTabBar() {
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
-        onTabChange={handleChange}
+        onChange={handleChange}
         onTabClose={handleClose}
         onTabContextMenu={handleContextMenu}
       />

@@ -15,6 +15,7 @@ export type CommandPaletteRenderItemProps<T> = {
   selected: boolean;
   disabled: boolean;
   label: string;
+  query: string;
   icon?: ReactNode;
 };
 
@@ -218,7 +219,7 @@ export function CommandPalette<T>({
                         {renderGroupHeader ? (
                           renderGroupHeader(group)
                         ) : (
-                          <div className="px-7 pb-1 text-[11px] font-semibold text-secondary uppercase tracking-wide">
+                          <div className="px-7 py-1 text-[11px] font-bold text-accent uppercase tracking-wider opacity-80">
                             {group}
                           </div>
                         )}
@@ -247,6 +248,7 @@ export function CommandPalette<T>({
                                         selected,
                                         disabled,
                                         label,
+                                        query: normalizedQuery,
                                         icon,
                                       })
                                     : (
@@ -254,7 +256,19 @@ export function CommandPalette<T>({
                                         {icon && (
                                           <span className="text-secondary">{icon}</span>
                                         )}
-                                        <span className="flex-1 truncate">{label}</span>
+                                        <span className="flex-1 truncate">
+                                          {normalizedQuery ? (
+                                            label.split(new RegExp(`(${normalizedQuery})`, 'gi')).map((part, i) => (
+                                              part.toLowerCase() === normalizedQuery.toLowerCase() ? (
+                                                <mark key={i} className="bg-accent/30 text-primary rounded-xs px-0.5">{part}</mark>
+                                              ) : (
+                                                <span key={i}>{part}</span>
+                                              )
+                                            ))
+                                          ) : (
+                                            label
+                                          )}
+                                        </span>
                                       </>
                                     );
                                   return <>{content}</>;
@@ -290,6 +304,7 @@ export function CommandPalette<T>({
                                   selected,
                                   disabled,
                                   label,
+                                  query: normalizedQuery,
                                   icon,
                                 })
                               : (
@@ -297,7 +312,19 @@ export function CommandPalette<T>({
                                   {icon && (
                                     <span className="text-secondary">{icon}</span>
                                   )}
-                                  <span className="flex-1 truncate">{label}</span>
+                                  <span className="flex-1 truncate">
+                                    {normalizedQuery ? (
+                                      label.split(new RegExp(`(${normalizedQuery})`, 'gi')).map((part, i) => (
+                                        part.toLowerCase() === normalizedQuery.toLowerCase() ? (
+                                          <mark key={i} className="bg-accent/30 text-primary rounded-xs px-0.5">{part}</mark>
+                                        ) : (
+                                          <span key={i}>{part}</span>
+                                        )
+                                      ))
+                                    ) : (
+                                      label
+                                    )}
+                                  </span>
                                 </>
                               );
                             return <>{content}</>;

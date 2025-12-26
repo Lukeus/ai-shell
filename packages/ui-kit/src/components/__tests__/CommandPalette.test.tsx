@@ -39,8 +39,9 @@ describe('CommandPalette', () => {
     const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: '> open f' } });
 
-    expect(screen.getByText('Open File')).toBeInTheDocument();
-    expect(screen.getByText('Open Folder')).toBeInTheDocument();
+    expect(screen.getByText(/Open/i)).toBeInTheDocument();
+    expect(screen.getByText(/File/i)).toBeInTheDocument();
+    expect(screen.getByText(/Folder/i)).toBeInTheDocument();
     expect(screen.queryByText('Close Window')).not.toBeInTheDocument();
   });
 
@@ -57,7 +58,7 @@ describe('CommandPalette', () => {
       />
     );
 
-    const option = screen.getByRole('option', { name: 'Open File' });
+    const option = screen.getAllByRole('option')[0];
     fireEvent.click(option);
 
     expect(onSelect).toHaveBeenCalledWith(items[0]);

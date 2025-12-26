@@ -44,7 +44,10 @@ export interface TabBarProps {
   activeTabId: string;
   
   /** Callback when a tab is clicked */
-  onTabChange: (tabId: string) => void;
+  onChange?: (tabId: string) => void;
+
+  /** Callback when a tab is clicked (legacy) */
+  onTabChange?: (tabId: string) => void;
 
   /** Callback when a tab close is requested */
   onTabClose?: (tabId: string) => void;
@@ -78,7 +81,7 @@ export interface TabBarProps {
  *     { id: 'problems', label: 'Problems', pinned: true }
  *   ]}
  *   activeTabId={activeTab}
- *   onTabChange={(id) => setActiveTab(id)}
+ *   onChange={(id) => setActiveTab(id)}
  *   onTabClose={(id) => closeTab(id)}
  *   onTabContextMenu={(id, e) => showMenu(id, e)}
  * />
@@ -87,31 +90,35 @@ export interface TabBarProps {
 export function TabBar({
   tabs,
   activeTabId,
+  onChange,
   onTabChange,
   onTabClose,
   onTabContextMenu,
   className = '',
 }: TabBarProps) {
-  const tabHeight = 'var(--tab-height, var(--vscode-tab-height))';
-  const tabMinWidth = 'var(--tab-min-width, 120px)';
-  const tabMaxWidth = 'var(--tab-max-width, 220px)';
+  const tabHeight = 'var(--vscode-tab-height)';
   const hasActiveTab = tabs.some(tab => tab.id === activeTabId);
   const resolvedActiveId = hasActiveTab ? activeTabId : (tabs[0]?.id ?? '');
   const selectedIndex = Math.max(0, tabs.findIndex(tab => tab.id === resolvedActiveId));
-  
+  const handleChange = onChange ?? onTabChange;
+
   return (
     <TabGroup
       selectedIndex={selectedIndex}
       onChange={(index) => {
         const tab = tabs[index];
         if (tab && !tab.disabled) {
-          onTabChange(tab.id);
+          handleChange?.(tab.id);
         }
       }}
     >
       <TabList
-        className={`flex items-center min-w-0 bg-[var(--vscode-tab-inactiveBackground)] overflow-x-auto overflow-y-hidden hide-scrollbar ${className}`}
-        style={{ height: tabHeight }}
+        className={`flex items-center min-w-0 overflow-x-auto overflow-y-hidden hide-scrollbar ${className}`}
+        style={{
+          height: tabHeight,
+          backgroundColor: 'var(--vscode-tab-border)',
+          borderBottom: '1px solid var(--vscode-tab-border)',
+        }}
       >
         {tabs.map((tab) => {
           const isActive = tab.id === resolvedActiveId;
@@ -119,6 +126,18 @@ export function TabBar({
           const isDirty = tab.dirty;
           const isPinned = tab.pinned;
           const showClose = tab.closable !== false && !isPinned;
+          const showDirtyIndicator = Boolean(isDirty && !isPinned);
+          const showCloseButton = showClose;
+          const closeVisibilityClass = showCloseButton
+            ? showDirtyIndicator
+              ? 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+              : isActive
+                ? 'opacity-100'
+                : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+            : 'hidden';
+          const dirtyVisibilityClass = showDirtyIndicator
+            ? 'group-hover:opacity-0 group-focus-within:opacity-0'
+            : 'hidden';
 
           return (
           <Tab
@@ -132,10 +151,15 @@ export function TabBar({
               e.preventDefault();
             }}
             className={({ selected }) => `
-              relative flex items-center gap-2 box-border
-              text-[13px] font-normal transition-colors
+              group relative flex items-center gap-2 box-border min-w-0
+              border-r px-3
+              text-[var(--vscode-font-size-ui)] font-normal leading-[1]
+              transition-colors
               focus:outline-none focus:ring-1 focus:ring-accent focus:ring-inset
-              ${selected ? 'text-primary z-10' : 'text-secondary hover:text-primary'}
+              ${selected 
+                ? 'text-primary z-10' 
+                : 'text-secondary hover:text-primary'
+              }
               ${isDisabled
                 ? 'opacity-50 cursor-not-allowed'
                 : 'cursor-pointer'
@@ -143,53 +167,63 @@ export function TabBar({
             `}
             style={{
               height: tabHeight,
-              minWidth: tabMinWidth,
-              maxWidth: tabMaxWidth,
+              minWidth: 'var(--vscode-tab-minWidth)',
+              maxWidth: 'var(--vscode-tab-maxWidth)',
+              marginBottom: isActive ? '-1px' : '0',
               backgroundColor: isActive
                 ? 'var(--vscode-tab-activeBackground)'
                 : 'var(--vscode-tab-inactiveBackground)',
-              borderRight: '1px solid var(--vscode-tab-border)',
-              borderTop: isActive ? 'var(--vscode-border-width) solid var(--vscode-tab-activeBorderTop)' : 'var(--vscode-border-width) solid transparent',
-              borderBottom: isActive ? '1px solid var(--vscode-tab-activeBackground)' : '1px solid var(--vscode-tab-border)',
-              marginBottom: isActive ? '-1px' : '0',
-              paddingLeft: 'var(--vscode-space-2)',
-              paddingRight: 'var(--vscode-space-2)',
+              borderRightColor: 'var(--vscode-tab-border)',
             }}
+            data-active={isActive ? 'true' : 'false'}
           >
+            {/* Top border for active tab - VS Code style */}
+            {isActive && (
+              <div 
+                className="absolute top-0 left-0 right-0 h-[1px] bg-tab-active-border-top"
+                aria-hidden="true"
+              />
+            )}
+
             {tab.icon && (
-              <span className="flex items-center">
+              <span className="flex items-center text-[14px]">
                 {tab.icon}
               </span>
             )}
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 text-left">
+            <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-left">
               {tab.label}
             </span>
-            {tab.badge && <span className="flex items-center">{tab.badge}</span>}
-            {isPinned && (
-              <span className="codicon codicon-pin text-secondary" aria-hidden="true" />
-            )}
-            {isDirty && !isPinned && (
-              <span className="text-status-warning text-lg leading-none" aria-label="Unsaved changes">
-                •
-              </span>
-            )}
-            {showClose && (
-              <span
-                role="button"
-                aria-label={`Close ${tab.label}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTabClose?.(tab.id);
-                }}
-                className="
-                  flex items-center justify-center w-5 h-5 rounded-sm
-                  text-secondary hover:text-primary hover:bg-surface-elevated
-                "
-              >
-                <span className="codicon codicon-close" aria-hidden="true" />
-              </span>
-            )}
-
+            <span className="flex items-center gap-1 shrink-0">
+              {tab.badge && <span className="flex items-center shrink-0">{tab.badge}</span>}
+              {isPinned && (
+                <span className="codicon codicon-pin text-[12px] text-secondary" aria-hidden="true" />
+              )}
+              {showDirtyIndicator && (
+                <span
+                  className={`h-2 w-2 rounded-full transition-opacity ${dirtyVisibilityClass} ${
+                    isActive ? 'bg-tab-active-border-top' : 'bg-text-tertiary'
+                  }`}
+                  aria-label="Unsaved changes"
+                />
+              )}
+              {showCloseButton && (
+                <span
+                  role="button"
+                  aria-label={`Close ${tab.label}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTabClose?.(tab.id);
+                  }}
+                  className={`
+                    flex items-center justify-center w-5 h-5 rounded-sm
+                    text-secondary hover:text-primary hover:bg-surface-elevated transition-opacity
+                    ${closeVisibilityClass}
+                  `}
+                >
+                  <span className="codicon codicon-close text-[12px]" aria-hidden="true" />
+                </span>
+              )}
+            </span>
             <span className="sr-only">{isActive ? 'Active' : ''}</span>
           </Tab>
           );

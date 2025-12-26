@@ -36,9 +36,15 @@ const SDD_SCHEMA_VERSION = 1;
 const SDD_DIRNAME = '.ai-shell';
 const SDD_SUBDIR = 'sdd';
 const LEDGER_FILENAME = 'trace.jsonl';
+const LEDGER_ARCHIVE_PREFIX = 'trace-';
+const LEDGER_EXTENSION = '.jsonl';
 const INDEX_FILENAME = 'index.json';
 const GITIGNORE_FILENAME = '.gitignore';
 const DEFAULT_IGNORED_DIRS = new Set(['.ai-shell', '.git']);
+// Ledger rotation policy: rotate trace.jsonl once it exceeds these limits.
+// Override via SDD_TRACE_MAX_BYTES / SDD_TRACE_MAX_LINES (positive integers).
+const DEFAULT_MAX_LEDGER_BYTES = 5 * 1024 * 1024;
+const DEFAULT_MAX_LEDGER_LINES = 50000;
 
 const FILE_EVENT_TYPES = new Set([
   'FILE_MODIFIED',
@@ -47,6 +53,30 @@ const FILE_EVENT_TYPES = new Set([
   'FILE_RENAMED',
   'UNTRACKED_CHANGE_DETECTED',
 ]);
+
+const parsePositiveInt = (value: string | undefined): number | null => {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+};
+
+const getLedgerRotationLimits = (): { maxBytes: number; maxLines: number } => {
+  const maxBytes =
+    parsePositiveInt(process.env.SDD_TRACE_MAX_BYTES) ?? DEFAULT_MAX_LEDGER_BYTES;
+  const maxLines =
+    parsePositiveInt(process.env.SDD_TRACE_MAX_LINES) ?? DEFAULT_MAX_LEDGER_LINES;
+  return { maxBytes, maxLines };
+};
+
+const buildArchiveName = (timestamp: string): string => {
+  const safe = timestamp.replace(/[:.]/g, '-');
+  return `${LEDGER_ARCHIVE_PREFIX}${safe}${LEDGER_EXTENSION}`;
+};
 
 /**
  * SddTraceService - main-process ledger + index for SDD provenance.
@@ -63,6 +93,7 @@ export class SddTraceService {
   private ignoreMtimeMs: number | null = null;
   private statusListeners = new Set<(status: SddStatus) => void>();
   private commitOverride: { reason: string; createdAt: string } | null = null;
+  private readonly ledgerRotation = getLedgerRotationLimits();
 
   private constructor() {
     this.workspaceService = WorkspaceService.getInstance();
@@ -360,16 +391,23 @@ export class SddTraceService {
   public async rebuildIndexFromLedger(): Promise<SddIndex> {
     const paths = await this.ensureStorage();
     await this.loadIgnoreMatcher(paths.workspaceRoot);
-    const contents = await fs.promises.readFile(paths.ledgerPath, 'utf-8');
     const index = this.createEmptyIndex();
-    const lines = contents.split('\n').filter((line) => line.trim().length > 0);
-
-    for (const line of lines) {
+    const ledgerFiles = await this.listLedgerFiles(paths);
+    for (const ledgerPath of ledgerFiles) {
       try {
-        const event = JSON.parse(line) as SddEvent;
-        this.applyEventToIndex(index, event, paths.workspaceRoot);
+        const contents = await fs.promises.readFile(ledgerPath, 'utf-8');
+        const lines = contents.split('\n').filter((line) => line.trim().length > 0);
+
+        for (const line of lines) {
+          try {
+            const event = JSON.parse(line) as SddEvent;
+            this.applyEventToIndex(index, event, paths.workspaceRoot);
+          } catch {
+            // Skip malformed lines.
+          }
+        }
       } catch {
-        // Skip malformed lines
+        // Skip unreadable ledger segments.
       }
     }
 
@@ -389,6 +427,7 @@ export class SddTraceService {
   private async recordEvent(event: SddEvent, paths: StoragePaths): Promise<void> {
     const index = await this.ensureIndexLoaded();
     this.applyEventToIndex(index, event, paths.workspaceRoot);
+    await this.rotateLedgerIfNeeded(paths);
     await fs.promises.appendFile(paths.ledgerPath, `${JSON.stringify(event)}\n`, 'utf-8');
     await this.writeIndex(paths.indexPath, index);
   }
@@ -707,6 +746,82 @@ export class SddTraceService {
     }
 
     return { workspaceRoot, sddRoot, ledgerPath, indexPath };
+  }
+
+  private async rotateLedgerIfNeeded(paths: StoragePaths): Promise<void> {
+    const { maxBytes, maxLines } = this.ledgerRotation;
+    if (maxBytes <= 0 && maxLines <= 0) {
+      return;
+    }
+
+    let stats: fs.Stats;
+    try {
+      stats = await fs.promises.stat(paths.ledgerPath);
+    } catch {
+      return;
+    }
+
+    if (stats.size === 0) {
+      return;
+    }
+
+    if (maxBytes > 0 && stats.size >= maxBytes) {
+      await this.rotateLedger(paths);
+      return;
+    }
+
+    if (maxLines > 0) {
+      const lineCount = await this.countLedgerLines(paths.ledgerPath);
+      if (lineCount >= maxLines) {
+        await this.rotateLedger(paths);
+      }
+    }
+  }
+
+  private async rotateLedger(paths: StoragePaths): Promise<void> {
+    const timestamp = new Date().toISOString();
+    const archiveName = buildArchiveName(timestamp);
+    const archivePath = path.join(paths.sddRoot, archiveName);
+
+    try {
+      await fs.promises.rename(paths.ledgerPath, archivePath);
+    } catch {
+      return;
+    }
+
+    await fs.promises.writeFile(paths.ledgerPath, '', 'utf-8');
+  }
+
+  private async countLedgerLines(ledgerPath: string): Promise<number> {
+    try {
+      const contents = await fs.promises.readFile(ledgerPath, 'utf-8');
+      if (!contents) {
+        return 0;
+      }
+      return contents.split('\n').filter((line) => line.trim().length > 0).length;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async listLedgerFiles(paths: StoragePaths): Promise<string[]> {
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(paths.sddRoot);
+    } catch {
+      return [paths.ledgerPath];
+    }
+
+    const ledgerFiles = entries.filter((entry) => {
+      if (entry === LEDGER_FILENAME) {
+        return true;
+      }
+      return entry.startsWith(LEDGER_ARCHIVE_PREFIX) && entry.endsWith(LEDGER_EXTENSION);
+    });
+
+    ledgerFiles.sort();
+
+    return ledgerFiles.map((entry) => path.join(paths.sddRoot, entry));
   }
 
   private getWorkspaceRoot(): string {

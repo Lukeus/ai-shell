@@ -108,7 +108,7 @@ export function TerminalPanel() {
       <TabBar
         tabs={tabs}
         activeTabId={activeTab}
-        onTabChange={(tabId) => setActiveTab(tabId as PanelView)}
+        onChange={(tabId) => setActiveTab(tabId as PanelView)}
         className="text-[12px]"
       />
       
@@ -120,7 +120,7 @@ export function TerminalPanel() {
         className="flex-1 overflow-hidden min-h-0"
       >
         {activeTab === 'terminal' && (
-          <div className="flex flex-col h-full min-h-0">
+          <div className="flex flex-col h-full min-h-0 animate-fade-in">
             <TerminalSessionTabs className="shrink-0 text-[12px]" />
             <div className="flex-1 overflow-hidden min-h-0">
               {activeSessionId ? (
@@ -131,8 +131,16 @@ export function TerminalPanel() {
             </div>
           </div>
         )}
-        {activeTab === 'output' && <OutputView className="h-full" />}
-        {activeTab === 'problems' && <ProblemsView className="h-full" />}
+        {activeTab === 'output' && (
+          <div className="h-full animate-fade-in">
+            <OutputView className="h-full" />
+          </div>
+        )}
+        {activeTab === 'problems' && (
+          <div className="h-full animate-fade-in">
+            <ProblemsView className="h-full" />
+          </div>
+        )}
       </div>
     </div>
   );

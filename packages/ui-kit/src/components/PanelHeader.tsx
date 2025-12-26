@@ -1,4 +1,3 @@
-import { Disclosure, DisclosureButton } from '@headlessui/react';
 import { ChevronUpIcon } from '@heroicons/react/20/solid';
 
 /**
@@ -37,55 +36,49 @@ export interface PanelHeaderProps {
  * ```
  */
 export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderProps) {
-  // Remount to keep Disclosure open state aligned with controlled collapsed prop.
-  const disclosureKey = collapsed ? 'collapsed' : 'open';
+  const isOpen = !collapsed;
 
   return (
-    <Disclosure
-      key={disclosureKey}
-      defaultOpen={!collapsed}
-      as="div"
-      className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
+    <div
+      className="flex items-center justify-between border-b border-border bg-surface-secondary"
       style={{
         height: 'var(--vscode-panelHeader-height)',
         paddingLeft: 'var(--vscode-space-2)',
         paddingRight: 'var(--vscode-space-2)',
       }}
     >
-      {({ open }) => (
-        <>
-          {/* Panel title with icon */}
-          <div className="flex items-center gap-2">
-            <h2
-              className="font-semibold text-secondary uppercase"
-              style={{
-                fontSize: 'var(--vscode-font-size-small)',
-                letterSpacing: '0.08em',
-              }}
-            >
-              {title}
-            </h2>
-          </div>
+      {/* Panel title with icon */}
+      <div className="flex items-center gap-2">
+        <h2
+          className="font-semibold text-secondary uppercase"
+          style={{
+            fontSize: 'var(--vscode-font-size-small)',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {title}
+        </h2>
+      </div>
 
-          {/* Collapse/expand button */}
-          <DisclosureButton
-            onClick={onToggleCollapse}
-            className="
-              p-1 rounded-none transition-colors duration-150
-              hover:bg-surface-hover
-              group focus:outline-none focus:ring-1 focus:ring-accent
-            "
-            aria-label={open ? 'Collapse panel' : 'Expand panel'}
-          >
-            <ChevronUpIcon
-              className="w-4 h-4 text-secondary transition-transform duration-200 group-hover:text-primary"
-              style={{
-                transform: open ? 'rotate(0deg)' : 'rotate(180deg)',
-              }}
-            />
-          </DisclosureButton>
-        </>
-      )}
-    </Disclosure>
+      {/* Collapse/expand button */}
+      <button
+        type="button"
+        onClick={onToggleCollapse}
+        className="
+          p-1 rounded-none transition-colors duration-150
+          hover:bg-surface-hover
+          group focus:outline-none focus:ring-1 focus:ring-accent
+        "
+        aria-label={isOpen ? 'Collapse panel' : 'Expand panel'}
+        aria-expanded={isOpen}
+      >
+        <ChevronUpIcon
+          className="h-4 w-4 text-secondary transition-transform duration-200 group-hover:text-primary"
+          style={{
+            transform: isOpen ? 'rotate(0deg)' : 'rotate(180deg)',
+          }}
+        />
+      </button>
+    </div>
   );
 }

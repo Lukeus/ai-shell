@@ -5,6 +5,7 @@
 - Standardize accessibility and behavior by implementing extracted components using `@headlessui/react`.
 - Standardize visual language (icons, spacing, focus, overlays) across the app using `@heroicons/react` where appropriate.
 - Leave app-side code focused on orchestration/business logic (command execution, indexing, routing), not focus traps and keyboard plumbing.
+- Align editor tabs and breadcrumbs styling with VS Code (spacing, separators, and truncation).
 
 ## Non-goals
 - Rewriting command indexing/search algorithms (keep in app).
@@ -70,6 +71,7 @@
 - `Badge` component supports variants: `default | success | warning | danger | info | muted | blue | indigo | purple | pink`.
 - `Breadcrumbs` supports an array of `{ label, onClick? , href?, current?, icon? }`, truncation/overflow handling, and accessible separators.
 - Breadcrumbs should set `aria-current="page"` when `current` is true and render an optional leading icon per item.
+- Tabs and breadcrumbs match VS Code visual density (height, padding, separator size).
 
 ### App-side replacement
 - electron-shell renderer replaces:

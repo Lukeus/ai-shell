@@ -5,16 +5,19 @@ import type {
   SddRunEvent,
   SddStep,
   Proposal,
+  SddCustomCommand,
 } from 'packages-api-contracts';
 import { useFileTree } from '../explorer/FileTreeContext';
 import { useSddStatus } from '../../hooks/useSddStatus';
-import { ProposalDiffView } from './ProposalDiffView';
-import { SddRunControls } from './SddRunControls';
-
-type SddTaskItem = {
-  id: string;
-  label: string;
-};
+import { SddPanelHeader } from './SddPanelHeader';
+import { SddWorkflowSection } from './SddWorkflowSection';
+import { SddActivitySection } from './SddActivitySection';
+import { SddProposalSection } from './SddProposalSection';
+import { SddFeatureListSection } from './SddFeatureListSection';
+import { SddTaskListSection, type SddTaskItem } from './SddTaskListSection';
+import { SddParitySection } from './SddParitySection';
+import { SddFileListSection } from './SddFileListSection';
+import { SddFileTraceSection } from './SddFileTraceSection';
 
 const parseTasks = (content: string): SddTaskItem[] => {
   const tasks: SddTaskItem[] = [];
@@ -38,48 +41,113 @@ const parseTasks = (content: string): SddTaskItem[] => {
   return tasks;
 };
 
-const parseSlashCommand = (value: string): SddStep | null => {
-  const trimmed = value.trim().toLowerCase();
+type CustomSlashCommand = {
+  command: string;
+  step: SddStep;
+  label?: string;
+  goalTemplate?: string;
+};
+
+type ParsedSlashCommand = {
+  command: string;
+  step: SddStep;
+  input: string;
+  goalTemplate?: string;
+};
+
+const BUILTIN_SLASH_COMMANDS: Record<string, SddStep> = {
+  '/spec': 'spec',
+  '/plan': 'plan',
+  '/tasks': 'tasks',
+  '/implement': 'implement',
+  '/review': 'review',
+};
+
+const validateCustomCommands = (
+  commands: SddCustomCommand[]
+): { commands: CustomSlashCommand[]; errors: string[] } => {
+  const errors: string[] = [];
+  const normalized = new Set<string>();
+  const validated: CustomSlashCommand[] = [];
+
+  for (const command of commands) {
+    const normalizedCommand = command.command.trim().toLowerCase();
+    if (!normalizedCommand.startsWith('/')) {
+      errors.push(`Custom command "${command.command}" must start with "/".`);
+      continue;
+    }
+    if (BUILTIN_SLASH_COMMANDS[normalizedCommand]) {
+      errors.push(`Custom command "${normalizedCommand}" conflicts with a built-in command.`);
+      continue;
+    }
+    if (normalized.has(normalizedCommand)) {
+      errors.push(`Custom command "${normalizedCommand}" is defined more than once.`);
+      continue;
+    }
+    normalized.add(normalizedCommand);
+    validated.push({
+      command: normalizedCommand,
+      step: command.step,
+      label: command.label,
+      goalTemplate: command.goalTemplate,
+    });
+  }
+
+  return { commands: validated, errors };
+};
+
+const parseSlashCommand = (
+  value: string,
+  customCommands: CustomSlashCommand[]
+): ParsedSlashCommand | null => {
+  const trimmed = value.trim();
   if (!trimmed.startsWith('/')) {
     return null;
   }
-  const [command] = trimmed.split(/\s+/, 1);
-  if (command === '/spec') return 'spec';
-  if (command === '/plan') return 'plan';
-  if (command === '/tasks') return 'tasks';
-  if (command === '/implement') return 'implement';
-  if (command === '/review') return 'review';
-  return null;
+  const parts = trimmed.split(/\s+/);
+  const rawCommand = parts[0] ?? '';
+  const command = rawCommand.toLowerCase();
+  const input = trimmed.slice(rawCommand.length).trim();
+
+  const builtin = BUILTIN_SLASH_COMMANDS[command];
+  if (builtin) {
+    return { command, step: builtin, input };
+  }
+
+  const custom = customCommands.find((entry) => entry.command === command);
+  if (!custom) {
+    return null;
+  }
+
+  return {
+    command,
+    step: custom.step,
+    input,
+    goalTemplate: custom.goalTemplate,
+  };
 };
 
-const formatEventLabel = (event: SddRunEvent): string => {
-  switch (event.type) {
-    case 'started':
-      return `Started ${event.featureId} (${event.step})`;
-    case 'contextLoaded':
-      return 'Context loaded';
-    case 'stepStarted':
-      return `Step started: ${event.step}`;
-    case 'outputAppended':
-      return 'Output appended';
-    case 'proposalReady':
-      return 'Proposal ready';
-    case 'approvalRequired':
-      return 'Approval required';
-    case 'proposalApplied':
-      return 'Proposal applied';
-    case 'testsRequested':
-      return `Tests requested: ${event.command}`;
-    case 'testsCompleted':
-      return `Tests completed (${event.exitCode})`;
-    case 'runCompleted':
-      return 'Run completed';
-    case 'runFailed':
-      return `Run failed: ${event.message}`;
-    default:
-      return event.type;
+const applyGoalTemplate = (
+  template: string,
+  values: { input: string; featureId: string; taskId: string }
+): string =>
+  template
+    .replace(/{{\s*input\s*}}/gi, values.input)
+    .replace(/{{\s*featureId\s*}}/gi, values.featureId)
+    .replace(/{{\s*taskId\s*}}/gi, values.taskId)
+    .trim();
+
+const getNextTaskId = (tasks: SddTaskItem[], currentTaskId: string | null): string | null => {
+  if (!currentTaskId) {
+    return null;
   }
+  const currentIndex = tasks.findIndex((task) => task.id === currentTaskId);
+  if (currentIndex < 0 || currentIndex >= tasks.length - 1) {
+    return null;
+  }
+  return tasks[currentIndex + 1]?.id ?? null;
 };
+
 
 export function SddPanel() {
   const { workspace, openFile, selectedEntry } = useFileTree();
@@ -105,6 +173,8 @@ export function SddPanel() {
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [isStartingWorkflow, setIsStartingWorkflow] = useState(false);
   const [isApplyingProposal, setIsApplyingProposal] = useState(false);
+  const [customCommands, setCustomCommands] = useState<CustomSlashCommand[]>([]);
+  const [customCommandErrors, setCustomCommandErrors] = useState<string[]>([]);
 
   const activeRun = status?.activeRun ?? null;
   const workflowRunIdRef = useRef<string | null>(null);
@@ -181,6 +251,52 @@ export function SddPanel() {
       isMounted = false;
     };
   }, [workspace, enabled]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const settingsEventTarget = window as unknown as {
+      addEventListener: (type: string, listener: (event: { detail?: unknown }) => void) => void;
+      removeEventListener: (type: string, listener: (event: { detail?: unknown }) => void) => void;
+    };
+
+    const applyCommands = (commands: SddCustomCommand[]) => {
+      const result = validateCustomCommands(commands);
+      if (isMounted) {
+        setCustomCommands(result.commands);
+        setCustomCommandErrors(result.errors);
+      }
+    };
+
+    const loadCommands = async () => {
+      if (typeof window.api?.getSettings !== 'function') {
+        return;
+      }
+      try {
+        const settings = await window.api.getSettings();
+        applyCommands(settings.sdd?.customCommands ?? []);
+      } catch (loadError) {
+        if (isMounted) {
+          setCustomCommandErrors([
+            loadError instanceof Error
+              ? loadError.message
+              : 'Failed to load custom slash commands.',
+          ]);
+        }
+      }
+    };
+
+    const handleSettingsUpdated = (event: { detail?: { sdd?: { customCommands?: SddCustomCommand[] } } }) => {
+      applyCommands(event.detail?.sdd?.customCommands ?? []);
+    };
+
+    void loadCommands();
+    settingsEventTarget.addEventListener('ai-shell:settings-updated', handleSettingsUpdated);
+
+    return () => {
+      isMounted = false;
+      settingsEventTarget.removeEventListener('ai-shell:settings-updated', handleSettingsUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     if (activeRun) {
@@ -349,9 +465,25 @@ export function SddPanel() {
     if (typeof window.api?.sddRuns?.start !== 'function') {
       return;
     }
-    const stepOverride = parseSlashCommand(workflowCommand);
-    const step = stepOverride ?? workflowStep;
-    if (!workflowFeatureId.trim() || !workflowGoal.trim()) {
+    const hasSlashCommand = workflowCommand.trim().startsWith('/');
+    const parsedCommand = parseSlashCommand(workflowCommand, customCommands);
+    if (hasSlashCommand && !parsedCommand) {
+      setWorkflowError('Unknown slash command. Check Settings > SDD custom commands.');
+      return;
+    }
+
+    const step = parsedCommand?.step ?? workflowStep;
+    const resolvedGoal = parsedCommand?.goalTemplate
+      ? applyGoalTemplate(parsedCommand.goalTemplate, {
+          input: parsedCommand.input,
+          featureId: workflowFeatureId.trim(),
+          taskId: selectedTaskId ?? '',
+        })
+      : workflowGoal.trim().length === 0 && parsedCommand?.input
+      ? parsedCommand.input
+      : workflowGoal;
+
+    if (!workflowFeatureId.trim() || !resolvedGoal.trim()) {
       setWorkflowError('Feature ID and goal are required to start an SDD run.');
       return;
     }
@@ -361,7 +493,7 @@ export function SddPanel() {
     try {
       await window.api.sddRuns.start({
         featureId: workflowFeatureId.trim(),
-        goal: workflowGoal.trim(),
+        goal: resolvedGoal.trim(),
         step,
       });
     } catch (runError) {
@@ -408,6 +540,12 @@ export function SddPanel() {
         runId: workflowRunId,
         proposal: workflowProposal,
       });
+      if (workflowStep === 'implement') {
+        const nextTaskId = getNextTaskId(tasks, selectedTaskId);
+        if (nextTaskId) {
+          await handleSelectTask(nextTaskId);
+        }
+      }
     } catch (applyError) {
       console.error('Failed to apply SDD proposal:', applyError);
       setWorkflowError(
@@ -421,6 +559,13 @@ export function SddPanel() {
   const handleOpenFile = (filePath: string) => {
     openFile(filePath);
   };
+
+  const handleReconcileDrift = useCallback(async (reason: string) => {
+    if (typeof window.api?.sdd?.overrideUntracked !== 'function') {
+      throw new Error('SDD drift reconciliation is unavailable in this build.');
+    }
+    await window.api.sdd.overrideUntracked(reason);
+  }, []);
 
   const workflowStatusLabel =
     workflowStatus === 'running'
@@ -456,7 +601,7 @@ export function SddPanel() {
 
   if (!enabled) {
     return (
-      <div className="flex flex-col h-full min-h-0 bg-surface">
+      <div className="flex flex-col h-full w-full min-h-0 bg-surface">
         <div
           className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
           style={{
@@ -476,35 +621,13 @@ export function SddPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-surface">
-      <div
-        className="border-b border-border-subtle bg-surface-secondary shrink-0"
-        style={{ padding: 'var(--vscode-space-3)' }}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="codicon codicon-checklist text-secondary" aria-hidden="true" />
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Spec-driven development
-            </span>
-          </div>
-          <span
-            className="text-tertiary"
-            style={{ fontSize: 'var(--vscode-font-size-small)' }}
-          >
-            Workflow: {workflowStatusLabel}
-          </span>
-        </div>
+    <div className="flex flex-col h-full w-full min-h-0 bg-surface">
+      <SddPanelHeader
+        workflowStatusLabel={workflowStatusLabel}
+        workflowRunId={workflowRunId}
+      />
 
-        <div
-          className="mt-2 text-tertiary"
-          style={{ fontSize: 'var(--vscode-font-size-small)' }}
-        >
-          {workflowRunId ? `Run ID: ${workflowRunId.slice(0, 8)}...` : 'No active workflow run.'}
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto w-full">
         {workflowError && (
           <div
             className="text-status-error"
@@ -529,119 +652,37 @@ export function SddPanel() {
           </div>
         )}
 
-        <div className="border-b border-border-subtle">
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Workflow
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {workflowStatusLabel}
-            </span>
-          </div>
-          <div style={{ padding: 'var(--vscode-space-3)' }}>
-            <SddRunControls
-              featureId={workflowFeatureId}
-              goal={workflowGoal}
-              step={workflowStep}
-              slashCommand={workflowCommand}
-              isRunning={workflowStatus === 'running'}
-              isStarting={isStartingWorkflow}
-              canStart={workflowSupported}
-              onFeatureIdChange={setWorkflowFeatureId}
-              onGoalChange={setWorkflowGoal}
-              onStepChange={setWorkflowStep}
-              onSlashCommandChange={setWorkflowCommand}
-              onStart={handleStartWorkflow}
-              onCancel={handleCancelWorkflow}
-            />
-          </div>
-        </div>
+        <SddWorkflowSection
+          workflowStatusLabel={workflowStatusLabel}
+          workflowFeatureId={workflowFeatureId}
+          workflowGoal={workflowGoal}
+          workflowStep={workflowStep}
+          workflowCommand={workflowCommand}
+          customCommands={customCommands.map((command) => command.command)}
+          customCommandErrors={customCommandErrors}
+          isRunning={workflowStatus === 'running'}
+          isStarting={isStartingWorkflow}
+          canStart={workflowSupported}
+          onFeatureIdChange={setWorkflowFeatureId}
+          onGoalChange={setWorkflowGoal}
+          onStepChange={setWorkflowStep}
+          onSlashCommandChange={setWorkflowCommand}
+          onStart={handleStartWorkflow}
+          onCancel={handleCancelWorkflow}
+        />
 
-        <div className="border-b border-border-subtle">
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Activity
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {workflowEvents.length}
-            </span>
-          </div>
-
-          {visibleWorkflowEvents.length === 0 ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              No workflow events yet.
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {visibleWorkflowEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="text-secondary"
-                  style={{
-                    paddingLeft: 'var(--vscode-space-3)',
-                    paddingRight: 'var(--vscode-space-3)',
-                    paddingTop: 'var(--vscode-space-2)',
-                    paddingBottom: 'var(--vscode-space-2)',
-                    fontSize: 'var(--vscode-font-size-small)',
-                    borderTop: '1px solid var(--vscode-border-subtle)',
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-primary">{formatEventLabel(event)}</span>
-                    <span className="text-tertiary">
-                      {new Date(event.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  {event.type === 'outputAppended' && (
-                    <div className="text-tertiary" style={{ marginTop: 'var(--vscode-space-1)' }}>
-                      {event.content}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <SddActivitySection
+          events={visibleWorkflowEvents}
+          totalCount={workflowEvents.length}
+        />
 
         {workflowProposal && (
-          <div className="border-b border-border-subtle">
-            <div
-              className="flex items-center justify-between text-secondary"
-              style={{ padding: 'var(--vscode-space-2)' }}
-            >
-              <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-                Proposal
-              </span>
-              <span
-                className="text-tertiary"
-                style={{ fontSize: 'var(--vscode-font-size-small)' }}
-              >
-                {workflowProposal.summary.filesChanged} files
-              </span>
-            </div>
-            <div style={{ padding: 'var(--vscode-space-3)' }}>
-              <ProposalDiffView
-                proposal={workflowProposal}
-                onApply={handleApplyProposal}
-                isApplying={isApplyingProposal}
-                canApply={Boolean(workflowRunId)}
-              />
-            </div>
-          </div>
+          <SddProposalSection
+            proposal={workflowProposal}
+            runId={workflowRunId}
+            onApply={handleApplyProposal}
+            isApplying={isApplyingProposal}
+          />
         )}
 
         {error && (
@@ -656,326 +697,47 @@ export function SddPanel() {
           </div>
         )}
 
-        <div className="border-b border-border-subtle">
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Features
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {features.length}
-            </span>
-          </div>
+        <SddFeatureListSection
+          features={features}
+          selectedFeatureId={selectedFeatureId}
+          isLoading={isLoadingFeatures}
+          onSelect={handleSelectFeature}
+        />
 
-          {isLoadingFeatures ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              Loading specs...
-            </div>
-          ) : features.length === 0 ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              No specs detected.
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {features.map((feature) => {
-                const isSelected = feature.featureId === selectedFeatureId;
-                return (
-                  <button
-                    key={feature.featureId}
-                    onClick={() => handleSelectFeature(feature.featureId)}
-                    className={`
-                      text-left hover:bg-surface-hover
-                      transition-colors duration-150
-                      ${isSelected ? 'bg-surface-hover text-primary' : 'text-secondary'}
-                    `}
-                    style={{
-                      paddingLeft: 'var(--vscode-space-3)',
-                      paddingRight: 'var(--vscode-space-3)',
-                      paddingTop: 'var(--vscode-space-2)',
-                      paddingBottom: 'var(--vscode-space-2)',
-                      fontSize: 'var(--vscode-font-size-ui)',
-                    }}
-                  >
-                    {feature.featureId}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <SddTaskListSection
+          tasks={tasks}
+          selectedTaskId={selectedTaskId}
+          isLoading={isLoadingTasks}
+          hasFeature={Boolean(selectedFeature)}
+          onSelect={handleSelectTask}
+        />
 
-        <div className="border-b border-border-subtle">
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Tasks
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {tasks.length}
-            </span>
-          </div>
+        <SddParitySection
+          trackedRatio={trackedRatio}
+          trackedChanges={trackedChanges}
+          untrackedChanges={untrackedChanges}
+          driftFilesCount={driftFiles.length}
+          staleDocsCount={staleDocs.length}
+          onReconcile={handleReconcileDrift}
+        />
 
-          {isLoadingTasks ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              Loading tasks...
-            </div>
-          ) : tasks.length === 0 ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              {selectedFeature ? 'No tasks found.' : 'Select a feature to view tasks.'}
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {tasks.map((task) => {
-                const isSelected = task.id === selectedTaskId;
-                return (
-                  <button
-                    key={task.id}
-                    onClick={() => handleSelectTask(task.id)}
-                    className={`
-                      text-left hover:bg-surface-hover
-                      transition-colors duration-150
-                      ${isSelected ? 'bg-surface-hover text-primary' : 'text-secondary'}
-                    `}
-                    style={{
-                      paddingLeft: 'var(--vscode-space-3)',
-                      paddingRight: 'var(--vscode-space-3)',
-                      paddingTop: 'var(--vscode-space-2)',
-                      paddingBottom: 'var(--vscode-space-2)',
-                      fontSize: 'var(--vscode-font-size-small)',
-                    }}
-                  >
-                    {task.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <SddFileListSection
+          title="Drift Files"
+          files={driftFiles}
+          emptyText="No untracked changes detected."
+          onOpenFile={handleOpenFile}
+          formatPath={formatPath}
+        />
 
-        <div className="border-b border-border-subtle">
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Parity
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {Math.round(trackedRatio * 100)}%
-            </span>
-          </div>
-          <div
-            className="flex flex-col gap-2"
-            style={{
-              paddingLeft: 'var(--vscode-space-3)',
-              paddingRight: 'var(--vscode-space-3)',
-              paddingBottom: 'var(--vscode-space-3)',
-            }}
-          >
-            <div
-              className="h-2 w-full rounded-full bg-surface-elevated overflow-hidden"
-              aria-hidden="true"
-            >
-              <div
-                className="h-full bg-accent"
-                style={{ width: `${Math.round(trackedRatio * 100)}%` }}
-              />
-            </div>
-            <div
-              className="flex items-center justify-between text-tertiary"
-              style={{ fontSize: 'var(--vscode-font-size-small)' }}
-            >
-              <span>Tracked: {trackedChanges}</span>
-              <span>Untracked: {untrackedChanges}</span>
-            </div>
-          </div>
-        </div>
+        <SddFileListSection
+          title="Stale Docs"
+          files={staleDocs}
+          emptyText="No stale docs detected."
+          onOpenFile={handleOpenFile}
+          formatPath={formatPath}
+        />
 
-        <div className="border-b border-border-subtle">
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Drift Files
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {driftFiles.length}
-            </span>
-          </div>
-          {driftFiles.length === 0 ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              No untracked changes detected.
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {driftFiles.map((filePath) => (
-                <button
-                  key={filePath}
-                  onClick={() => handleOpenFile(filePath)}
-                  className="text-left hover:bg-surface-hover text-secondary"
-                  style={{
-                    paddingLeft: 'var(--vscode-space-3)',
-                    paddingRight: 'var(--vscode-space-3)',
-                    paddingTop: 'var(--vscode-space-2)',
-                    paddingBottom: 'var(--vscode-space-2)',
-                    fontSize: 'var(--vscode-font-size-small)',
-                  }}
-                >
-                  {formatPath(filePath)}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="border-b border-border-subtle">
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              Stale Docs
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {staleDocs.length}
-            </span>
-          </div>
-          {staleDocs.length === 0 ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              No stale docs detected.
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {staleDocs.map((filePath) => (
-                <button
-                  key={filePath}
-                  onClick={() => handleOpenFile(filePath)}
-                  className="text-left hover:bg-surface-hover text-secondary"
-                  style={{
-                    paddingLeft: 'var(--vscode-space-3)',
-                    paddingRight: 'var(--vscode-space-3)',
-                    paddingTop: 'var(--vscode-space-2)',
-                    paddingBottom: 'var(--vscode-space-2)',
-                    fontSize: 'var(--vscode-font-size-small)',
-                  }}
-                >
-                  {formatPath(filePath)}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <div
-            className="flex items-center justify-between text-secondary"
-            style={{ padding: 'var(--vscode-space-2)' }}
-          >
-            <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-ui)' }}>
-              File Trace
-            </span>
-            <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              {fileTrace?.runs.length ?? 0}
-            </span>
-          </div>
-          {!selectedEntry || selectedEntry.type !== 'file' ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              Select a file to view trace details.
-            </div>
-          ) : !fileTrace || fileTrace.runs.length === 0 ? (
-            <div
-              className="text-tertiary"
-              style={{
-                paddingLeft: 'var(--vscode-space-3)',
-                paddingRight: 'var(--vscode-space-3)',
-                paddingBottom: 'var(--vscode-space-2)',
-                fontSize: 'var(--vscode-font-size-small)',
-              }}
-            >
-              No trace recorded for this file.
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {fileTrace.runs.map((run) => (
-                <div
-                  key={run.runId}
-                  className="flex items-center justify-between text-secondary"
-                  style={{
-                    paddingLeft: 'var(--vscode-space-3)',
-                    paddingRight: 'var(--vscode-space-3)',
-                    paddingTop: 'var(--vscode-space-2)',
-                    paddingBottom: 'var(--vscode-space-2)',
-                    fontSize: 'var(--vscode-font-size-small)',
-                  }}
-                >
-                  <span className="text-primary">{`${run.featureId} / ${run.taskId}`}</span>
-                  <span className="text-tertiary">{run.status}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <SddFileTraceSection selectedEntry={selectedEntry} fileTrace={fileTrace} />
       </div>
     </div>
   );

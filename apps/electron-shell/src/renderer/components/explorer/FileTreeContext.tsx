@@ -141,16 +141,27 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
     try {
       const stored = localStorage.getItem(localStorageKey);
       if (stored) {
-        const { expandedFolders: expanded, openTabs: tabs } = JSON.parse(stored);
+        const {
+          expandedFolders: expanded,
+          openTabs: tabs,
+          settingsTabOpen,
+        } = JSON.parse(stored);
+        const shouldOpenSettingsTab = Boolean(settingsTabOpen);
         if (Array.isArray(expanded)) {
           setExpandedFolders(new Set(expanded));
         }
         if (Array.isArray(tabs)) {
           const sanitizedTabs = tabs.filter((tab) => tab !== SETTINGS_TAB_ID);
-          setOpenTabs(sanitizedTabs);
-          if (sanitizedTabs.length > 0) {
+          const nextTabs = shouldOpenSettingsTab
+            ? [...sanitizedTabs, SETTINGS_TAB_ID]
+            : sanitizedTabs;
+          setOpenTabs(nextTabs);
+          if (nextTabs.length > 0) {
             setActiveTabIndex(0);
           }
+        } else if (shouldOpenSettingsTab) {
+          setOpenTabs([SETTINGS_TAB_ID]);
+          setActiveTabIndex(0);
         }
       }
     } catch (err) {
@@ -168,6 +179,7 @@ export function FileTreeContextProvider({ children }: { children: React.ReactNod
       const data = {
         expandedFolders: Array.from(expandedFolders),
         openTabs: openTabs.filter((tab) => tab !== SETTINGS_TAB_ID),
+        settingsTabOpen: openTabs.includes(SETTINGS_TAB_ID),
       };
       localStorage.setItem(localStorageKey, JSON.stringify(data));
     } catch (err) {

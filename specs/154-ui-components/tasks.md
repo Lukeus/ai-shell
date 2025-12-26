@@ -173,3 +173,22 @@
 - No unrelated refactors.
 **Done =**
 - Dead code removed and tests pass.
+
+---
+
+## Task 10 - Align tabs and breadcrumbs with VS Code
+**Effort**: 2-4h
+**Files**:
+- `packages/ui-kit/src/components/TabBar.tsx`
+- `packages/ui-kit/src/components/Breadcrumbs.tsx`
+- `apps/electron-shell/src/renderer/components/editor/BreadcrumbsBar.tsx`
+- `specs/154-ui-components/screenshots/task-10-tabs-breadcrumbs.png`
+**Work**:
+- Adjust tab spacing, icon sizing, and close affordances to match VS Code density.
+- Refine breadcrumb separators, icon sizing, and truncation to match VS Code styling.
+**Verify**:
+- Manual: compare tabs + breadcrumbs against VS Code screenshot.
+**Invariants**:
+- No changes to tab/breadcrumb click behavior.
+**Done =**
+- Tabs and breadcrumbs visually align with VS Code and have a screenshot.

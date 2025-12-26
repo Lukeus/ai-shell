@@ -220,9 +220,9 @@ export function AgentsPanel() {
   }, [activeRun, connectionLookup]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full min-h-0 bg-surface">
       <div
-        className="border-b border-border-subtle"
+        className="border-b border-border-subtle bg-surface-secondary shrink-0"
         style={{
           paddingLeft: 'var(--vscode-space-3)',
           paddingRight: 'var(--vscode-space-3)',

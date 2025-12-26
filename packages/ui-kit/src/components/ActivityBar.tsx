@@ -95,7 +95,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
   
   return (
     <div
-      className="flex flex-col items-center h-full overflow-hidden bg-surface-elevated border-r border-border-subtle"
+      className="flex flex-col items-center h-full overflow-hidden bg-surface-elevated border-r border-border"
       style={{
         width: itemSize,
         minWidth: itemSize,
@@ -129,7 +129,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                   relative flex items-center justify-center
                   transition-colors duration-150 ease-out group
                   text-secondary focus:outline-none focus-visible:ring-1 focus-visible:ring-accent
-                  ${selected ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
+                  ${selected ? 'text-primary border-l-2 border-activity-bar-active-border' : 'hover:bg-surface-hover hover:text-primary'}
                 `}
                 style={{
                   width: itemSize,
@@ -152,7 +152,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
           
           {/* Bottom section - settings and other bottom icons */}
           <div
-            className="flex flex-col items-center border-t border-border-subtle"
+            className="flex flex-col items-center border-t border-border"
             style={{
               paddingTop: 'var(--vscode-space-2)',
               paddingBottom: 'var(--vscode-space-2)',
@@ -166,7 +166,7 @@ export function ActivityBar({ activeIcon, onIconClick }: ActivityBarProps) {
                   relative flex items-center justify-center
                   transition-colors duration-150 ease-out group
                   text-secondary focus:outline-none focus-visible:ring-1 focus-visible:ring-accent
-                  ${selected ? 'text-primary border-l-2 border-accent' : 'hover:bg-surface-hover hover:text-primary'}
+                  ${selected ? 'text-primary border-l-2 border-activity-bar-active-border' : 'hover:bg-surface-hover hover:text-primary'}
                 `}
                 style={{
                   width: itemSize,

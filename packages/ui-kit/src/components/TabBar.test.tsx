@@ -16,7 +16,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -33,7 +33,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="output"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -44,14 +44,14 @@ describe('TabBar', () => {
     expect(terminalTab).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('should call onTabChange when a tab is clicked', () => {
+  it('should call onChange when a tab is clicked', () => {
     const handleChange = vi.fn();
     
     render(
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -61,7 +61,7 @@ describe('TabBar', () => {
     expect(handleChange).toHaveBeenCalledWith('output');
   });
 
-  it('should not call onTabChange when disabled tab is clicked', () => {
+  it('should not call onChange when disabled tab is clicked', () => {
     const handleChange = vi.fn();
     const tabsWithDisabled: Tab[] = [
       { id: 'terminal', label: 'Terminal' },
@@ -73,7 +73,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={tabsWithDisabled}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -99,7 +99,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={tabsWithIcons}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -113,7 +113,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -130,7 +130,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="output"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -147,7 +147,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="problems"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -164,7 +164,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="problems"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -181,7 +181,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -203,7 +203,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={tabsWithDisabled}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -221,7 +221,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -232,3 +232,4 @@ describe('TabBar', () => {
     expect(tabs).toHaveLength(3);
   });
 });
+

@@ -258,9 +258,32 @@ export function CommandPalette({ isOpen, onClose, builtInCommands = [] }: Comman
         : searchQuery
           ? 'No files matched your search.'
           : 'Start typing to search workspace files.';
-  const footer = actionError
-    ? <span className="text-status-error">{actionError}</span>
-    : null;
+  const footer = (
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center gap-4">
+        {actionError && <span className="text-status-error">{actionError}</span>}
+        {!actionError && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-xs bg-surface-hover px-1.5 py-0.5 border border-border-subtle font-medium text-[10px]">↑↓</span>
+              <span>to navigate</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-xs bg-surface-hover px-1.5 py-0.5 border border-border-subtle font-medium text-[10px]">↵</span>
+              <span>to select</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-xs bg-surface-hover px-1.5 py-0.5 border border-border-subtle font-medium text-[10px]">esc</span>
+              <span>to dismiss</span>
+            </div>
+          </>
+        )}
+      </div>
+      <div className="text-[10px] opacity-50">
+        {isCommandMode ? 'Command Mode' : 'File Search'}
+      </div>
+    </div>
+  );
 
   return (
     <UiCommandPalette
@@ -280,13 +303,24 @@ export function CommandPalette({ isOpen, onClose, builtInCommands = [] }: Comman
       closeOnSelect={false}
       getItemLabel={(item) => item.searchText}
       getItemDisabled={(item) => (item.kind === 'command' ? !item.enabled : false)}
-      renderItem={({ item }) => {
+      renderItem={({ item, query }) => {
+        const highlight = (text: string) => {
+          if (!query) return text;
+          return text.split(new RegExp(`(${query})`, 'gi')).map((part, i) => (
+            part.toLowerCase() === query.toLowerCase() ? (
+              <mark key={i} className="bg-accent/30 text-primary rounded-xs px-0.5">{part}</mark>
+            ) : (
+              <span key={i}>{part}</span>
+            )
+          ));
+        };
+
         if (item.kind === 'command') {
           return (
             <div className="flex w-full items-center justify-between gap-4">
               <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-[13px] truncate">{item.label}</span>
-                <span className="text-[11px] text-tertiary truncate">{item.commandId}</span>
+                <span className="text-[13px] truncate">{highlight(item.label)}</span>
+                <span className="text-[11px] text-tertiary truncate">{highlight(item.commandId)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap rounded-sm border border-border-subtle bg-surface-elevated px-2 py-0.5 text-[11px] text-tertiary">
@@ -299,7 +333,7 @@ export function CommandPalette({ isOpen, onClose, builtInCommands = [] }: Comman
         return (
           <div className="flex w-full items-center justify-between gap-4">
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-[13px] truncate">{item.label}</span>
+              <span className="text-[13px] truncate">{highlight(item.label)}</span>
               <span className="text-[11px] text-tertiary">Workspace file</span>
             </div>
             <div className="flex items-center gap-2">

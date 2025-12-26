@@ -115,6 +115,8 @@
   --vscode-activityBar-width: 48px;
   --vscode-activityBar-iconSize: 24px;
   --vscode-tab-height: 35px;
+  --vscode-tab-minWidth: 120px;
+  --vscode-tab-maxWidth: 260px;
   --vscode-breadcrumbs-height: var(--vscode-list-rowHeight);
   --vscode-statusBar-height: 24px;
   --vscode-titleBar-height: 35px;

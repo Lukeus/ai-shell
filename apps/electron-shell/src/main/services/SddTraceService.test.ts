@@ -263,4 +263,57 @@ describe('SddTraceService', () => {
       indexBefore.latestParitySnapshot.untrackedFileChanges
     );
   });
+
+  it('rotates the ledger when it grows too large', async () => {
+    const previousMaxBytes = process.env.SDD_TRACE_MAX_BYTES;
+    const previousMaxLines = process.env.SDD_TRACE_MAX_LINES;
+    process.env.SDD_TRACE_MAX_BYTES = '300';
+    process.env.SDD_TRACE_MAX_LINES = '100000';
+
+    try {
+      const service = SddTraceService.getInstance();
+      await service.setEnabled(true);
+
+      const run = await service.startRun({
+        featureId: '140-sdd',
+        taskId: 'task-rotate',
+        inputs: [],
+      });
+
+      const filePath = path.join(tempWorkspace, 'src', 'rotate.txt');
+      await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.promises.writeFile(filePath, 'rotate', 'utf-8');
+
+      for (let i = 0; i < 8; i += 1) {
+        await service.recordFileChange({
+          path: filePath,
+          op: 'modified',
+          actor: 'human',
+        });
+      }
+
+      await service.stopRun();
+
+      const sddDir = path.join(tempWorkspace, '.ai-shell', 'sdd');
+      const ledgerFiles = fs
+        .readdirSync(sddDir)
+        .filter((name) => name.startsWith('trace-') && name.endsWith('.jsonl'));
+
+      expect(ledgerFiles.length).toBeGreaterThan(0);
+
+      const rebuilt = await service.rebuildIndexFromLedger();
+      expect(rebuilt.runsById[run.runId]).toBeDefined();
+    } finally {
+      if (previousMaxBytes === undefined) {
+        delete process.env.SDD_TRACE_MAX_BYTES;
+      } else {
+        process.env.SDD_TRACE_MAX_BYTES = previousMaxBytes;
+      }
+      if (previousMaxLines === undefined) {
+        delete process.env.SDD_TRACE_MAX_LINES;
+      } else {
+        process.env.SDD_TRACE_MAX_LINES = previousMaxLines;
+      }
+    }
+  });
 });
