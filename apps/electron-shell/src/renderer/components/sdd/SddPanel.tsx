@@ -166,7 +166,7 @@ export function SddPanel() {
   const [workflowCommand, setWorkflowCommand] = useState('');
   const [workflowRunId, setWorkflowRunId] = useState<string | null>(null);
   const [workflowStatus, setWorkflowStatus] = useState<
-    'idle' | 'running' | 'completed' | 'failed'
+    'idle' | 'running' | 'completed' | 'failed' | 'canceled'
   >('idle');
   const [workflowEvents, setWorkflowEvents] = useState<SddRunEvent[]>([]);
   const [workflowProposal, setWorkflowProposal] = useState<Proposal | null>(null);
@@ -285,8 +285,9 @@ export function SddPanel() {
       }
     };
 
-    const handleSettingsUpdated = (event: { detail?: { sdd?: { customCommands?: SddCustomCommand[] } } }) => {
-      applyCommands(event.detail?.sdd?.customCommands ?? []);
+    const handleSettingsUpdated = (event: { detail?: unknown }) => {
+      const detail = event.detail as any;
+      applyCommands(detail?.sdd?.customCommands ?? []);
     };
 
     void loadCommands();
@@ -330,7 +331,7 @@ export function SddPanel() {
       setIsLoadingTasks(true);
       setError(null);
       try {
-        const response = await window.api.fs.readFile({ path: selectedFeature.tasksPath });
+        const response = await window.api.fs.readFile({ path: selectedFeature.tasksPath! });
         if (!isMounted) return;
         const parsed = parseTasks(response.content ?? '');
         setTasks(parsed);
@@ -452,6 +453,10 @@ export function SddPanel() {
         setWorkflowStatus('failed');
         setWorkflowError(event.message);
       }
+      if (event.type === 'runCanceled') {
+        setWorkflowStatus('canceled');
+        setWorkflowError(event.message ?? 'Run canceled.');
+      }
     });
 
     return () => {
@@ -572,6 +577,8 @@ export function SddPanel() {
       ? 'Running'
       : workflowStatus === 'failed'
       ? 'Failed'
+      : workflowStatus === 'canceled'
+      ? 'Canceled'
       : workflowStatus === 'completed'
       ? 'Completed'
       : 'Idle';

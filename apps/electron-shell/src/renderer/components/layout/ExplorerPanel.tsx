@@ -42,9 +42,6 @@ export function ExplorerPanel() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleRetry = () => {
-    refresh();
-  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

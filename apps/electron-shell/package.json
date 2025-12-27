@@ -15,6 +15,7 @@
     "clean": "rm -rf dist out .vite"
   },
   "dependencies": {
+    "ajv": "^8.17.1",
     "electron-squirrel-startup": "1.0.1",
     "ignore": "5.3.1",
     "minimatch": "10.1.1",

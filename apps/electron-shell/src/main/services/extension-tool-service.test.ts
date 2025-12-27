@@ -5,13 +5,15 @@ import { ExtensionHostManager } from './extension-host-manager';
 describe('ExtensionToolService', () => {
   let toolService: ExtensionToolService;
   let mockExtensionHostManager: ExtensionHostManager;
+  let activateExtension: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockExtensionHostManager = {
       sendRequest: vi.fn(),
     } as unknown as ExtensionHostManager;
 
-    toolService = new ExtensionToolService(mockExtensionHostManager);
+    activateExtension = vi.fn().mockResolvedValue(undefined);
+    toolService = new ExtensionToolService(mockExtensionHostManager, activateExtension);
   });
 
   it('registers and lists tools', () => {
@@ -39,6 +41,10 @@ describe('ExtensionToolService', () => {
 
     expect(result.success).toBe(true);
     expect(result.result).toEqual({ ok: true });
+    expect(activateExtension).toHaveBeenCalledWith(
+      'acme.sample-extension',
+      'onTool:acme.sample-extension.echo'
+    );
     expect(mockExtensionHostManager.sendRequest).toHaveBeenCalledWith('tool.execute', {
       toolName: 'acme.sample-extension.echo',
       input: { message: 'hi' },

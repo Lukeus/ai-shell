@@ -7,6 +7,8 @@ import {
   type DiagSetSafeModeResponse,
   type DiagFatalEvent,
   type ErrorReport,
+  type JsonValue,
+  type PermissionCheckResult,
   type SddStatus,
   type TestForceCrashRendererResponse,
 } from 'packages-api-contracts';
@@ -268,12 +270,15 @@ const api: PreloadAPI = {
     enable: (request) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_ENABLE, request),
     disable: (request) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_DISABLE, request),
     uninstall: (request) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_UNINSTALL, request),
-    executeCommand: (command, args) =>
-      ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_EXECUTE_COMMAND, command, args),
+    executeCommand: (request) =>
+      invokeSafe<JsonValue>(IPC_CHANNELS.EXTENSIONS_EXECUTE_COMMAND, request),
     listCommands: () => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_LIST_COMMANDS),
     listViews: () => ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS),
-    requestPermission: (extensionId, scope) =>
-      ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_REQUEST_PERMISSION, extensionId, scope),
+    requestPermission: (request) =>
+      invokeSafe<PermissionCheckResult | null>(
+        IPC_CHANNELS.EXTENSIONS_REQUEST_PERMISSION,
+        request
+      ),
     listPermissions: (request) =>
       ipcRenderer.invoke(IPC_CHANNELS.EXTENSIONS_LIST_PERMISSIONS, request),
     revokePermissions: (request) =>

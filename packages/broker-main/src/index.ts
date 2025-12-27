@@ -1,29 +1,15 @@
-const {
+import {
+  AgentPolicyConfigSchema,
   JsonValueSchema,
   ToolCallEnvelopeSchema,
   ToolCallResultSchema,
-} = require('packages-api-contracts');
-
-type JsonValue = unknown;
-type ToolCallEnvelope = {
-  callId: string;
-  toolId: string;
-  requesterId: string;
-  runId: string;
-  input: JsonValue;
-  reason?: string;
-};
-type ToolCallResult = {
-  callId: string;
-  toolId: string;
-  runId: string;
-  ok: boolean;
-  durationMs: number;
-  output?: JsonValue;
-  error?: string;
-};
+  type JsonValue,
+  type ToolCallEnvelope,
+  type ToolCallResult,
+} from 'packages-api-contracts';
 import { ToolExecutor, ToolRegistry, type ToolDefinition } from 'packages-agent-tools';
 import { PolicyService } from './policy/PolicyService';
+import type { AgentPolicyConfig } from 'packages-api-contracts';
 
 export const TOOL_ERROR_CODES = {
   POLICY_DENIED: 'POLICY_DENIED',
@@ -59,6 +45,7 @@ export class BrokerMain {
   private readonly auditLogger?: AuditLogger;
   private readonly registry: ToolRegistry;
   private readonly executor: ToolExecutor;
+  private readonly runPolicyOverrides = new Map<string, AgentPolicyConfig>();
 
   constructor(options: BrokerMainOptions = {}) {
     this.policyService = options.policyService ?? new PolicyService();
@@ -96,9 +83,32 @@ export class BrokerMain {
     return this.registry.list().map((tool) => tool.id);
   }
 
+  public setRunPolicy(runId: string, policy?: AgentPolicyConfig | null): void {
+    if (!policy) {
+      this.runPolicyOverrides.delete(runId);
+      return;
+    }
+
+    const parsed = AgentPolicyConfigSchema.parse(policy);
+    const hasAllowlist = Array.isArray(parsed.allowlist) && parsed.allowlist.length > 0;
+    const hasDenylist = Array.isArray(parsed.denylist) && parsed.denylist.length > 0;
+    if (!hasAllowlist && !hasDenylist) {
+      this.runPolicyOverrides.delete(runId);
+      return;
+    }
+
+    this.runPolicyOverrides.set(runId, parsed);
+  }
+
+  public clearRunPolicy(runId: string): void {
+    this.runPolicyOverrides.delete(runId);
+  }
+
   public async handleAgentToolCall(envelope: ToolCallEnvelope): Promise<ToolCallResult> {
     const validated = ToolCallEnvelopeSchema.parse(envelope);
-    const decision = this.policyService.evaluateToolCall(validated);
+    const runPolicy = this.runPolicyOverrides.get(validated.runId);
+    const mergedPolicyOverride = this.mergePolicyOverrides(runPolicy, validated.policyOverride);
+    const decision = this.policyService.evaluateToolCall(validated, mergedPolicyOverride);
 
     this.auditLogger?.logAgentToolAccess({
       runId: validated.runId,
@@ -109,7 +119,12 @@ export class BrokerMain {
     });
 
     if (!decision.allowed) {
-      return this.buildErrorResult(validated, TOOL_ERROR_CODES.POLICY_DENIED, 0);
+      return this.buildErrorResult(
+        validated,
+        TOOL_ERROR_CODES.POLICY_DENIED,
+        0,
+        decision.reason
+      );
     }
 
     const startedAt = Date.now();
@@ -175,7 +190,8 @@ export class BrokerMain {
   private buildErrorResult(
     envelope: ToolCallEnvelope,
     error: ToolErrorCode,
-    durationMs: number
+    durationMs: number,
+    reason?: string
   ): ToolCallResult {
     const result: ToolCallResult = {
       callId: envelope.callId,
@@ -186,12 +202,50 @@ export class BrokerMain {
       durationMs,
     };
 
+    if (error === TOOL_ERROR_CODES.POLICY_DENIED) {
+      result.output = {
+        denied: true,
+        ...(reason ? { reason } : {}),
+      };
+    }
+
     return ToolCallResultSchema.parse(result);
   }
 
   private elapsedMs(startedAt: number): number {
     const elapsed = Date.now() - startedAt;
     return elapsed < 0 ? 0 : Math.round(elapsed);
+  }
+
+  private mergePolicyOverrides(
+    runPolicy?: AgentPolicyConfig,
+    callPolicy?: AgentPolicyConfig | null
+  ): AgentPolicyConfig | undefined {
+    if (!runPolicy && !callPolicy) {
+      return undefined;
+    }
+
+    const run = runPolicy ? AgentPolicyConfigSchema.parse(runPolicy) : null;
+    const call = callPolicy ? AgentPolicyConfigSchema.parse(callPolicy) : null;
+
+    const denylist = [
+      ...(run?.denylist ?? []),
+      ...(call?.denylist ?? []),
+    ];
+
+    const runAllow = run?.allowlist ?? null;
+    const callAllow = call?.allowlist ?? null;
+    const allowlist =
+      runAllow && callAllow
+        ? runAllow.filter((toolId) => callAllow.includes(toolId))
+        : runAllow ?? callAllow;
+
+    const merged: AgentPolicyConfig = {
+      ...(allowlist ? { allowlist } : {}),
+      ...(denylist.length > 0 ? { denylist } : {}),
+    };
+
+    return AgentPolicyConfigSchema.parse(merged);
   }
 }
 

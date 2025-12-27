@@ -67,11 +67,11 @@ async function main() {
   // Initialize extension system components
   const loader = new ExtensionLoader();
   const activationController = new ActivationController(loader);
-  const contributionRegistry = new ContributionRegistry();
-  const extensionRuntime = new ExtensionRuntime(rpcClient);
   const commandManager = new CommandManager();
   const viewManager = new ViewManager();
   const toolManager = new ToolManager();
+  const contributionRegistry = new ContributionRegistry();
+  const extensionRuntime = new ExtensionRuntime(commandManager, viewManager, toolManager);
 
   // JSON-RPC method handlers
   

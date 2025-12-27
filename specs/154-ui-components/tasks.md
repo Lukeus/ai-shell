@@ -183,12 +183,42 @@
 - `packages/ui-kit/src/components/Breadcrumbs.tsx`
 - `apps/electron-shell/src/renderer/components/editor/BreadcrumbsBar.tsx`
 - `specs/154-ui-components/screenshots/task-10-tabs-breadcrumbs.png`
-**Work**:
+  **Work**:
 - Adjust tab spacing, icon sizing, and close affordances to match VS Code density.
 - Refine breadcrumb separators, icon sizing, and truncation to match VS Code styling.
-**Verify**:
+  **Verify**:
 - Manual: compare tabs + breadcrumbs against VS Code screenshot.
-**Invariants**:
+  **Invariants**:
 - No changes to tab/breadcrumb click behavior.
-**Done =**
+  **Done =**
 - Tabs and breadcrumbs visually align with VS Code and have a screenshot.
+
+----
+## Task 11 - Refactor Command Palette to adhere to AGENTS.md guardrails
+**Effort**: 4-8h
+**Files**:
+- `packages/ui-kit/src/components/CommandPalette.tsx`
+- `packages/ui-kit/src/components/CommandPalette.view.tsx`
+- `packages/ui-kit/src/components/useCommandPalette.ts`
+- `packages/ui-kit/src/components/CommandPalette.types.ts`
+- `apps/electron-shell/src/renderer/components/command-palette/CommandPalette.tsx`
+- `apps/electron-shell/src/renderer/components/command-palette/useCommandPaletteItems.ts`
+- `apps/electron-shell/src/renderer/components/command-palette/CommandPaletteItem.view.tsx`
+**Work**:
+- **ui-kit**:
+  - Split `CommandPalette.tsx` (monolith) into presentational (`.view.tsx`), state/logic (`.ts` hook), and types.
+  - Reduce `CommandPalette` function size to < 80 lines by extracting sub-components (Input, List, Groups).
+  - Reduce props surface to <= 12 by using a config object for optional renderers/hooks.
+- **electron-shell**:
+  - Extract file indexing and command aggregation from the UI component into `useCommandPaletteItems.ts`.
+  - Extract complex item rendering into `CommandPaletteItem.view.tsx`.
+  - Ensure the main component is focused on orchestration, not heavy async logic or complex UI rendering.
+**Verify**:
+- `pnpm --filter packages-ui-kit test`
+- Manual: verify all command palette functionality (command mode, file search, keyboard nav) remains identical.
+**Invariants**:
+- No functional changes or UI regressions.
+- No new features.
+**Done =**
+- Files and functions are within `AGENTS.md` budgets.
+- All tests pass.

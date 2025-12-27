@@ -21,7 +21,7 @@ const loadPreload = async () => {
   const electronCall = exposeInMainWorldMock.mock.calls.find((call) => call[0] === 'electron');
   return electronCall?.[1] as {
     ipcRenderer: {
-      on: (channel: string, handler: (...args: unknown[]) => void) => void;
+      on: (channel: string, handler: (...args: unknown[]) => void) => (() => void);
       removeListener: (channel: string, handler: (...args: unknown[]) => void) => void;
     };
   };

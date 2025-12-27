@@ -27,6 +27,12 @@ export const ToolCallEnvelopeSchema = z.object({
   runId: z.string().uuid(),
   input: JsonValueSchema,
   reason: z.string().optional(),
+  policyOverride: z
+    .object({
+      allowlist: z.array(z.string()).optional(),
+      denylist: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export type ToolCallEnvelope = z.infer<typeof ToolCallEnvelopeSchema>;

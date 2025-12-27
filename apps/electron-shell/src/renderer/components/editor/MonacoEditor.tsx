@@ -284,11 +284,12 @@ export function MonacoEditor({
     if (!monaco || !editorRef.current || editor) return;
 
     // Set default compiler options for TypeScript
-    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      target: monaco.languages.typescript.ScriptTarget.ES2022,
-      module: monaco.languages.typescript.ModuleKind.ESNext,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-      jsx: monaco.languages.typescript.JsxEmit.React,
+    const typescriptDefaults = (monaco.languages.typescript as any).typescriptDefaults;
+    typescriptDefaults.setCompilerOptions({
+      target: (monaco.languages.typescript as any).ScriptTarget.ES2022,
+      module: (monaco.languages.typescript as any).ModuleKind.ESNext,
+      moduleResolution: (monaco.languages.typescript as any).ModuleResolutionKind.NodeJs,
+      jsx: (monaco.languages.typescript as any).JsxEmit.React,
       allowNonTsExtensions: true,
       resolveJsonModule: true,
       esModuleInterop: true,
@@ -298,7 +299,7 @@ export function MonacoEditor({
     });
 
     // Enable eager model sync to help with cross-model diagnostics
-    monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+    typescriptDefaults.setEagerModelSync(true);
 
     const uri = monaco.Uri.file(filePath);
     let model = monaco.editor.getModel(uri);

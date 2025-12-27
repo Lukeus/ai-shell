@@ -18,6 +18,7 @@ export * from './types/connections';
 export * from './types/diagnostics';
 export * from './types/result';
 export * from './types/extension-api';
+export * from './types/extension-commands';
 export * from './types/extension-contributions';
 export * from './types/extension-events';
 export * from './types/extension-host-protocol';

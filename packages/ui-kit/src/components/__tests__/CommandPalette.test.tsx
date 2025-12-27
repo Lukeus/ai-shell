@@ -39,10 +39,13 @@ describe('CommandPalette', () => {
     const input = screen.getByRole('combobox');
     fireEvent.change(input, { target: { value: '> open f' } });
 
-    expect(screen.getByText(/Open/i)).toBeInTheDocument();
-    expect(screen.getByText(/File/i)).toBeInTheDocument();
-    expect(screen.getByText(/Folder/i)).toBeInTheDocument();
-    expect(screen.queryByText('Close Window')).not.toBeInTheDocument();
+    const options = screen.getAllByRole('option');
+    const labels = options.map((option) => option.textContent ?? '');
+
+    expect(options).toHaveLength(2);
+    expect(labels.some((label) => label.includes('Open File'))).toBe(true);
+    expect(labels.some((label) => label.includes('Open Folder'))).toBe(true);
+    expect(labels.some((label) => label.includes('Close Window'))).toBe(false);
   });
 
   it('calls onSelect and onClose when an option is chosen', () => {
@@ -58,8 +61,12 @@ describe('CommandPalette', () => {
       />
     );
 
-    const option = screen.getAllByRole('option')[0];
-    fireEvent.click(option);
+    const option = screen.getAllByRole('option').find((node) =>
+      node.textContent?.includes('Open File')
+    );
+
+    expect(option).toBeTruthy();
+    fireEvent.mouseDown(option as HTMLElement);
 
     expect(onSelect).toHaveBeenCalledWith(items[0]);
     expect(onClose).toHaveBeenCalled();
@@ -72,7 +79,9 @@ describe('CommandPalette', () => {
         onClose={() => undefined}
         items={items}
         onSelect={() => undefined}
-        getItemDisabled={(item) => Boolean(item.disabled)}
+        config={{
+          getItemDisabled: (item) => Boolean(item.disabled),
+        }}
       />
     );
 

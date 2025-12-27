@@ -1,4 +1,6 @@
 import { test, expect } from '../fixtures/electron-test-app';
+import * as fs from 'fs';
+import * as path from 'path';
 
 test.describe('Problems Panel', () => {
   test('renders diagnostics updates', async ({ page }) => {
@@ -43,5 +45,11 @@ test.describe('Problems Panel', () => {
     await expect(page.getByText('src/main.ts')).toBeVisible();
     await expect(page.getByText('12')).toBeVisible();
     await expect(page.getByText('TypeScript')).toBeVisible();
+
+    if (process.env.CAPTURE_SCREENSHOTS) {
+      const outputPath = path.join('docs', 'screenshots', 'problems-panel.png');
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      await page.screenshot({ path: outputPath, fullPage: true });
+    }
   });
 });

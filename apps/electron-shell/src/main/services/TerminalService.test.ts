@@ -218,7 +218,7 @@ describe('TerminalService', () => {
       terminalService.createSession(request, mockWorkspaceRoot);
 
       // Assert
-      const spawnCall = mockSpawn.mock.calls[0];
+      const spawnCall = mockSpawn.mock.calls[0] as any;
       const options = spawnCall[2];
       expect(options.env).toBeDefined();
       expect(options.env?.CUSTOM_VAR).toBe('value');

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "packages-agent-tools": "workspace:*",
+    "packages-agent-policy": "workspace:*",
     "packages-api-contracts": "workspace:*",
     "zod": "^3.24.1"
   }

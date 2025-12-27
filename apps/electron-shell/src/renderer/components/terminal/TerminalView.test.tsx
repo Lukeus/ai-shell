@@ -28,11 +28,13 @@ vi.mock('xterm', () => ({
     write: vi.fn(),
     onData: vi.fn(() => ({ dispose: vi.fn() })),
     dispose: vi.fn(),
-    setOption: vi.fn(),
     clear: vi.fn(),
     cols: 80,
     rows: 24,
     loadAddon: vi.fn(),
+    options: {
+      theme: {},
+    },
   })),
 }));
 

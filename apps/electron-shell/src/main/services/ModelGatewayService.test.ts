@@ -35,11 +35,11 @@ describe('ModelGatewayService', () => {
     const service = new ModelGatewayService({
       getSettings: () => ({
         appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
-        editor: { wordWrap: false, lineNumbers: true, minimap: true, breadcrumbsEnabled: true },
+        editor: { fontSize: 14, wordWrap: false, lineNumbers: true, minimap: true, breadcrumbsEnabled: true, tabSize: 2 },
         terminal: { defaultShell: 'default' },
         extensions: { autoUpdate: true, enableTelemetry: false },
         agents: { defaultConnectionId: baseConnection.metadata.id },
-        sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false },
+        sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
       }),
       listConnections: () => [baseConnection],
       evaluateAccess: () => true,
@@ -64,11 +64,11 @@ describe('ModelGatewayService', () => {
     const service = new ModelGatewayService({
       getSettings: () => ({
         appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
-        editor: { wordWrap: false, lineNumbers: true, minimap: true, breadcrumbsEnabled: true },
+        editor: { fontSize: 14, wordWrap: false, lineNumbers: true, minimap: true, breadcrumbsEnabled: true, tabSize: 2 },
         terminal: { defaultShell: 'default' },
         extensions: { autoUpdate: true, enableTelemetry: false },
         agents: { defaultConnectionId: null },
-        sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false },
+        sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
       }),
       listConnections: () => [
         {

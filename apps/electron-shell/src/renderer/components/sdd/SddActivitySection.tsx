@@ -31,7 +31,7 @@ const formatEventLabel = (event: SddRunEvent): string => {
     case 'runFailed':
       return `Run failed: ${event.message}`;
     default:
-      return event.type;
+      return (event as any).type;
   }
 };
 

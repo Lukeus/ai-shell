@@ -571,7 +571,8 @@ export class SddTraceService {
     const validated: SddDocRef[] = [];
     for (const docRef of docRefs) {
       const resolved = await resolvePathWithinWorkspace(docRef.path, workspaceRoot);
-      validated.push({ ...docRef, path: resolved });
+      const hash = await this.computeFileHash(resolved);
+      validated.push({ ...docRef, path: resolved, hash });
     }
     return validated;
   }

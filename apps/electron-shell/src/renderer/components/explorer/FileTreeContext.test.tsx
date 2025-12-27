@@ -600,7 +600,7 @@ describe('FileTreeContext', () => {
         await result.current.refresh();
       });
 
-      expect(mockApi.fs.readDirectory).toHaveBeenCalledTimes(2);
+      expect(mockApi.fs.readDirectory).toHaveBeenCalledTimes(3);
     });
   });
 });

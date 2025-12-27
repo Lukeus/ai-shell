@@ -36,7 +36,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   public componentDidCatch(error: Error, info: React.ErrorInfo): void {
     if (typeof window?.api?.diagnostics?.reportError === 'function') {
-      void window.api.diagnostics.reportError(buildErrorReport(error, info.componentStack));
+      void window.api.diagnostics.reportError(buildErrorReport(error, info.componentStack || undefined));
     }
   }
 

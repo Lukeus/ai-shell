@@ -87,7 +87,7 @@ export function SearchPanel() {
     }
   }, [query, searchRequest, workspace]);
 
-  const runReplace = useCallback(async (request: ReplaceRequest, scopeLabel: ReplaceSummary) => {
+  const runReplace = useCallback(async (request: ReplaceRequest, scopeLabel: { scope: 'workspace' | 'file'; target?: string }) => {
     setError(null);
     try {
       const response = await window.api.search.replace(request);

@@ -49,6 +49,7 @@ export function Terminal({ sessionId }: TerminalProps) {
   const [xterm, setXterm] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [fitAddon, setFitAddon] = useState<any>(null);
+  const fitAddonRef = useRef<any>(null);
   const [error, setError] = useState<string | null>(null);
   const lastOutputLengthRef = useRef(0);
   
@@ -93,6 +94,7 @@ export function Terminal({ sessionId }: TerminalProps) {
     let term: any;
     let disposable: { dispose: () => void } | null = null;
     try {
+      console.log(`[DEBUG_LOG] Creating terminal instance for session ${sessionId}`);
       term = new xterm.Terminal({
         cursorBlink: true,
         fontSize: 14,
@@ -104,6 +106,7 @@ export function Terminal({ sessionId }: TerminalProps) {
 
       // Create fit addon
       const fit = new fitAddon();
+      fitAddonRef.current = fit;
       term.loadAddon(fit);
 
       // Open terminal in DOM
@@ -138,6 +141,7 @@ export function Terminal({ sessionId }: TerminalProps) {
     }
 
     return () => {
+      console.log(`[DEBUG_LOG] Disposing terminal instance for session ${sessionId}`);
       disposable?.dispose();
       term?.dispose();
     };
@@ -147,7 +151,7 @@ export function Terminal({ sessionId }: TerminalProps) {
     if (!terminal) return;
 
     const applyTheme = () => {
-      terminal.setOption('theme', buildTerminalTheme());
+      terminal.options.theme = buildTerminalTheme();
     };
 
     applyTheme();
@@ -187,11 +191,13 @@ export function Terminal({ sessionId }: TerminalProps) {
     
     const output = outputs.get(sessionId);
     if (typeof output !== 'string') {
+      console.log(`[DEBUG_LOG] No output for session ${sessionId}`);
       return;
     }
 
     if (output.length === 0) {
       if (lastOutputLengthRef.current > 0 && typeof terminal.clear === 'function') {
+        console.log(`[DEBUG_LOG] Clearing terminal for session ${sessionId} because output is empty`);
         terminal.clear();
       }
       lastOutputLengthRef.current = 0;
@@ -199,11 +205,13 @@ export function Terminal({ sessionId }: TerminalProps) {
     }
 
     if (output.length < lastOutputLengthRef.current) {
+      console.log(`[DEBUG_LOG] Resetting lastOutputLengthRef for session ${sessionId} (output.length: ${output.length}, last: ${lastOutputLengthRef.current})`);
       lastOutputLengthRef.current = 0;
     }
 
     const delta = output.slice(lastOutputLengthRef.current);
     if (delta) {
+      console.log(`[DEBUG_LOG] Writing ${delta.length} chars to terminal for session ${sessionId}`);
       terminal.write(delta);
       lastOutputLengthRef.current = output.length;
     }
@@ -211,14 +219,11 @@ export function Terminal({ sessionId }: TerminalProps) {
   
   // Handle resize events
   useEffect(() => {
-    if (!terminal || !fitAddon) return;
-
-    const fit = new fitAddon();
-    terminal.loadAddon(fit);
+    if (!terminal || !fitAddonRef.current) return;
 
     const handleResize = () => {
       try {
-        fit.fit();
+        fitAddonRef.current.fit();
         // Send new size to backend
         resizeSession(sessionId, terminal.cols, terminal.rows).catch(err => {
           console.error('Failed to resize terminal:', err);

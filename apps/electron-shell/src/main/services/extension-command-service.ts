@@ -31,16 +31,23 @@ export interface RegisteredCommand {
   extensionId: string;
 }
 
+type ExtensionActivationHandler = (extensionId: string, event?: string) => Promise<void>;
+
 /**
  * ExtensionCommandService manages command registration and execution.
  */
 export class ExtensionCommandService {
   private extensionHostManager: ExtensionHostManager;
   private commands: Map<string, RegisteredCommand>;
+  private activateExtension?: ExtensionActivationHandler;
 
-  constructor(extensionHostManager: ExtensionHostManager) {
+  constructor(
+    extensionHostManager: ExtensionHostManager,
+    activateExtension?: ExtensionActivationHandler
+  ) {
     this.extensionHostManager = extensionHostManager;
     this.commands = new Map();
+    this.activateExtension = activateExtension;
   }
 
   /**
@@ -96,6 +103,10 @@ export class ExtensionCommandService {
     }
 
     try {
+      if (this.activateExtension) {
+        await this.activateExtension(command.extensionId, `onCommand:${commandId}`);
+      }
+
       // Execute command via Extension Host with timeout
       const result = await Promise.race([
         this.extensionHostManager.sendRequest('command.execute', {
@@ -130,6 +141,13 @@ export class ExtensionCommandService {
    */
   listCommands(): RegisteredCommand[] {
     return Array.from(this.commands.values());
+  }
+
+  /**
+   * Reset all registered commands (used during contribution sync).
+   */
+  reset(): void {
+    this.commands.clear();
   }
 
   /**

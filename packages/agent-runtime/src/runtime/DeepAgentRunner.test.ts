@@ -172,9 +172,7 @@ describe('DeepAgentRunner', () => {
       reason: 'write to protected path',
     };
 
-    await expect(runner.startRun(runId, { goal: 'Write file' }, [deniedCall])).rejects.toThrow(
-      'POLICY_DENIED'
-    );
+    await runner.startRun(runId, { goal: 'Write file' }, [deniedCall]);
 
     const toolResultEvents = events.filter((e) => e.type === 'tool-result');
     expect(toolResultEvents.length).toBe(1);
@@ -183,9 +181,9 @@ describe('DeepAgentRunner', () => {
       'POLICY_DENIED'
     );
 
-    // Verify status shows failed after a denied tool call
+    // Verify status completes; denial is recoverable by default.
     const statusEvents = events.filter((e) => e.type === 'status');
-    expect(statusEvents[statusEvents.length - 1]).toMatchObject({ status: 'failed' });
+    expect(statusEvents[statusEvents.length - 1]).toMatchObject({ status: 'completed' });
   });
 
   it('invokes model.generate when no tool calls are provided', async () => {
@@ -201,9 +199,24 @@ describe('DeepAgentRunner', () => {
       })),
     };
 
+    type AgentFactory = NonNullable<
+      ConstructorParameters<typeof DeepAgentRunner>[0]['createAgent']
+    >;
+    const createAgent = (({
+      model,
+    }: {
+      model: { invoke: (input: unknown) => Promise<unknown> };
+    }) =>
+      ({
+        streamEvents: async function* () {
+          await model.invoke('Summarize changes');
+        },
+      })) as unknown as AgentFactory;
+
     const runner = new DeepAgentRunner({
       toolExecutor,
       onEvent: (event) => events.push(event),
+      createAgent,
     });
 
     const runId = randomUUID();
@@ -226,6 +239,59 @@ describe('DeepAgentRunner', () => {
 
     const types = events.map((event) => event.type);
     expect(types).toEqual(['status', 'tool-call', 'tool-result', 'log', 'status']);
+  });
+
+  it('emits plan and todo events from write_todos updates', async () => {
+    const events: AgentEvent[] = [];
+    const toolExecutor = {
+      executeToolCall: vi.fn(async (envelope: ToolCallEnvelope) => ({
+        callId: envelope.callId,
+        toolId: envelope.toolId,
+        runId: envelope.runId,
+        ok: true,
+        output: { ok: true },
+        durationMs: 1,
+      })),
+    };
+
+    type AgentFactory = NonNullable<
+      ConstructorParameters<typeof DeepAgentRunner>[0]['createAgent']
+    >;
+    const createAgent = (() =>
+      ({
+        streamEvents: async function* () {
+          yield {
+            event: 'on_tool_start',
+            name: 'write_todos',
+            run_id: 'todo-run',
+            tags: [],
+            metadata: {},
+            data: {
+              input: {
+                todos: [
+                  { content: 'Scan repo', status: 'in_progress' },
+                  { content: 'Summarize findings', status: 'pending' },
+                ],
+              },
+            },
+          };
+        },
+      })) as unknown as AgentFactory;
+
+    const runner = new DeepAgentRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+      createAgent,
+    });
+
+    const runId = randomUUID();
+    await runner.startRun(runId, { goal: 'Review code' });
+
+    const planEvent = events.find((event) => event.type === 'plan');
+    const todoEvents = events.filter((event) => event.type === 'todo-update');
+
+    expect(planEvent).toBeDefined();
+    expect(todoEvents.length).toBe(2);
   });
 
   it('emits tool-call events with input data for storage-layer redaction', async () => {

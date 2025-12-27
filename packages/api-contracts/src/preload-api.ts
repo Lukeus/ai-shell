@@ -122,13 +122,18 @@ import type {
   ExtensionStateChangeEvent,
 } from './types/extension-events';
 import type {
+  ExtensionExecuteCommandRequest,
+} from './types/extension-commands';
+import type {
   CommandContribution,
   ViewContribution,
 } from './types/extension-contributions';
 import type {
-  PermissionScope,
+  PermissionRequest,
+  PermissionCheckResult,
   PermissionGrant,
 } from './types/extension-permissions';
+import type { JsonValue } from './types/agent-tools';
 import type { WindowState } from './types/window-state';
 
 /**
@@ -826,16 +831,14 @@ export interface PreloadAPI {
 
     /**
      * Executes an extension command.
-     * 
+     *
      * Main process routes to Extension Host, which executes the command
-     * and returns the result.
-     * 
-     * @param command - Command identifier (e.g., "extension.commandName")
-     * @param args - Optional command arguments
-     * @returns Promise resolving to command result (type depends on command)
-     * @throws Error if command not found, extension not active, or execution fails
+     * and returns the result in a Result envelope.
+     *
+     * @param request - Command identifier and optional args
+     * @returns Result with the command result (JsonValue) or error info
      */
-    executeCommand(command: string, args?: unknown[]): Promise<unknown>;
+    executeCommand(request: ExtensionExecuteCommandRequest): Promise<Result<JsonValue>>;
 
     /**
      * Lists all available extension commands.
@@ -853,14 +856,15 @@ export interface PreloadAPI {
 
     /**
      * Requests a permission for an extension.
-     * 
+     *
      * Shows permission consent dialog to user.
-     * 
-     * @param extensionId - Extension requesting permission
-     * @param scope - Permission scope to request
-     * @returns Promise resolving to true if granted, false if denied
+     *
+     * @param request - Permission request (extensionId, scope, optional reason)
+     * @returns Result with permission check result, or null if user decision needed
      */
-    requestPermission(extensionId: string, scope: PermissionScope): Promise<boolean>;
+    requestPermission(
+      request: PermissionRequest
+    ): Promise<Result<PermissionCheckResult | null>>;
 
     /**
      * Lists all permissions for an extension.

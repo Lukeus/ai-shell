@@ -14,12 +14,18 @@ const buildContextFiles = (featureId: string): FileMap => ({
   'docs/architecture/architecture.md': 'architecture',
 });
 
+const buildBaseContextFiles = (): FileMap => ({
+  'memory/constitution.md': 'constitution',
+  'memory/context/00-overview.md': 'overview',
+  'docs/architecture/architecture.md': 'architecture',
+});
+
 const buildContextFilesForRoot = (featureRoot: string): FileMap => ({
   'memory/constitution.md': 'constitution',
   'memory/context/00-overview.md': 'overview',
-  `${featureRoot}/spec.md`: 'Constitution alignment: yes\nspec',
-  `${featureRoot}/plan.md`: 'Constitution alignment: yes\nplan',
-  `${featureRoot}/tasks.md`: 'Constitution alignment: yes\ntasks',
+  [`${featureRoot}/spec.md`]: 'Constitution alignment: yes\nspec',
+  [`${featureRoot}/plan.md`]: 'Constitution alignment: yes\nplan',
+  [`${featureRoot}/tasks.md`]: 'Constitution alignment: yes\ntasks',
   'docs/architecture/architecture.md': 'architecture',
 });
 
@@ -92,6 +98,28 @@ describe('SddWorkflowRunner', () => {
       'runCompleted',
     ]);
     expect(events[2]).toMatchObject({ type: 'stepStarted', step: 'spec' });
+  });
+
+  it('allows /spec when feature docs do not exist yet', async () => {
+    const featureId = '999-new-feature';
+    const toolExecutor = createToolExecutor(buildBaseContextFiles(), 'Spec output');
+    const events: SddRunEvent[] = [];
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+    });
+
+    const runId = randomUUID();
+    await runner.startRun(runId, { featureId, goal: 'Bootstrap spec', step: 'spec' });
+
+    const proposalEvent = events.find((event) => event.type === 'proposalReady');
+    expect(proposalEvent?.type).toBe('proposalReady');
+    if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.writes[0]).toMatchObject({
+        path: `specs/${featureId}/spec.md`,
+        content: 'Spec output',
+      });
+    }
   });
 
   it('fails when required context files are missing', async () => {
@@ -200,5 +228,31 @@ describe('SddWorkflowRunner', () => {
       expect(proposalEvent.proposal.writes).toHaveLength(2);
       expect(proposalEvent.proposal.summary.filesChanged).toBe(2);
     }
+  });
+
+  it('emits runCanceled when cancel is requested', async () => {
+    const featureId = '151-sdd-workflow';
+    const deferred: { resolve: () => void } = { resolve: () => undefined };
+    const contextLoader = () =>
+      new Promise<{ files: Map<string, string> }>((resolve) => {
+        deferred.resolve = () => resolve({ files: new Map(Object.entries(buildBaseContextFiles())) });
+      });
+
+    const toolExecutor = createToolExecutor(buildBaseContextFiles(), 'Spec output');
+    const events: SddRunEvent[] = [];
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+      contextLoader: async (...args) => contextLoader(...args),
+    });
+
+    const runId = randomUUID();
+    const runPromise = runner.startRun(runId, { featureId, goal: 'Cancel me', step: 'spec' });
+    runner.controlRun({ runId, action: 'cancel', reason: 'User requested' });
+    deferred.resolve();
+    await runPromise;
+
+    const cancelEvent = events.find((event) => event.type === 'runCanceled');
+    expect(cancelEvent?.type).toBe('runCanceled');
   });
 });

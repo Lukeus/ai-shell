@@ -15,10 +15,12 @@ import { ExtensionViewService } from './services/extension-view-service';
 import { ExtensionToolService } from './services/extension-tool-service';
 import { PermissionService } from './services/permission-service';
 import { ExtensionStateManager } from './services/extension-state-manager';
+import { ExtensionActivationService } from './services/ExtensionActivationService';
 import { AgentHostManager } from './services/agent-host-manager';
 import { auditService } from './services/AuditService';
 import * as brokerMainModule from 'packages-broker-main';
 import { IPC_CHANNELS } from 'packages-api-contracts';
+import { workspaceService } from './services/WorkspaceService';
 // SettingsService is initialized lazily when first accessed via IPC handlers
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -38,6 +40,7 @@ let extensionViewService: ExtensionViewService | null = null;
 let extensionToolService: ExtensionToolService | null = null;
 let permissionService: PermissionService | null = null;
 let extensionStateManager: ExtensionStateManager | null = null;
+let extensionActivationService: ExtensionActivationService | null = null;
 let agentHostManager: AgentHostManager | null = null;
 let stableRunTimer: NodeJS.Timeout | null = null;
 let isAppQuitting = false;
@@ -246,7 +249,7 @@ app.on('ready', () => {
   // P2: Validates manifests against ExtensionManifestSchema
   // P3: No secrets stored in registry
   extensionRegistry = new ExtensionRegistry(extensionsDir);
-  extensionRegistry.initialize().catch((error) => {
+  const extensionRegistryReady = extensionRegistry.initialize().catch((error) => {
     console.error('[Main] Failed to initialize Extension Registry:', error);
   });
   
@@ -262,23 +265,46 @@ app.on('ready', () => {
   // Task 9: Track and broadcast extension state changes
   extensionStateManager = new ExtensionStateManager();
 
-  if (!safeModeEnabled) {
+  const isTestEnv = process.env.NODE_ENV === 'test';
+
+  if (!safeModeEnabled && !isTestEnv) {
+    if (!extensionRegistry) {
+      console.error('[Main] Extension Registry not initialized.');
+      return;
+    }
+
     extensionHostManager = new ExtensionHostManager({
       extensionHostPath,
       extensionsDir,
       stateManager: extensionStateManager,
     });
 
+    extensionActivationService = new ExtensionActivationService({
+      extensionRegistry,
+      extensionHostManager,
+      workspaceService,
+      extensionsDir,
+    });
+
     // Initialize Extension Command Service
-    extensionCommandService = new ExtensionCommandService(extensionHostManager);
+    extensionCommandService = new ExtensionCommandService(
+      extensionHostManager,
+      (extensionId, event) => extensionActivationService?.ensureActivated(extensionId, event)
+    );
 
     // Initialize Extension View Service
     // Task 8: View aggregation and rendering
-    extensionViewService = new ExtensionViewService(extensionHostManager);
+    extensionViewService = new ExtensionViewService(
+      extensionHostManager,
+      (extensionId, event) => extensionActivationService?.ensureActivated(extensionId, event)
+    );
 
     // Initialize Extension Tool Service
     // Task 8: Tool aggregation and execution for Agent Host
-    extensionToolService = new ExtensionToolService(extensionHostManager);
+    extensionToolService = new ExtensionToolService(
+      extensionHostManager,
+      (extensionId, event) => extensionActivationService?.ensureActivated(extensionId, event)
+    );
 
     const agentHostPath = resolveAgentHostPath();
     const BrokerMain = brokerMainModule.BrokerMain;
@@ -301,9 +327,26 @@ app.on('ready', () => {
 
     // Start Extension Host (will be lazy-loaded when needed)
     // For now, we start it on app launch. Later tasks will implement lazy loading.
-    extensionHostManager.start().catch((error) => {
-      console.error('[Main] Failed to start Extension Host:', error);
-    });
+    extensionHostManager
+      .start()
+      .then(async () => {
+        if (!extensionActivationService || !extensionCommandService || !extensionViewService || !extensionToolService) {
+          return;
+        }
+        await extensionRegistryReady;
+        await extensionActivationService.registerEnabledExtensions();
+        await extensionActivationService.syncContributions({
+          commands: extensionCommandService,
+          views: extensionViewService,
+          tools: extensionToolService,
+        });
+        await extensionActivationService.activateStartupExtensions();
+      })
+      .catch((error) => {
+        console.error('[Main] Failed to start Extension Host:', error);
+      });
+  } else if (isTestEnv) {
+    console.warn('[Main] Test environment: extension and agent hosts are disabled.');
   } else {
     console.warn('[Main] Safe Mode enabled: extension and agent hosts are disabled.');
   }

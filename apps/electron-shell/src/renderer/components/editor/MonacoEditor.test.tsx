@@ -115,8 +115,9 @@ describe('MonacoEditor', () => {
     if (!global.ResizeObserver) {
       global.ResizeObserver = class {
         observe() {}
+        unobserve() {}
         disconnect() {}
-      };
+      } as any;
     }
   });
 

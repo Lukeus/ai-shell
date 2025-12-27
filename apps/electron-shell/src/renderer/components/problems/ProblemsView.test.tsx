@@ -34,6 +34,10 @@ beforeEach(() => {
 
   mockDiagnosticsApi.onUpdate.mockReturnValue(vi.fn());
   mockDiagnosticsApi.onSummary.mockReturnValue(vi.fn());
+  mockDiagnosticsApi.list.mockResolvedValue({
+    diagnostics: [],
+    summary: { errorCount: 0, warningCount: 0, infoCount: 0, hintCount: 0 },
+  });
 
   // Mock element measurements for virtualization.
   Element.prototype.getBoundingClientRect = vi.fn(() => ({
@@ -60,7 +64,16 @@ beforeEach(() => {
 });
 
 describe('ProblemsView', () => {
-  it('renders mock diagnostics by default', async () => {
+  it('loads initial diagnostics and renders counts', async () => {
+    mockDiagnosticsApi.list.mockResolvedValueOnce({
+      diagnostics: [
+        baseDiagnostic,
+        { ...baseDiagnostic, id: '00000000-0000-4000-8000-000000000002', severity: 'warning' },
+        { ...baseDiagnostic, id: '00000000-0000-4000-8000-000000000003', severity: 'info' },
+      ],
+      summary: { errorCount: 1, warningCount: 1, infoCount: 1, hintCount: 0 },
+    });
+
     render(<ProblemsView />);
 
     await waitFor(() => {
@@ -88,13 +101,15 @@ describe('ProblemsView', () => {
 
     render(<ProblemsView />);
 
-    if (updateCallback) {
-      updateCallback({
-        filePath: baseDiagnostic.filePath,
-        source: baseDiagnostic.source,
-        diagnostics: [baseDiagnostic],
-      });
-    }
+    await waitFor(() => {
+      expect(updateCallback).toBeDefined();
+    });
+
+    updateCallback?.({
+      filePath: baseDiagnostic.filePath,
+      source: baseDiagnostic.source,
+      diagnostics: [baseDiagnostic],
+    });
 
     await waitFor(() => {
       expect(screen.getByText('1 error')).toBeDefined();
@@ -139,13 +154,15 @@ describe('ProblemsView', () => {
 
     render(<ProblemsView />);
 
-    if (updateCallback) {
-      updateCallback({
-        filePath: baseDiagnostic.filePath,
-        source: baseDiagnostic.source,
-        diagnostics,
-      });
-    }
+    await waitFor(() => {
+      expect(updateCallback).toBeDefined();
+    });
+
+    updateCallback?.({
+      filePath: baseDiagnostic.filePath,
+      source: baseDiagnostic.source,
+      diagnostics,
+    });
 
     await waitFor(() => {
       const messages = screen.getAllByTestId('diagnostic-message').map((node) => node.textContent);

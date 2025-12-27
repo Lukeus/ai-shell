@@ -5,6 +5,7 @@ import { ExtensionHostManager } from './extension-host-manager';
 describe('ExtensionCommandService', () => {
   let commandService: ExtensionCommandService;
   let mockExtensionHostManager: ExtensionHostManager;
+  let activateExtension: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // Create mock Extension Host Manager
@@ -12,7 +13,8 @@ describe('ExtensionCommandService', () => {
       sendRequest: vi.fn(),
     } as unknown as ExtensionHostManager;
 
-    commandService = new ExtensionCommandService(mockExtensionHostManager);
+    activateExtension = vi.fn().mockResolvedValue(undefined);
+    commandService = new ExtensionCommandService(mockExtensionHostManager, activateExtension);
   });
 
   describe('registerCommand', () => {
@@ -106,6 +108,7 @@ describe('ExtensionCommandService', () => {
 
       expect(result.success).toBe(true);
       expect(result.result).toEqual(mockResult);
+      expect(activateExtension).toHaveBeenCalledWith('test.extension', 'onCommand:test.hello');
       expect(mockExtensionHostManager.sendRequest).toHaveBeenCalledWith('command.execute', {
         commandId: 'test.hello',
         args: ['arg1', 'arg2'],

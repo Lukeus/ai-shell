@@ -28,6 +28,7 @@ type SddContext = {
 type SddContextLoader = (
   runId: string,
   featureId: string,
+  step: SddStep,
   docPaths?: SddDocPaths
 ) => Promise<SddContext>;
 
@@ -46,14 +47,27 @@ type SddWorkflowRunnerOptions = {
   docPathResolver?: SddDocPathResolver;
 };
 
-const buildMandatoryContextPaths = (docPaths: SddDocPaths): string[] => [
-  'memory/constitution.md',
-  'memory/context/00-overview.md',
-  docPaths.specPath,
-  docPaths.planPath,
-  docPaths.tasksPath,
-  'docs/architecture/architecture.md',
-];
+const buildContextPathsForStep = (step: SddStep, docPaths: SddDocPaths): string[] => {
+  const base = [
+    'memory/constitution.md',
+    'memory/context/00-overview.md',
+    'docs/architecture/architecture.md',
+  ];
+
+  if (step === 'spec') {
+    return base;
+  }
+
+  if (step === 'plan') {
+    return [...base, docPaths.specPath];
+  }
+
+  if (step === 'tasks') {
+    return [...base, docPaths.specPath, docPaths.planPath];
+  }
+
+  return [...base, docPaths.specPath, docPaths.planPath, docPaths.tasksPath];
+};
 
 const CONSTITUTION_ALIGNMENT_PATTERNS = [
   /constitution alignment/i,
@@ -78,10 +92,35 @@ export class SddWorkflowRunner {
     this.docPathResolver = options.docPathResolver ?? resolveSddDocPaths;
     this.contextLoader =
       options.contextLoader ??
-      ((runId, featureId, docPaths) =>
-        this.loadMandatoryContext(runId, featureId, docPaths));
+      ((runId, featureId, step, docPaths) =>
+        this.loadMandatoryContext(runId, featureId, step, docPaths));
   }
 
+  /**
+   * Starts a new SDD (Specification-Driven Development) workflow run.
+   * 
+   * This method orchestrates the execution of an SDD workflow step, including context loading,
+   * validation, and step-specific processing. It manages the lifecycle of the run from start
+   * to completion, cancellation, or failure.
+   * 
+   * @param runId - Unique identifier for this workflow run
+   * @param request - The SDD run start request containing the feature ID and optional step specification
+   * 
+   * @throws {Error} If the run is canceled via {@link cancelRun}
+   * @throws {Error} If constitution alignment check fails
+   * @throws {Error} If the requested step is not allowed given the current context
+   * @throws {Error} If step execution encounters an error
+   * 
+   * @remarks
+   * - Validates the request against {@link SddRunStartRequestSchema}
+   * - Defaults to 'spec' step if not specified in the request
+   * - Emits events throughout the workflow lifecycle (started, context loaded, step started, completed/canceled/failed)
+   * - Supports steps: 'spec', 'plan', 'tasks', and 'implement'
+   * - Maintains run state in {@link activeRun} and tracks canceled runs in {@link canceledRuns}
+   * - Automatically cleans up run state in the finally block
+   * 
+   * @returns A promise that resolves when the run completes successfully or rejects on failure
+   */
   public async startRun(runId: string, request: SddRunStartRequest): Promise<void> {
     const validatedRequest = SddRunStartRequestSchema.parse(request);
     const step = validatedRequest.step ?? 'spec';
@@ -93,10 +132,15 @@ export class SddWorkflowRunner {
     try {
       this.assertNotCanceled(runId);
 
-      const context = await this.contextLoader(runId, validatedRequest.featureId, docPaths);
+      const context = await this.contextLoader(
+        runId,
+        validatedRequest.featureId,
+        step,
+        docPaths
+      );
       this.emitContextLoaded(runId, step);
 
-      this.assertConstitutionAligned(docPaths, context);
+      this.assertConstitutionAligned(docPaths, context, step);
       this.assertStepAllowed(step, docPaths, context);
 
       this.emitStepStarted(runId, step);
@@ -115,8 +159,14 @@ export class SddWorkflowRunner {
       this.emitRunCompleted(runId);
       this.activeRun = { runId, step, status: 'completed' };
     } catch (error) {
-      const status = this.canceledRuns.has(runId) ? 'canceled' : 'failed';
-      this.activeRun = { runId, step, status };
+      if (this.canceledRuns.has(runId)) {
+        const reason = this.canceledRuns.get(runId);
+        this.activeRun = { runId, step, status: 'canceled' };
+        this.emitRunCanceled(runId, reason);
+        return;
+      }
+
+      this.activeRun = { runId, step, status: 'failed' };
       throw error;
     } finally {
       this.canceledRuns.delete(runId);
@@ -185,6 +235,16 @@ export class SddWorkflowRunner {
     });
   }
 
+  private emitRunCanceled(runId: string, reason?: string): void {
+    this.emitEvent({
+      id: this.idProvider(),
+      runId,
+      timestamp: this.now(),
+      type: 'runCanceled',
+      message: reason,
+    });
+  }
+
   private emitEvent(event: SddRunEvent): void {
     const validated = SddRunEventSchema.parse(event);
     this.onEvent(validated);
@@ -242,27 +302,25 @@ export class SddWorkflowRunner {
     }
   }
 
-  private assertConstitutionAligned(docPaths: SddDocPaths, context: SddContext): void {
-    const requiredPaths = [docPaths.specPath, docPaths.planPath, docPaths.tasksPath];
-    const missing: string[] = [];
+  private assertConstitutionAligned(
+    docPaths: SddDocPaths,
+    context: SddContext,
+    step: SddStep
+  ): void {
+    const requiredPaths = buildContextPathsForStep(step, docPaths).filter((path) =>
+      path.startsWith('specs/')
+    );
     const misaligned: string[] = [];
 
     for (const path of requiredPaths) {
       const content = context.files.get(path);
       if (!content) {
-        missing.push(path);
         continue;
       }
       const aligned = CONSTITUTION_ALIGNMENT_PATTERNS.some((pattern) => pattern.test(content));
       if (!aligned) {
         misaligned.push(path);
       }
-    }
-
-    if (missing.length > 0) {
-      throw new Error(
-        `SDD constitution alignment check failed. Missing files: ${missing.join(', ')}`
-      );
     }
 
     if (misaligned.length > 0) {
@@ -481,7 +539,9 @@ export class SddWorkflowRunner {
       reason: `SDD ${request.featureId} ${step} generation`,
     };
 
+    this.assertNotCanceled(runId);
     const result = await this.toolExecutor.executeToolCall(envelope);
+    this.assertNotCanceled(runId);
     if (!result.ok) {
       throw new Error(result.error ?? 'model.generate failed');
     }
@@ -497,13 +557,15 @@ export class SddWorkflowRunner {
   private async loadMandatoryContext(
     runId: string,
     featureId: string,
+    step: SddStep,
     docPaths?: SddDocPaths
   ): Promise<SddContext> {
     const files = new Map<string, string>();
     const missing: string[] = [];
     const resolvedDocPaths = docPaths ?? this.resolveDocPaths(featureId);
 
-    for (const path of buildMandatoryContextPaths(resolvedDocPaths)) {
+    const requiredPaths = buildContextPathsForStep(step, resolvedDocPaths);
+    for (const path of requiredPaths) {
       try {
         const content = await this.readWorkspaceFile(runId, path);
         files.set(path, content);
@@ -515,6 +577,31 @@ export class SddWorkflowRunner {
 
     if (missing.length > 0) {
       throw new Error(`Missing required context files: ${missing.join(', ')}`);
+    }
+
+    const optionalPaths: string[] = [];
+    if (step === 'spec') {
+      optionalPaths.push(
+        resolvedDocPaths.specPath,
+        resolvedDocPaths.planPath,
+        resolvedDocPaths.tasksPath
+      );
+    } else if (step === 'plan') {
+      optionalPaths.push(resolvedDocPaths.planPath, resolvedDocPaths.tasksPath);
+    } else if (step === 'tasks') {
+      optionalPaths.push(resolvedDocPaths.tasksPath);
+    }
+
+    for (const path of optionalPaths) {
+      if (requiredPaths.includes(path) || files.has(path)) {
+        continue;
+      }
+      try {
+        const content = await this.readWorkspaceFile(runId, path);
+        files.set(path, content);
+      } catch {
+        // Optional context; ignore missing files.
+      }
     }
 
     return { files };

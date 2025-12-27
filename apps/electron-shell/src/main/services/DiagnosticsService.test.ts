@@ -3,11 +3,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-let userDataPath = '';
+const electronState = vi.hoisted(() => ({ userDataPath: '' }));
 
 vi.mock('electron', () => ({
   app: {
-    getPath: vi.fn(() => userDataPath),
+    getPath: vi.fn(() => electronState.userDataPath),
   },
 }));
 
@@ -15,16 +15,16 @@ import { DiagnosticsService, DIAGNOSTICS_LIMITS } from './DiagnosticsService';
 
 describe('DiagnosticsService', () => {
   beforeEach(() => {
-    userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'diag-'));
+    electronState.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'diag-'));
     // @ts-expect-error reset singleton for tests
     DiagnosticsService.instance = null;
   });
 
   afterEach(() => {
-    if (userDataPath) {
-      fs.rmSync(userDataPath, { recursive: true, force: true });
+    if (electronState.userDataPath) {
+      fs.rmSync(electronState.userDataPath, { recursive: true, force: true });
     }
-    userDataPath = '';
+    electronState.userDataPath = '';
     vi.clearAllMocks();
   });
 

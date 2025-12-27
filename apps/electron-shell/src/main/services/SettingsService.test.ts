@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsService } from './SettingsService';
-import { SETTINGS_DEFAULTS } from 'packages-api-contracts';
+import { SETTINGS_DEFAULTS, SettingsSchema } from 'packages-api-contracts';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -55,10 +55,11 @@ describe('SettingsService', () => {
 
       // Act
       const result = settingsService.getSettings();
+      const expected = SettingsSchema.parse(mockSettings);
 
       // Assert
       expect(fs.readFileSync).toHaveBeenCalledWith(mockSettingsPath, 'utf-8');
-      expect(result).toEqual(mockSettings);
+      expect(result).toEqual(expected);
       expect(result.appearance.theme).toBe('light');
       expect(result.appearance.fontSize).toBe(16);
     });

@@ -5,7 +5,6 @@
  * Commands are registered by extensions and executed when requested by main process.
  */
 
-import { ExtensionManifest } from 'packages-api-contracts';
 
 /**
  * Command handler function type.

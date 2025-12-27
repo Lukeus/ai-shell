@@ -53,10 +53,10 @@ describe('SearchService', () => {
       lastChild = child;
       return child;
     });
-    setSearchSpawnForTesting(spawnMock as unknown as (command: string, args: string[], options: { cwd: string }) => any);
+    setSearchSpawnForTesting(spawnMock as any);
     // @ts-expect-error reset singleton for tests
     SearchService.instance = null;
-    vi.mocked(fs.promises.realpath).mockImplementation(async (value: string) => value);
+    vi.mocked(fs.promises.realpath).mockImplementation(async (value: fs.PathLike) => value.toString());
   });
 
   afterEach(() => {
@@ -66,7 +66,12 @@ describe('SearchService', () => {
 
   it('returns parsed results from ripgrep output', async () => {
     const service = SearchService.getInstance();
-    const searchPromise = service.search({ query: 'App' });
+    const searchPromise = service.search({ 
+      query: 'App',
+      isRegex: false,
+      matchCase: false,
+      wholeWord: false,
+    });
 
     expect(spawnMock).toHaveBeenCalled();
     const payload = JSON.stringify({
@@ -101,7 +106,12 @@ describe('SearchService', () => {
   it('rejects when ripgrep times out', async () => {
     vi.useFakeTimers();
     const service = SearchService.getInstance();
-    const searchPromise = service.search({ query: 'App' });
+    const searchPromise = service.search({ 
+      query: 'App',
+      isRegex: false,
+      matchCase: false,
+      wholeWord: false,
+    });
     const rejection = expect(searchPromise).rejects.toThrow('ripgrep timed out');
     await vi.advanceTimersByTimeAsync(30000);
     await rejection;

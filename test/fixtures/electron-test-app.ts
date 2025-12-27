@@ -17,7 +17,7 @@ type ElectronFixtures = {
  */
 export const test = base.extend<ElectronFixtures>({
   electronApp: async ({}, use) => {
-    // Use the packaged Electron app from out directory
+    // Use the packaged Electron app from out directory (electron-forge package output).
     const executablePath = path.join(
       __dirname,
       '../../apps/electron-shell/out/apps-electron-shell-win32-x64/apps-electron-shell.exe'
@@ -31,10 +31,14 @@ export const test = base.extend<ElectronFixtures>({
 
     const app = await electron.launch({
       executablePath,
-      env: {
+      env: (() => {
+        const env = {
         ...process.env,
         NODE_ENV: 'test',
-      },
+        } as Record<string, string | undefined>;
+        delete env.ELECTRON_RUN_AS_NODE;
+        return env as Record<string, string>;
+      })(),
     });
 
     await use(app);

@@ -29,6 +29,30 @@ export function ProblemsView({ className = '' }: ProblemsViewProps) {
   );
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialDiagnostics = async () => {
+      try {
+        const response = await window.api.diagnostics.list({});
+        if (!isMounted) {
+          return;
+        }
+
+        setDiagnosticsByKey(() => {
+          const next = new Map<string, Diagnostic[]>();
+          for (const diagnostic of response.diagnostics) {
+            const key = `${diagnostic.filePath}::${diagnostic.source}`;
+            const existing = next.get(key) ?? [];
+            existing.push(diagnostic);
+            next.set(key, existing);
+          }
+          return next;
+        });
+      } catch {
+        // Ignore initial diagnostics load errors; live updates still apply.
+      }
+    };
+
     const handleUpdate = (event: DiagnosticsUpdateEvent) => {
       setDiagnosticsByKey((prev) => {
         const next = new Map(prev);
@@ -44,9 +68,11 @@ export function ProblemsView({ className = '' }: ProblemsViewProps) {
       });
     };
 
+    void loadInitialDiagnostics();
     const unsubscribe = window.api.diagnostics.onUpdate(handleUpdate);
 
     return () => {
+      isMounted = false;
       unsubscribe();
     };
   }, []);

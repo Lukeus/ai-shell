@@ -59,7 +59,7 @@ describe('FsBrokerService', () => {
 
     // Clear all mocks
     vi.clearAllMocks();
-    vi.mocked(fs.promises.realpath).mockImplementation(async (value: string) => value);
+    vi.mocked(fs.promises.realpath).mockImplementation(async (value: fs.PathLike) => value.toString());
   });
 
   afterEach(() => {

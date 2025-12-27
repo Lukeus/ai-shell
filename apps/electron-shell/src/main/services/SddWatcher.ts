@@ -63,7 +63,7 @@ export class SddWatcher {
         root,
         { recursive: true, encoding: 'utf8' },
         (eventType, filename) => {
-          this.queueEvent(root, eventType, filename);
+          this.queueEvent(root, eventType, filename ?? undefined);
         }
       );
       this.watchers.add(watcher);

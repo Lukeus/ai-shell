@@ -94,8 +94,8 @@ export function OutputView({ className = '' }: OutputViewProps) {
         setUsingMockData(false);
 
         // Auto-select first channel if available
-        if (response.channels.length > 0 && !selectedChannelId) {
-          setSelectedChannelId(response.channels[0].id);
+        if (response.channels.length > 0) {
+          setSelectedChannelId((current) => current ?? response.channels[0].id);
         }
       } catch (err) {
         console.error('Failed to load output channels:', err);
@@ -106,7 +106,7 @@ export function OutputView({ className = '' }: OutputViewProps) {
     };
 
     loadChannels();
-  }, [selectedChannelId]);
+  }, []);
 
   // Load lines when selected channel changes
   useEffect(() => {

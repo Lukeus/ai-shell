@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { EditorLoader } from './EditorLoader';
 
+vi.mock('../../monaco/monacoWorkers', () => ({}));
+
 // Mock the MonacoEditor component to avoid loading real Monaco
 vi.mock('./MonacoEditor', () => ({
   MonacoEditor: ({ filePath, content, language }: any) => (

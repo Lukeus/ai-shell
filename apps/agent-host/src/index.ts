@@ -12,13 +12,20 @@ import type {
   SddRunStartRequest,
   ToolCallEnvelope,
 } from 'packages-api-contracts';
-import { DeepAgentRunner, SddWorkflowRunner, ToolExecutor } from 'packages-agent-runtime';
+import { BrokerClient } from 'packages-broker-client';
+import { DeepAgentRunner, SddWorkflowRunner } from 'packages-agent-runtime';
 
 type StartRunMessage = {
   type: 'agent-host:start-run';
   runId: string;
   request: AgentRunStartRequest;
   toolCalls?: ToolCallEnvelope[];
+};
+
+type CancelRunMessage = {
+  type: 'agent-host:cancel-run';
+  runId: string;
+  reason?: string;
 };
 
 type SddStartRunMessage = {
@@ -98,6 +105,25 @@ const parseStartRunMessage = (message: unknown): StartRunMessage | null => {
   };
 };
 
+const parseCancelRunMessage = (message: unknown): CancelRunMessage | null => {
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+  const candidate = message as Partial<CancelRunMessage>;
+  if (candidate.type !== 'agent-host:cancel-run' || !candidate.runId) {
+    return null;
+  }
+  if (!isUuid(candidate.runId)) {
+    return null;
+  }
+
+  return {
+    type: 'agent-host:cancel-run',
+    runId: candidate.runId,
+    reason: typeof candidate.reason === 'string' ? candidate.reason : undefined,
+  };
+};
+
 const parseSddStartRunMessage = (message: unknown): SddStartRunMessage | null => {
   if (!message || typeof message !== 'object') {
     return null;
@@ -142,7 +168,10 @@ const parseSddControlRunMessage = (message: unknown): SddControlRunMessage | nul
   };
 };
 
-const toolExecutor = new ToolExecutor();
+const brokerClient = new BrokerClient();
+const toolExecutor = {
+  executeToolCall: (envelope: ToolCallEnvelope) => brokerClient.executeToolCall(envelope),
+};
 const runner = new DeepAgentRunner({
   toolExecutor,
   onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
@@ -152,7 +181,17 @@ const sddRunner = new SddWorkflowRunner({
   onEvent: (event: SddRunEvent) => sendToMain({ type: 'agent-host:sdd-event', event }),
 });
 
+const disposeBroker = () => brokerClient.dispose();
+process.on('disconnect', disposeBroker);
+process.on('exit', disposeBroker);
+
 process.on('message', async (message: unknown) => {
+  const cancelMessage = parseCancelRunMessage(message);
+  if (cancelMessage) {
+    runner.cancelRun(cancelMessage.runId, cancelMessage.reason);
+    return;
+  }
+
   const startMessage = parseStartRunMessage(message);
   if (!startMessage) {
     const sddStartMessage = parseSddStartRunMessage(message);

@@ -5,13 +5,15 @@ import { ExtensionHostManager } from './extension-host-manager';
 describe('ExtensionViewService', () => {
   let viewService: ExtensionViewService;
   let mockExtensionHostManager: ExtensionHostManager;
+  let activateExtension: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockExtensionHostManager = {
       sendRequest: vi.fn(),
     } as unknown as ExtensionHostManager;
 
-    viewService = new ExtensionViewService(mockExtensionHostManager);
+    activateExtension = vi.fn().mockResolvedValue(undefined);
+    viewService = new ExtensionViewService(mockExtensionHostManager, activateExtension);
   });
 
   it('registers and lists views', () => {
@@ -39,6 +41,7 @@ describe('ExtensionViewService', () => {
 
     expect(result.success).toBe(true);
     expect(result.content).toBe('<div>ok</div>');
+    expect(activateExtension).toHaveBeenCalledWith('acme.sample-extension', 'onView:sample.view');
     expect(mockExtensionHostManager.sendRequest).toHaveBeenCalledWith('view.render', {
       viewId: 'sample.view',
     });

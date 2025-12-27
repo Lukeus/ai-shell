@@ -1,4 +1,6 @@
 import { test, expect } from '../fixtures/electron-test-app';
+import * as fs from 'fs';
+import * as path from 'path';
 
 test.describe('Output Panel', () => {
   test('renders output channel and appends lines', async ({ page }) => {
@@ -66,5 +68,11 @@ test.describe('Output Panel', () => {
     });
 
     await expect(page.getByText('Build finished')).toBeVisible();
+
+    if (process.env.CAPTURE_SCREENSHOTS) {
+      const outputPath = path.join('docs', 'screenshots', 'output-panel.png');
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      await page.screenshot({ path: outputPath, fullPage: true });
+    }
   });
 });

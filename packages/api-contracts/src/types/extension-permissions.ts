@@ -67,3 +67,13 @@ export const PermissionGrantSchema = z.object({
  * TypeScript type for permission grant.
  */
 export type PermissionGrant = z.infer<typeof PermissionGrantSchema>;
+
+/**
+ * Permission check result returned to renderer.
+ */
+export const PermissionCheckResultSchema = z.object({
+  granted: z.boolean(),
+  reason: z.string().optional(),
+});
+
+export type PermissionCheckResult = z.infer<typeof PermissionCheckResultSchema>;

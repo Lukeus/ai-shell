@@ -45,6 +45,12 @@ type StartRunMessage = {
   toolCalls?: ToolCallEnvelope[];
 };
 
+type CancelRunMessage = {
+  type: 'agent-host:cancel-run';
+  runId: string;
+  reason?: string;
+};
+
 type AgentHostEventMessage = {
   type: 'agent-host:event';
   event: AgentEvent;
@@ -205,6 +211,7 @@ export class AgentHostManager {
     await this.start();
 
     const validatedRequest = AgentRunStartRequestSchema.parse(request);
+    this.brokerMain.setRunPolicy(runId, validatedRequest.config?.policy);
     const validatedToolCalls = ToolCallEnvelopeSchema.array().parse(toolCalls);
     const message: StartRunMessage = {
       type: 'agent-host:start-run',
@@ -214,6 +221,20 @@ export class AgentHostManager {
     };
 
     this.childProcess?.send(message);
+  }
+
+  public async cancelRun(runId: string, reason?: string): Promise<void> {
+    if (!this.childProcess) {
+      return;
+    }
+
+    const message: CancelRunMessage = {
+      type: 'agent-host:cancel-run',
+      runId,
+      reason,
+    };
+
+    this.childProcess.send(message);
   }
 
   public async startSddRun(runId: string, request: SddRunStartRequest): Promise<void> {
@@ -250,6 +271,15 @@ export class AgentHostManager {
       const parsed = AgentEventSchema.safeParse(message.event);
       if (!parsed.success) {
         return;
+      }
+      if (parsed.data.type === 'status') {
+        const terminal =
+          parsed.data.status === 'completed' ||
+          parsed.data.status === 'failed' ||
+          parsed.data.status === 'canceled';
+        if (terminal) {
+          this.brokerMain.clearRunPolicy(parsed.data.runId);
+        }
       }
       this.eventHandlers.forEach((handler) => handler(parsed.data));
       return;
@@ -293,8 +323,8 @@ export class AgentHostManager {
         this.brokerMain.registerToolDefinition({
           id: envelope.toolId,
           description: tool?.description ?? envelope.toolId,
-          inputSchema: JsonValueSchema,
-          outputSchema: JsonValueSchema,
+          inputSchema: tool?.inputValidator ?? JsonValueSchema,
+          outputSchema: tool?.outputValidator ?? JsonValueSchema,
           category: 'other',
           execute: async (input) => {
             const result = await extensionToolService.executeTool(envelope.toolId, input);
@@ -408,6 +438,15 @@ export class AgentHostManager {
           text: z.string(),
         })
       ),
+    });
+    const repoListInput = z.object({
+      glob: z.string().optional(),
+      root: z.string().optional(),
+      maxResults: z.number().int().min(1).max(5000).optional(),
+    });
+    const repoListOutput = z.object({
+      files: z.array(z.string()),
+      truncated: z.boolean().optional(),
     });
 
     this.brokerMain.registerToolDefinition({
@@ -562,6 +601,68 @@ export class AgentHostManager {
           runId: envelope.runId,
           requesterId: envelope.requesterId,
         });
+      },
+    });
+
+    this.brokerMain.registerToolDefinition({
+      id: 'repo.list',
+      description: 'List workspace files using ripgrep with optional glob.',
+      inputSchema: repoListInput,
+      outputSchema: repoListOutput,
+      category: 'repo',
+      execute: async (input) => {
+        const workspace = workspaceService.getWorkspace();
+        if (!workspace) {
+          throw new Error('No workspace open.');
+        }
+
+        const request = repoListInput.parse(input);
+        const rootPath = request.root
+          ? await resolvePathWithinWorkspace(request.root, workspace.path, { requireExisting: true })
+          : workspace.path;
+        const maxResults = request.maxResults ?? 2000;
+        const args = ['--files'];
+        if (request.glob) {
+          args.push('-g', request.glob);
+        }
+
+        const files: string[] = [];
+        let truncated = false;
+
+        await new Promise<void>((resolve, reject) => {
+          const child = spawn('rg', args, { cwd: rootPath });
+          let stderr = '';
+
+          child.stdout.on('data', (data: Buffer) => {
+            const lines = data.toString().split('\n').filter((line) => line.length > 0);
+            for (const line of lines) {
+              if (files.length >= maxResults) {
+                truncated = true;
+                child.kill();
+                break;
+              }
+              files.push(line);
+            }
+          });
+
+          child.stderr.on('data', (data: Buffer) => {
+            stderr += data.toString();
+          });
+
+          child.on('error', (error) => {
+            reject(error);
+          });
+
+          child.on('close', (code) => {
+            if (code === 0 || code === 1) {
+              resolve();
+              return;
+            }
+            reject(new Error(stderr.trim() || `ripgrep failed with code ${code}`));
+          });
+        });
+
+        return { files, truncated: truncated || undefined };
       },
     });
 

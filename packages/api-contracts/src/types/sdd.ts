@@ -351,6 +351,11 @@ export const SddRunFailedEventSchema = SddRunEventBaseSchema.extend({
   code: z.string().optional(),
 });
 
+export const SddRunCanceledEventSchema = SddRunEventBaseSchema.extend({
+  type: z.literal('runCanceled'),
+  message: z.string().min(1).optional(),
+});
+
 export const SddRunEventSchema = z.discriminatedUnion('type', [
   SddRunStartedEventSchema,
   SddContextLoadedEventSchema,
@@ -363,6 +368,7 @@ export const SddRunEventSchema = z.discriminatedUnion('type', [
   SddTestsCompletedEventSchema,
   SddRunCompletedEventSchema,
   SddRunFailedEventSchema,
+  SddRunCanceledEventSchema,
 ]);
 
 export type SddRunEvent = z.infer<typeof SddRunEventSchema>;
