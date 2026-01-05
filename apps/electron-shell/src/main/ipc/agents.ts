@@ -5,8 +5,17 @@ import {
   AgentEventSubscriptionRequestSchema,
   AgentRunControlRequestSchema,
   AgentRunStartRequestSchema,
+  AppendAgentMessageRequestSchema,
+  AppendAgentMessageResponseSchema,
+  CreateAgentConversationRequestSchema,
+  CreateAgentConversationResponseSchema,
   GetAgentRunRequestSchema,
+  GetAgentConversationRequestSchema,
+  GetAgentConversationResponseSchema,
   IPC_CHANNELS,
+  ListAgentConversationsResponseSchema,
+  SaveAgentDraftRequestSchema,
+  SaveAgentDraftResponseSchema,
   ListAgentTraceRequestSchema,
   type AgentEvent,
   type AgentRunControlResponse,
@@ -18,9 +27,12 @@ import {
   type ListAgentTraceResponse,
 } from 'packages-api-contracts';
 import { agentRunStore } from '../services/AgentRunStore';
+import { agentConversationStore } from '../services/AgentConversationStore';
+import { agentDraftService } from '../services/AgentDraftService';
 import { connectionsService } from '../services/ConnectionsService';
 import { settingsService } from '../services/SettingsService';
 import { getAgentHostManager } from '../index';
+import { handleSafe } from './safeIpc';
 
 type AgentSubscriber = {
   sender: WebContents;
@@ -378,5 +390,54 @@ export const registerAgentHandlers = (): void => {
       }
       unregisterAgentSubscriber(event.sender);
     }
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_CONVERSATIONS_LIST,
+    { outputSchema: ListAgentConversationsResponseSchema },
+    async () => ({
+      conversations: agentConversationStore.listConversations(),
+    })
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_CONVERSATIONS_CREATE,
+    {
+      inputSchema: CreateAgentConversationRequestSchema,
+      outputSchema: CreateAgentConversationResponseSchema,
+    },
+    async (_event, request) => ({
+      conversation: agentConversationStore.createConversation(request.title),
+    })
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_CONVERSATIONS_GET,
+    {
+      inputSchema: GetAgentConversationRequestSchema,
+      outputSchema: GetAgentConversationResponseSchema,
+    },
+    async (_event, request) =>
+      agentConversationStore.getConversation(request.conversationId)
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_MESSAGES_APPEND,
+    {
+      inputSchema: AppendAgentMessageRequestSchema,
+      outputSchema: AppendAgentMessageResponseSchema,
+    },
+    async (_event, request) => ({
+      message: agentConversationStore.appendMessage(request),
+    })
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_DRAFTS_SAVE,
+    {
+      inputSchema: SaveAgentDraftRequestSchema,
+      outputSchema: SaveAgentDraftResponseSchema,
+    },
+    async (_event, request) => agentDraftService.saveDraft(request)
   );
 };

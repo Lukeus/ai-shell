@@ -13,7 +13,11 @@ import type {
   ToolCallEnvelope,
 } from 'packages-api-contracts';
 import { BrokerClient } from 'packages-broker-client';
-import { DeepAgentRunner, SddWorkflowRunner } from 'packages-agent-runtime';
+import {
+  DeepAgentRunner,
+  PlanningWorkflowRunner,
+  SddWorkflowRunner,
+} from 'packages-agent-runtime';
 
 type StartRunMessage = {
   type: 'agent-host:start-run';
@@ -176,10 +180,38 @@ const runner = new DeepAgentRunner({
   toolExecutor,
   onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
 });
+const planningRunner = new PlanningWorkflowRunner({
+  toolExecutor,
+  onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
+});
 const sddRunner = new SddWorkflowRunner({
   toolExecutor,
   onEvent: (event: SddRunEvent) => sendToMain({ type: 'agent-host:sdd-event', event }),
 });
+
+const getPlanningFeatureId = (request: AgentRunStartRequest): string | null => {
+  const metadataFeatureId = request.metadata?.featureId;
+  if (typeof metadataFeatureId === 'string' && metadataFeatureId.trim().length > 0) {
+    return metadataFeatureId.trim();
+  }
+
+  const inputs = request.inputs as Record<string, unknown> | undefined;
+  const inputFeatureId = inputs?.featureId;
+  if (typeof inputFeatureId === 'string' && inputFeatureId.trim().length > 0) {
+    return inputFeatureId.trim();
+  }
+
+  return null;
+};
+
+const isPlanningRequest = (request: AgentRunStartRequest): boolean => {
+  const workflow = request.metadata?.workflow;
+  if (typeof workflow !== 'string') {
+    return false;
+  }
+  const normalized = workflow.trim().toLowerCase();
+  return normalized === 'planning' || normalized === 'draft';
+};
 
 const disposeBroker = () => brokerClient.dispose();
 process.on('disconnect', disposeBroker);
@@ -228,7 +260,19 @@ process.on('message', async (message: unknown) => {
   }
 
   try {
-    await runner.startRun(startMessage.runId, startMessage.request, startMessage.toolCalls ?? []);
+    if (isPlanningRequest(startMessage.request)) {
+      const featureId = getPlanningFeatureId(startMessage.request);
+      if (!featureId) {
+        throw new Error('Planning runs require a featureId in metadata or inputs.');
+      }
+      await planningRunner.startRun(startMessage.runId, startMessage.request, featureId);
+    } else {
+      await runner.startRun(
+        startMessage.runId,
+        startMessage.request,
+        startMessage.toolCalls ?? []
+      );
+    }
   } catch (error) {
     const messageText = error instanceof Error ? error.message : 'Agent run failed';
     sendToMain({ type: 'agent-host:run-error', runId: startMessage.runId, message: messageText });

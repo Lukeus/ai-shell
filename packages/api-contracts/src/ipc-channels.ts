@@ -240,6 +240,21 @@ export const IPC_CHANNELS = {
   /** List agent trace events */
   AGENT_TRACE_LIST: 'agent:trace:list',
 
+  /** List agent conversations */
+  AGENT_CONVERSATIONS_LIST: 'agent:conversations:list',
+
+  /** Create a new agent conversation */
+  AGENT_CONVERSATIONS_CREATE: 'agent:conversations:create',
+
+  /** Get a single agent conversation */
+  AGENT_CONVERSATIONS_GET: 'agent:conversations:get',
+
+  /** Append a message to a conversation */
+  AGENT_MESSAGES_APPEND: 'agent:messages:append',
+
+  /** Save a spec/plan/tasks draft */
+  AGENT_DRAFTS_SAVE: 'agent:drafts:save',
+
   // Connections + Secrets
   /** List connections */
   CONNECTIONS_LIST: 'connections:list',

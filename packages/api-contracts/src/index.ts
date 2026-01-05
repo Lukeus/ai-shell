@@ -10,6 +10,8 @@
 
 // Export all types and schemas
 export * from './types/agent-events';
+export * from './types/agent-conversations';
+export * from './types/agent-drafts';
 export * from './types/agent-runs';
 export * from './types/agent-tools';
 export * from './types/app-info';

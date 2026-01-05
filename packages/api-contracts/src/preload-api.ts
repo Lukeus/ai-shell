@@ -93,6 +93,19 @@ import type {
   ListAgentTraceResponse,
 } from './types/agent-events';
 import type {
+  ListAgentConversationsResponse,
+  CreateAgentConversationRequest,
+  CreateAgentConversationResponse,
+  GetAgentConversationRequest,
+  GetAgentConversationResponse,
+  AppendAgentMessageRequest,
+  AppendAgentMessageResponse,
+} from './types/agent-conversations';
+import type {
+  SaveAgentDraftRequest,
+  SaveAgentDraftResponse,
+} from './types/agent-drafts';
+import type {
   CreateConnectionRequest,
   CreateConnectionResponse,
   UpdateConnectionRequest,
@@ -732,6 +745,39 @@ export interface PreloadAPI {
      * Receives agent events.
      */
     onEvent(callback: (event: AgentEvent) => void): () => void;
+
+    /**
+     * Lists conversations.
+     */
+    listConversations(): Promise<Result<ListAgentConversationsResponse>>;
+
+    /**
+     * Creates a new conversation.
+     */
+    createConversation(
+      request: CreateAgentConversationRequest
+    ): Promise<Result<CreateAgentConversationResponse>>;
+
+    /**
+     * Gets a single conversation and its messages.
+     */
+    getConversation(
+      request: GetAgentConversationRequest
+    ): Promise<Result<GetAgentConversationResponse>>;
+
+    /**
+     * Appends a message to a conversation.
+     */
+    appendMessage(
+      request: AppendAgentMessageRequest
+    ): Promise<Result<AppendAgentMessageResponse>>;
+
+    /**
+     * Saves a spec/plan/tasks draft for a feature.
+     */
+    saveDraft(
+      request: SaveAgentDraftRequest
+    ): Promise<Result<SaveAgentDraftResponse>>;
   };
 
   /**

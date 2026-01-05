@@ -240,6 +240,16 @@ const api: PreloadAPI = {
         ipcRenderer.removeListener(IPC_CHANNELS.AGENT_EVENTS_ON_EVENT, listener);
       };
     },
+    listConversations: () =>
+      invokeSafe(IPC_CHANNELS.AGENT_CONVERSATIONS_LIST),
+    createConversation: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_CONVERSATIONS_CREATE, request),
+    getConversation: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_CONVERSATIONS_GET, request),
+    appendMessage: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_MESSAGES_APPEND, request),
+    saveDraft: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_DRAFTS_SAVE, request),
   },
 
   // Connections + secrets methods (metadata only)
