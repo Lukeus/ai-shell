@@ -1,4 +1,4 @@
-import { app, type BrowserWindow, type ChildProcessGoneDetails, type RenderProcessGoneDetails } from 'electron';
+import { app, type BrowserWindow, type RenderProcessGoneDetails } from 'electron';
 import type { ErrorReport } from 'packages-api-contracts';
 import { diagnosticsService } from './services/DiagnosticsService';
 import { runtimeStateService } from './services/RuntimeStateService';
@@ -97,13 +97,12 @@ const reportRendererCrash = (details: RenderProcessGoneDetails, webContentsId?: 
   reportNonFatal(report);
 };
 
-const reportChildProcessGone = (details: ChildProcessGoneDetails): void => {
+const reportChildProcessGone = (details: RenderProcessGoneDetails): void => {
   const serviceName =
-    'serviceName' in details && typeof details.serviceName === 'string'
-      ? details.serviceName
+    'serviceName' in details && typeof (details as any).serviceName === 'string'
+      ? (details as any).serviceName
       : null;
-  const report = buildErrorReport('main', `Child process gone: ${details.type}`, {
-    type: details.type,
+  const report = buildErrorReport('main', `Child process gone: ${details.reason}`, {
     reason: details.reason,
     exitCode: typeof details.exitCode === 'number' ? details.exitCode : null,
     serviceName,

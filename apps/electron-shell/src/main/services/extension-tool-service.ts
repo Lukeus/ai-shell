@@ -5,6 +5,8 @@
  * P2 (Security): Agent Host communicates via main process, never directly to Extension Host.
  */
 
+import { z } from 'zod';
+import Ajv, { type ValidateFunction } from 'ajv';
 import { ExtensionHostManager } from './extension-host-manager';
 
 /**
@@ -14,7 +16,10 @@ export interface RegisteredTool {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   extensionId: string;
+  inputValidator?: z.ZodTypeAny;
+  outputValidator?: z.ZodTypeAny;
 }
 
 /**
@@ -26,6 +31,8 @@ export interface ToolExecutionResult {
   error?: string;
 }
 
+type ExtensionActivationHandler = (extensionId: string, event?: string) => Promise<void>;
+
 /**
  * ExtensionToolService manages tool registration and execution.
  * Tools are callable by Agent Host for extension functionality.
@@ -33,10 +40,17 @@ export interface ToolExecutionResult {
 export class ExtensionToolService {
   private extensionHostManager: ExtensionHostManager;
   private tools: Map<string, RegisteredTool>;
+  private activateExtension?: ExtensionActivationHandler;
+  private ajv: Ajv;
 
-  constructor(extensionHostManager: ExtensionHostManager) {
+  constructor(
+    extensionHostManager: ExtensionHostManager,
+    activateExtension?: ExtensionActivationHandler
+  ) {
     this.extensionHostManager = extensionHostManager;
     this.tools = new Map();
+    this.activateExtension = activateExtension;
+    this.ajv = new Ajv({ allErrors: true, strict: false, allowUnionTypes: true });
   }
 
   /**
@@ -50,7 +64,16 @@ export class ExtensionToolService {
 
     // Task 8 invariant: Tool schemas validated against ToolContributionSchema
     // Validation happens during extension manifest loading in ExtensionRegistry
-    this.tools.set(tool.name, tool);
+    const inputValidator = this.buildValidator(tool.inputSchema, 'input');
+    const outputValidator = tool.outputSchema
+      ? this.buildValidator(tool.outputSchema, 'output')
+      : undefined;
+
+    this.tools.set(tool.name, {
+      ...tool,
+      inputValidator,
+      outputValidator,
+    });
     console.log(`[ExtensionToolService] Registered tool ${tool.name} from ${tool.extensionId}`);
   }
 
@@ -94,11 +117,40 @@ export class ExtensionToolService {
     }
 
     try {
+      if (tool.inputValidator) {
+        const parsed = tool.inputValidator.safeParse(input);
+        if (!parsed.success) {
+          return {
+            success: false,
+            error: 'Tool input failed schema validation.',
+          };
+        }
+        input = parsed.data;
+      }
+
+      if (this.activateExtension) {
+        await this.activateExtension(tool.extensionId, `onTool:${toolName}`);
+      }
+
       // Execute tool via Extension Host
       const result = await this.extensionHostManager.sendRequest('tool.execute', {
         toolName,
         input,
       });
+
+      if (tool.outputValidator) {
+        const parsed = tool.outputValidator.safeParse(result);
+        if (!parsed.success) {
+          return {
+            success: false,
+            error: 'Tool output failed schema validation.',
+          };
+        }
+        return {
+          success: true,
+          result: parsed.data,
+        };
+      }
 
       return {
         success: true,
@@ -124,6 +176,13 @@ export class ExtensionToolService {
   }
 
   /**
+   * Reset all registered tools (used during contribution sync).
+   */
+  reset(): void {
+    this.tools.clear();
+  }
+
+  /**
    * Get tools from a specific extension.
    */
   getExtensionTools(extensionId: string): RegisteredTool[] {
@@ -142,5 +201,32 @@ export class ExtensionToolService {
    */
   hasTool(toolName: string): boolean {
     return this.tools.has(toolName);
+  }
+
+  private buildValidator(schema: Record<string, unknown>, label: string): z.ZodTypeAny {
+    let validate: ValidateFunction;
+    try {
+      validate = this.ajv.compile(schema);
+    } catch (error) {
+      console.warn(`[ExtensionToolService] Invalid ${label} schema`, error);
+      return z.any().superRefine((_value, ctx) => {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Invalid ${label} schema.`,
+        });
+      });
+    }
+    return z.any().superRefine((value, ctx) => {
+      const ok = validate(value);
+      if (ok) {
+        return;
+      }
+      const error = validate.errors?.[0];
+      const message = error?.message ? `${label} ${error.message}` : `${label} schema invalid`;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message,
+      });
+    });
   }
 }

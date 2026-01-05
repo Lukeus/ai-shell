@@ -120,7 +120,7 @@ export class SddRunCoordinator {
 
     if (!this.agentHostManager) {
       if (request.action === 'cancel') {
-        this.handleRunError(request.runId, request.reason ?? 'Run canceled.');
+        this.handleRunCanceled(request.runId, request.reason ?? 'Run canceled.');
         return;
       }
       throw new Error('Agent Host not available.');
@@ -202,11 +202,27 @@ export class SddRunCoordinator {
 
     if (event.type === 'runFailed') {
       this.updateRunStatus(event.runId, 'failed');
+      return;
+    }
+
+    if (event.type === 'runCanceled') {
+      this.updateRunStatus(event.runId, 'canceled');
     }
   }
 
   private updateRunStatus(runId: string, status: SddRunRecord['status']): void {
     this.updateRun(runId, { status });
+  }
+
+  private handleRunCanceled(runId: string, message: string): void {
+    this.updateRunStatus(runId, 'canceled');
+    this.publishEvent({
+      id: randomUUID(),
+      runId,
+      timestamp: new Date().toISOString(),
+      type: 'runCanceled',
+      message,
+    });
   }
 
   private updateRun(runId: string, updates: Partial<SddRunRecord>): void {

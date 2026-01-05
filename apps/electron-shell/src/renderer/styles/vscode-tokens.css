@@ -17,7 +17,7 @@
   --vscode-sidebar-background: #252526;
   --vscode-activityBar-background: #333333;
   --vscode-statusBar-background: #007acc;
-  --vscode-statusBar-foreground: #cccccc;
+  --vscode-statusBar-foreground: #ffffff;
   --vscode-statusBar-hoverBackground: #1f8ad6;
   --vscode-titleBar-activeBackground: #333333;
   --vscode-titleBar-activeForeground: #cccccc;
@@ -115,6 +115,8 @@
   --vscode-activityBar-width: 48px;
   --vscode-activityBar-iconSize: 24px;
   --vscode-tab-height: 35px;
+  --vscode-tab-minWidth: 120px;
+  --vscode-tab-maxWidth: 260px;
   --vscode-breadcrumbs-height: var(--vscode-list-rowHeight);
   --vscode-statusBar-height: 24px;
   --vscode-titleBar-height: 35px;

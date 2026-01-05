@@ -34,6 +34,7 @@ export function EditorLoader(props: EditorLoaderProps) {
         
         // Dynamic import of MonacoEditor component
         // Note: The MonacoEditor component itself handles the monaco-editor library import
+        await import('../../monaco/monacoWorkers');
         const module = await import('./MonacoEditor');
         
         if (!isMounted) return;

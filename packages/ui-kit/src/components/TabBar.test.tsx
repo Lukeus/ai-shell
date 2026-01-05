@@ -16,13 +16,14 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
-    expect(screen.getByText('Terminal')).toBeInTheDocument();
-    expect(screen.getByText('Output')).toBeInTheDocument();
-    expect(screen.getByText('Problems')).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: 'Terminal' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Output' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Problems' })).toBeInTheDocument();
   });
 
   it('should mark the active tab with aria-selected', () => {
@@ -32,7 +33,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="output"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -43,24 +44,24 @@ describe('TabBar', () => {
     expect(terminalTab).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('should call onTabChange when a tab is clicked', () => {
+  it('should call onChange when a tab is clicked', () => {
     const handleChange = vi.fn();
     
     render(
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
-    const outputTab = screen.getByText('Output');
+    const outputTab = screen.getByRole('tab', { name: 'Output' });
     fireEvent.click(outputTab);
 
     expect(handleChange).toHaveBeenCalledWith('output');
   });
 
-  it('should not call onTabChange when disabled tab is clicked', () => {
+  it('should not call onChange when disabled tab is clicked', () => {
     const handleChange = vi.fn();
     const tabsWithDisabled: Tab[] = [
       { id: 'terminal', label: 'Terminal' },
@@ -72,11 +73,11 @@ describe('TabBar', () => {
       <TabBar
         tabs={tabsWithDisabled}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
-    const outputTab = screen.getByText('Output');
+    const outputTab = screen.getByRole('tab', { name: 'Output' });
     fireEvent.click(outputTab);
 
     expect(handleChange).not.toHaveBeenCalled();
@@ -98,7 +99,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={tabsWithIcons}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -112,7 +113,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -129,7 +130,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="output"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -146,7 +147,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="problems"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -163,7 +164,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="problems"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -180,7 +181,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -202,7 +203,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={tabsWithDisabled}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -213,14 +214,14 @@ describe('TabBar', () => {
     expect(handleChange).toHaveBeenCalledWith('problems');
   });
 
-  it('should have proper ARIA attributes', () => {
+  it('should expose tablist and tabs for accessibility', () => {
     const handleChange = vi.fn();
     
     const { container } = render(
       <TabBar
         tabs={mockTabs}
         activeTabId="terminal"
-        onTabChange={handleChange}
+        onChange={handleChange}
       />
     );
 
@@ -229,9 +230,6 @@ describe('TabBar', () => {
 
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(3);
-
-    tabs.forEach((tab, index) => {
-      expect(tab).toHaveAttribute('aria-controls', `tabpanel-${mockTabs[index].id}`);
-    });
   });
 });
+

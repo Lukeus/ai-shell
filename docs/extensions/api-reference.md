@@ -43,6 +43,7 @@ Tools:
 - `name`: tool name (unique within extension)
 - `description`: tool description
 - `inputSchema`: JSON schema for parameters
+- `outputSchema`: optional JSON schema for results
 
 Settings:
 
@@ -79,5 +80,8 @@ Currently, extensions receive an API object with:
 
 - `context`: extension context (paths, ID)
 - `log(message: string)`: logs a message in Extension Host
+- `commands.registerCommand(commandId, handler)`
+- `views.registerView(viewId, provider)`
+- `tools.registerTool(name, description, inputSchema, handler)`
 
-Future APIs will be added for commands, views, tools, UI, and storage.
+Future APIs will be added for UI and storage.

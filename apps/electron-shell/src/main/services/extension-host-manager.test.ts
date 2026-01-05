@@ -48,16 +48,16 @@ describe('ExtensionHostManager', () => {
     mockChildProcess = {
       pid: 12345,
       killed: false,
-      stdin: new PassThrough(),
-      stdout: new PassThrough(),
-      stderr: new PassThrough(),
-      on: vi.fn(),
-      once: vi.fn((event: string, handler: () => void) => {
+      stdin: new PassThrough() as any,
+      stdout: new PassThrough() as any,
+      stderr: new PassThrough() as any,
+      on: vi.fn() as any,
+      once: vi.fn(((event: string, handler: () => void) => {
         if (event === 'exit') {
           handler();
         }
-      }),
-      kill: vi.fn(),
+      }) as any) as any,
+      kill: vi.fn() as any,
     };
 
     // Mock fork to return our mock process

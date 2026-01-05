@@ -64,6 +64,7 @@ export const ExtensionManifestSchema = z.object({
       name: z.string(),
       description: z.string(),
       inputSchema: z.record(z.unknown()),
+      outputSchema: z.record(z.unknown()).optional(),
     })).optional(),
   }).optional(),
 });

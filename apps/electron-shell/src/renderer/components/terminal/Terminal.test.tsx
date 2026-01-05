@@ -28,11 +28,13 @@ const mockTerminal = {
   write: vi.fn(),
   onData: vi.fn(() => ({ dispose: vi.fn() })),
   dispose: vi.fn(),
-  setOption: vi.fn(),
   clear: vi.fn(),
   cols: 80,
   rows: 24,
   loadAddon: vi.fn(),
+  options: {
+    theme: {},
+  },
 };
 
 const mockFitAddon = {
@@ -186,10 +188,10 @@ describe('Terminal', () => {
   it('writes output from TerminalContext to xterm', async () => {
     const testOutput = 'Hello from terminal\r\n';
     let dataHandler: ((event: { sessionId: string; data: string }) => void) | null = null;
-    mockTerminalApi.onData.mockImplementation((handler) => {
+    mockTerminalApi.onData.mockImplementation(((handler: (event: { sessionId: string; data: string }) => void) => {
       dataHandler = handler;
       return vi.fn();
-    });
+    }) as any);
     
     render(<Terminal sessionId="test-session-1" />, { wrapper: TestWrapper });
     
@@ -198,12 +200,34 @@ describe('Terminal', () => {
       expect(mockTerminal.open).toHaveBeenCalled();
     }, { timeout: 3000 });
 
-    dataHandler?.({ sessionId: 'test-session-1', data: testOutput });
+    (dataHandler as any)?.({ sessionId: 'test-session-1', data: testOutput });
     
     // Wait for output to be written
     await waitFor(() => {
       expect(mockTerminal.write).toHaveBeenCalledWith(expect.stringContaining(testOutput));
     }, { timeout: 3000 });
+  });
+
+  it('P1: handles rapid incremental updates correctly', async () => {
+    let dataHandler: ((event: { sessionId: string; data: string }) => void) | null = null;
+    mockTerminalApi.onData.mockImplementation(((handler: (event: { sessionId: string; data: string }) => void) => {
+      dataHandler = handler;
+      return vi.fn();
+    }) as any);
+    
+    render(<Terminal sessionId="test-session-1" />, { wrapper: TestWrapper });
+    
+    await waitFor(() => expect(mockTerminal.open).toHaveBeenCalled());
+
+    // Chunk 1
+    (dataHandler as any)?.({ sessionId: 'test-session-1', data: 'first chunk ' });
+    await waitFor(() => expect(mockTerminal.write).toHaveBeenCalledWith('first chunk '));
+
+    // Chunk 2
+    (dataHandler as any)?.({ sessionId: 'test-session-1', data: 'second chunk' });
+    await waitFor(() => expect(mockTerminal.write).toHaveBeenCalledWith('second chunk'));
+    
+    expect(mockTerminal.write).toHaveBeenCalledTimes(2);
   });
 
   it('sends resize events via IPC', async () => {

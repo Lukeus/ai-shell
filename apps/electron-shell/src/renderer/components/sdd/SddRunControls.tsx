@@ -6,6 +6,8 @@ type SddRunControlsProps = {
   goal: string;
   step: SddStep;
   slashCommand: string;
+  customCommands: string[];
+  customCommandErrors: string[];
   isRunning: boolean;
   isStarting: boolean;
   canStart: boolean;
@@ -28,6 +30,8 @@ export function SddRunControls({
   goal,
   step,
   slashCommand,
+  customCommands,
+  customCommandErrors,
   isRunning,
   isStarting,
   canStart,
@@ -124,6 +128,19 @@ export function SddRunControls({
             fontSize: 'var(--vscode-font-size-ui)',
           }}
         />
+        {customCommands.length > 0 && (
+          <span className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
+            Custom commands: {customCommands.join(', ')}
+          </span>
+        )}
+        {customCommandErrors.length > 0 && (
+          <span
+            className="text-status-error"
+            style={{ fontSize: 'var(--vscode-font-size-small)' }}
+          >
+            {customCommandErrors.join(' ')}
+          </span>
+        )}
       </label>
 
       <div className="flex items-center gap-2">

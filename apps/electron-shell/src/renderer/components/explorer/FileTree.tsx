@@ -202,7 +202,7 @@ export function FileTree({
 
   return (
     <div
-      className="overflow-y-auto h-full text-primary"
+      className="overflow-y-auto h-full w-full text-primary"
       role="tree"
       aria-label="File explorer tree"
       style={{ fontSize: 'var(--vscode-font-size-ui)' }}

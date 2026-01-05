@@ -1,5 +1,4 @@
-import { ipcMain, app, BrowserWindow, type WebContents } from 'electron';
-import { randomUUID } from 'crypto';
+import { ipcMain, app, BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -23,19 +22,6 @@ import {
   TerminalResizeRequestSchema,
   TerminalCloseRequestSchema,
   ListTerminalsResponse,
-  AgentRunStartRequestSchema,
-  AgentRunStartResponse,
-  AgentRunControlRequestSchema,
-  AgentRunControlResponse,
-  ListAgentRunsResponse,
-  GetAgentRunRequestSchema,
-  GetAgentRunResponse,
-  AgentEventSchema,
-  AgentEventSubscriptionRequestSchema,
-  ListAgentTraceRequestSchema,
-  ListAgentTraceResponse,
-  type AgentEvent,
-  type AgentRunStatus,
   CreateConnectionRequestSchema,
   CreateConnectionResponse,
   UpdateConnectionRequestSchema,
@@ -52,8 +38,6 @@ import {
   ListAuditEventsRequestSchema,
   ListAuditEventsResponse,
   WindowStateSchema,
-  ExtensionIdRequestSchema,
-  ListExtensionsResponse,
   SearchRequestSchema,
   SearchResponse,
   ReplaceRequestSchema,
@@ -83,11 +67,18 @@ import {
   SddProposalApplyRequestSchema,
   SddRunStartRequestSchema,
   SddRunControlRequestSchema,
+  AppendOutputRequestSchema,
+  ClearOutputRequestSchema,
+  ListOutputChannelsRequestSchema,
+  ReadOutputRequestSchema,
+  type OutputAppendEvent,
+  type OutputClearEvent,
 } from 'packages-api-contracts';
 import { settingsService } from './services/SettingsService';
 import { workspaceService } from './services/WorkspaceService';
 import { fsBrokerService } from './services/FsBrokerService';
 import { terminalService } from './services/TerminalService';
+import { outputService } from './services/OutputService';
 import { searchService } from './services/SearchService';
 import { gitService } from './services/GitService';
 import { connectionsService } from './services/ConnectionsService';
@@ -95,121 +86,67 @@ import { connectionProviderRegistry } from './services/ConnectionProviderRegistr
 import { secretsService } from './services/SecretsService';
 import { consentService } from './services/ConsentService';
 import { auditService } from './services/AuditService';
-import { agentRunStore } from './services/AgentRunStore';
 import { sddTraceService } from './services/SddTraceService';
 import { sddWatcher } from './services/SddWatcher';
 import { resolvePathWithinWorkspace } from './services/workspace-paths';
 import { patchApplyService } from './services/PatchApplyService';
 import { sddRunCoordinator } from './services/SddRunCoordinator';
+import { registerAgentHandlers } from './ipc/agents';
 import { registerDiagnosticsHandlers } from './ipc/diagnostics';
+import { registerExtensionHandlers } from './ipc/extensions';
 import { registerTestOnlyHandlers } from './ipc/testOnly';
-import {
-  getAgentHostManager,
-  getExtensionCommandService,
-  getExtensionRegistry,
-  getExtensionViewService,
-  getExtensionToolService,
-  getPermissionService,
-} from './index';
-
-type AgentSubscriber = {
-  sender: WebContents;
-  runId?: string;
-};
-
-const agentSubscribers = new Map<number, AgentSubscriber>();
-
-const registerAgentSubscriber = (sender: WebContents, runId?: string): void => {
-  const existing = agentSubscribers.get(sender.id);
-  agentSubscribers.set(sender.id, { sender, runId });
-  if (!existing) {
-    sender.once('destroyed', () => {
-      agentSubscribers.delete(sender.id);
-    });
-  }
-};
-
-const unregisterAgentSubscriber = (sender: WebContents): void => {
-  agentSubscribers.delete(sender.id);
-};
-
-const publishAgentEvent = (event: AgentEvent): void => {
-  const validated = AgentEventSchema.parse(event);
-  for (const subscriber of agentSubscribers.values()) {
-    if (subscriber.sender.isDestroyed()) {
-      agentSubscribers.delete(subscriber.sender.id);
-      continue;
-    }
-    if (subscriber.runId && subscriber.runId !== validated.runId) {
-      continue;
-    }
-    subscriber.sender.send(IPC_CHANNELS.AGENT_EVENTS_ON_EVENT, validated);
-  }
-};
-
-const appendAndPublish = (event: AgentEvent): void => {
-  if (event.type === 'status') {
-    try {
-      agentRunStore.updateRunStatus(event.runId, event.status);
-    } catch {
-      // Ignore missing runs; events may arrive before metadata is created.
-    }
-  }
-  agentRunStore.appendEvent(event);
-  publishAgentEvent(event);
-};
-
-let agentHostBindingsReady = false;
-
-const ensureAgentHostBindings = (): void => {
-  if (agentHostBindingsReady) {
-    return;
-  }
-
-  const agentHostManager = getAgentHostManager();
-  if (!agentHostManager) {
-    return;
-  }
-
-  agentHostManager.onEvent((event) => {
-    appendAndPublish(event);
-  });
-
-  agentHostManager.onRunError((runId, message) => {
-    appendAndPublish(
-      AgentEventSchema.parse({
-        id: randomUUID(),
-        runId,
-        timestamp: new Date().toISOString(),
-        type: 'error',
-        message,
-      })
-    );
-    try {
-      agentRunStore.updateRunStatus(runId, 'failed');
-    } catch {
-      // Ignore missing runs; failure event is still published.
-    }
-  });
-
-  agentHostBindingsReady = true;
-};
+import { getAgentHostManager } from './index';
 
 const getWindowFromEvent = (event: Electron.IpcMainInvokeEvent): BrowserWindow | null => {
   const window = BrowserWindow.fromWebContents(event.sender);
   return window ?? null;
 };
 
-const buildStatusEvent = (runId: string, status: AgentRunStatus): AgentEvent =>
-  AgentEventSchema.parse({
-    id: randomUUID(),
-    runId,
-    timestamp: new Date().toISOString(),
-    type: 'status',
-    status,
+let sddBindingsReady = false;
+
+const publishOutputAppend = (event: OutputAppendEvent): void => {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (window.isDestroyed()) continue;
+    const contents = window.webContents;
+    if (contents.isDestroyed()) continue;
+    try {
+      contents.send(IPC_CHANNELS.OUTPUT_ON_APPEND, event);
+    } catch {
+      // Ignore
+    }
+  }
+};
+
+const publishOutputClear = (event: OutputClearEvent): void => {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (window.isDestroyed()) continue;
+    const contents = window.webContents;
+    if (contents.isDestroyed()) continue;
+    try {
+      contents.send(IPC_CHANNELS.OUTPUT_ON_CLEAR, event);
+    } catch {
+      // Ignore
+    }
+  }
+};
+
+let outputBindingsReady = false;
+
+const ensureOutputBindings = (): void => {
+  if (outputBindingsReady) {
+    return;
+  }
+
+  outputService.onAppend((event) => {
+    publishOutputAppend(event);
   });
 
-let sddBindingsReady = false;
+  outputService.onClear((event) => {
+    publishOutputClear(event);
+  });
+
+  outputBindingsReady = true;
+};
 
 const publishSddStatus = (status: SddStatus): void => {
   let validated: SddStatus;
@@ -354,10 +291,12 @@ const listSddFeatures = async (): Promise<SddListFeaturesResponse> => {
  * P1 (Process isolation): Main process owns OS access
  */
 export function registerIPCHandlers(): void {
-  ensureAgentHostBindings();
   ensureSddBindings();
+  ensureOutputBindings();
   void applySddSettings(settingsService.getSettings());
+  registerAgentHandlers();
   registerDiagnosticsHandlers();
+  registerExtensionHandlers();
   registerTestOnlyHandlers();
   // Handler for GET_VERSION channel
   ipcMain.handle(IPC_CHANNELS.GET_VERSION, async (): Promise<AppInfo> => {
@@ -766,6 +705,60 @@ export function registerIPCHandlers(): void {
   );
 
   // ========================================
+  // Output IPC Handlers
+  // P6 (Contracts-first): Validate all requests with Zod before processing
+  // P1 (Process isolation): All output operations via main process only
+  // ========================================
+
+  /**
+   * Handler for OUTPUT_APPEND channel.
+   * Appends lines to an output channel.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.OUTPUT_APPEND,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = AppendOutputRequestSchema.parse(request);
+      outputService.append(validated);
+    }
+  );
+
+  /**
+   * Handler for OUTPUT_CLEAR channel.
+   * Clears an output channel.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.OUTPUT_CLEAR,
+    async (_event, request: unknown): Promise<void> => {
+      const validated = ClearOutputRequestSchema.parse(request);
+      outputService.clear(validated);
+    }
+  );
+
+  /**
+   * Handler for OUTPUT_LIST_CHANNELS channel.
+   * Lists all output channels.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.OUTPUT_LIST_CHANNELS,
+    async (_event, request: unknown): Promise<any> => {
+      ListOutputChannelsRequestSchema.parse(request ?? {});
+      return outputService.listChannels();
+    }
+  );
+
+  /**
+   * Handler for OUTPUT_READ channel.
+   * Reads lines from an output channel.
+   */
+  ipcMain.handle(
+    IPC_CHANNELS.OUTPUT_READ,
+    async (_event, request: unknown): Promise<any> => {
+      const validated = ReadOutputRequestSchema.parse(request);
+      return outputService.read(validated);
+    }
+  );
+
+  // ========================================
   // SDD IPC Handlers
   // P6 (Contracts-first): Validate all requests with Zod before processing
   // P1 (Process isolation): SDD runs in main process only
@@ -891,152 +884,6 @@ export function registerIPCHandlers(): void {
         });
         throw error;
       }
-    }
-  );
-
-  // ========================================
-  // Agent Runs + Events IPC Handlers
-  // P6 (Contracts-first): Validate all requests with Zod before processing
-  // P1 (Process isolation): Agent Host/renderer communicate through main
-  // ========================================
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_RUNS_LIST,
-    async (): Promise<ListAgentRunsResponse> => {
-      const runs = agentRunStore.listRuns();
-      return { runs };
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_RUNS_GET,
-    async (_event, request: unknown): Promise<GetAgentRunResponse> => {
-      const validated = GetAgentRunRequestSchema.parse(request);
-      const run = agentRunStore.getRun(validated.runId);
-      if (!run) {
-        throw new Error(`Agent run not found: ${validated.runId}`);
-      }
-      return { run };
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_RUNS_START,
-    async (_event, request: unknown): Promise<AgentRunStartResponse> => {
-      const validated = AgentRunStartRequestSchema.parse(request);
-      let run = agentRunStore.createRun('user');
-      appendAndPublish(buildStatusEvent(run.id, run.status));
-
-      const failRun = (message: string): AgentRunStartResponse => {
-        const failedRun = agentRunStore.updateRunStatus(run.id, 'failed');
-        appendAndPublish(
-          AgentEventSchema.parse({
-            id: randomUUID(),
-            runId: run.id,
-            timestamp: new Date().toISOString(),
-            type: 'error',
-            message,
-          })
-        );
-        return { run: failedRun };
-      };
-
-      const settings = settingsService.getSettings();
-      const resolvedConnectionId =
-        validated.connectionId ?? settings.agents.defaultConnectionId;
-
-      if (!resolvedConnectionId) {
-        return failRun('No connection configured for this run.');
-      }
-
-      const connection = connectionsService
-        .listConnections()
-        .find((item) => item.metadata.id === resolvedConnectionId);
-
-      if (!connection) {
-        return failRun(`Connection not found: ${resolvedConnectionId}`);
-      }
-
-      const connectionModel =
-        typeof connection.config.model === 'string' ? connection.config.model : undefined;
-      const effectiveModelRef = validated.config?.modelRef ?? connectionModel;
-
-      run = agentRunStore.updateRunRouting(run.id, {
-        connectionId: resolvedConnectionId,
-        providerId: connection.metadata.providerId,
-        modelRef: effectiveModelRef,
-      });
-
-      ensureAgentHostBindings();
-      const agentHostManager = getAgentHostManager();
-
-      if (!agentHostManager) {
-        return failRun('Agent Host not available.');
-      }
-
-      const requestForHost = {
-        ...validated,
-        connectionId: resolvedConnectionId,
-      };
-
-      try {
-        await agentHostManager.startRun(run.id, requestForHost);
-        return { run };
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to start agent run';
-        return failRun(message);
-      }
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_RUNS_CANCEL,
-    async (_event, request: unknown): Promise<AgentRunControlResponse> => {
-      const validated = AgentRunControlRequestSchema.parse(request);
-      const run = agentRunStore.updateRunStatus(validated.runId, 'canceled');
-      appendAndPublish(buildStatusEvent(run.id, run.status));
-      return { run };
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_RUNS_RETRY,
-    async (_event, request: unknown): Promise<AgentRunControlResponse> => {
-      const validated = AgentRunControlRequestSchema.parse(request);
-      const run = agentRunStore.updateRunStatus(validated.runId, 'queued');
-      appendAndPublish(buildStatusEvent(run.id, run.status));
-      return { run };
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_TRACE_LIST,
-    async (_event, request: unknown): Promise<ListAgentTraceResponse> => {
-      const validated = ListAgentTraceRequestSchema.parse(request);
-      return agentRunStore.listEvents(validated);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_EVENTS_SUBSCRIBE,
-    async (event, request: unknown): Promise<void> => {
-      const validated = AgentEventSubscriptionRequestSchema.parse(request ?? {});
-      if (!event?.sender) {
-        return;
-      }
-      registerAgentSubscriber(event.sender, validated.runId);
-    }
-  );
-
-  ipcMain.handle(
-    IPC_CHANNELS.AGENT_EVENTS_UNSUBSCRIBE,
-    async (event, request: unknown): Promise<void> => {
-      AgentEventSubscriptionRequestSchema.parse(request ?? {});
-      if (!event?.sender) {
-        return;
-      }
-      unregisterAgentSubscriber(event.sender);
     }
   );
 
@@ -1177,238 +1024,4 @@ export function registerIPCHandlers(): void {
     }
   );
 
-  // ========================================
-  // Extension IPC Handlers
-  // P1 (Process isolation): Renderer never talks directly to Extension Host
-  // P2 (Security): All operations go through main process
-  // ========================================
-
-  /**
-   * Handler for EXTENSIONS_LIST channel.
-   * Lists installed extensions from registry.
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_LIST,
-    async (): Promise<ListExtensionsResponse> => {
-      const registry = getExtensionRegistry();
-      if (!registry) {
-        return { extensions: [] };
-      }
-
-      const extensions = registry.getAllExtensions().map((item) => ({
-        manifest: item.manifest,
-        enabled: item.enabled,
-        installedAt: item.installedAt,
-        updatedAt: item.updatedAt,
-      }));
-
-      return { extensions };
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_GET channel.
-   * Gets a single extension by ID.
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_GET,
-    async (_event, request: unknown) => {
-      const validated = ExtensionIdRequestSchema.parse(request);
-      const registry = getExtensionRegistry();
-      if (!registry) {
-        return null;
-      }
-
-      const extension = registry.getExtension(validated.extensionId);
-      if (!extension) {
-        return null;
-      }
-
-      return {
-        manifest: extension.manifest,
-        enabled: extension.enabled,
-        installedAt: extension.installedAt,
-        updatedAt: extension.updatedAt,
-      };
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_ENABLE channel.
-   * Enables an extension by ID.
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_ENABLE,
-    async (_event, request: unknown): Promise<void> => {
-      const validated = ExtensionIdRequestSchema.parse(request);
-      const registry = getExtensionRegistry();
-      if (!registry) {
-        throw new Error('Extension registry not initialized');
-      }
-
-      const ok = await registry.enableExtension(validated.extensionId);
-      if (!ok) {
-        throw new Error(`Extension not found: ${validated.extensionId}`);
-      }
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_DISABLE channel.
-   * Disables an extension by ID.
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_DISABLE,
-    async (_event, request: unknown): Promise<void> => {
-      const validated = ExtensionIdRequestSchema.parse(request);
-      const registry = getExtensionRegistry();
-      if (!registry) {
-        throw new Error('Extension registry not initialized');
-      }
-
-      const ok = await registry.disableExtension(validated.extensionId);
-      if (!ok) {
-        throw new Error(`Extension not found: ${validated.extensionId}`);
-      }
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_UNINSTALL channel.
-   * Uninstalls an extension by ID.
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_UNINSTALL,
-    async (_event, request: unknown): Promise<void> => {
-      const validated = ExtensionIdRequestSchema.parse(request);
-      const registry = getExtensionRegistry();
-      if (!registry) {
-        throw new Error('Extension registry not initialized');
-      }
-
-      const ok = await registry.uninstallExtension(validated.extensionId);
-      if (!ok) {
-        throw new Error(`Extension not found: ${validated.extensionId}`);
-      }
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_EXECUTE_COMMAND channel.
-   * Executes a command from an extension.
-   * 
-   * @param commandId - Command ID to execute
-   * @param args - Command arguments
-   * @returns Command execution result
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_EXECUTE_COMMAND,
-    async (_event, commandId: string, args?: unknown[]) => {
-      const commandService = getExtensionCommandService();
-      if (!commandService) {
-        throw new Error('Extension command service not initialized');
-      }
-
-      return await commandService.executeCommand(commandId, args);
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_LIST_COMMANDS channel.
-   * Lists all registered extension commands.
-   */
-  ipcMain.handle(IPC_CHANNELS.EXTENSIONS_LIST_COMMANDS, async () => {
-    const commandService = getExtensionCommandService();
-    if (!commandService) {
-      return [];
-    }
-
-    return commandService.listCommands();
-  });
-
-  /**
-   * Handler for EXTENSIONS_REQUEST_PERMISSION channel.
-   * Request a permission for an extension.
-   * Returns result if already granted/denied, or null if user decision needed.
-   * 
-   * P1: Permission checks enforced in main process only
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_REQUEST_PERMISSION,
-    async (_event, extensionId: string, scope: string, reason?: string) => {
-      const permService = getPermissionService();
-      if (!permService) {
-        throw new Error('Permission service not initialized');
-      }
-
-      const result = await permService.requestPermission(extensionId, scope as any, reason);
-      return result;
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_LIST_PERMISSIONS channel.
-   * List all permissions for an extension.
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_LIST_PERMISSIONS,
-    async (_event, request: unknown) => {
-      const validated = ExtensionIdRequestSchema.parse(request);
-      const permService = getPermissionService();
-      if (!permService) {
-        return [];
-      }
-
-      return permService.getAllPermissions(validated.extensionId);
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_REVOKE_PERMISSION channel.
-   * Revoke a specific permission for an extension.
-   * Note: For now, this revokes ALL permissions. Individual revocation in future task.
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_REVOKE_PERMISSION,
-    async (_event, request: unknown) => {
-      const validated = ExtensionIdRequestSchema.parse(request);
-      const permService = getPermissionService();
-      if (!permService) {
-        throw new Error('Permission service not initialized');
-      }
-
-      await permService.revokeAllPermissions(validated.extensionId);
-    }
-  );
-
-  /**
-   * Handler for EXTENSIONS_LIST_VIEWS channel.
-   * Lists all registered extension views.
-   * Task 8: View contribution points
-   */
-  ipcMain.handle(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS, async () => {
-    const viewService = getExtensionViewService();
-    if (!viewService) {
-      return [];
-    }
-
-    return viewService.listViews();
-  });
-
-  /**
-   * Handler for EXTENSIONS_RENDER_VIEW channel.
-   * Renders an extension view and returns content.
-   * Task 8: View content sanitized before rendering in renderer (P1)
-   */
-  ipcMain.handle(
-    IPC_CHANNELS.EXTENSIONS_RENDER_VIEW,
-    async (_event, viewId: string) => {
-      const viewService = getExtensionViewService();
-      if (!viewService) {
-        throw new Error('Extension view service not initialized');
-      }
-
-      return await viewService.renderView(viewId);
-    }
-  );
 }

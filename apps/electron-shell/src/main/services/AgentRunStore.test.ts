@@ -148,6 +148,31 @@ describe('AgentRunStore', () => {
     expect(events[0].id).not.toBe(firstId);
   });
 
+  it('resets run events', () => {
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const run = store.createRun('user');
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+
+    store.appendEvent({
+      id: randomUUID(),
+      runId: run.id,
+      timestamp: new Date().toISOString(),
+      type: 'status',
+      status: 'running',
+    });
+
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+    store.resetRunEvents(run.id);
+
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+    const events = store.listEvents({ runId: run.id }).events;
+    expect(events).toHaveLength(0);
+  });
+
   it('redacts sensitive fields in tool calls', () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       throw new Error('ENOENT');

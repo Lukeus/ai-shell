@@ -15,10 +15,16 @@ const mockApi = {
     subscribeEvents: vi.fn(),
     unsubscribeEvents: vi.fn(),
     onEvent: vi.fn(),
+    listConversations: vi.fn(),
+    createConversation: vi.fn(),
+    getConversation: vi.fn(),
+    appendMessage: vi.fn(),
+    saveDraft: vi.fn(),
   },
   connections: {
     list: vi.fn(),
   },
+  getSettings: vi.fn(),
 };
 
 const globalWindow = globalThis as unknown as { window: { api: typeof mockApi } };
@@ -33,11 +39,64 @@ describe('AgentsPanel', () => {
     mockApi.agents.subscribeEvents.mockResolvedValue(undefined);
     mockApi.agents.unsubscribeEvents.mockResolvedValue(undefined);
     mockApi.agents.onEvent.mockImplementation(() => () => undefined);
+    mockApi.agents.listConversations.mockResolvedValue({ ok: true, value: { conversations: [] } });
+    mockApi.agents.getConversation.mockResolvedValue({
+      ok: true,
+      value: {
+        conversation: {
+          id: runId,
+          title: 'New Conversation',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        messages: [],
+      },
+    });
+    mockApi.agents.appendMessage.mockResolvedValue({ ok: true, value: { message: null } });
+    mockApi.agents.createConversation.mockResolvedValue({
+      ok: true,
+      value: {
+        conversation: {
+          id: runId,
+          title: 'New Conversation',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+      },
+    });
+    mockApi.agents.saveDraft.mockResolvedValue({
+      ok: true,
+      value: {
+        featureId: '159-agents-panel-context',
+        specPath: 'specs/159-agents-panel-context/spec.md',
+        planPath: 'specs/159-agents-panel-context/plan.md',
+        tasksPath: 'specs/159-agents-panel-context/tasks.md',
+        savedAt: '2024-01-01T00:00:00.000Z',
+      },
+    });
     mockApi.connections.list.mockResolvedValue({ connections: [] });
+    mockApi.getSettings.mockResolvedValue({
+      appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
+      editor: {
+        wordWrap: false,
+        lineNumbers: true,
+        minimap: true,
+        breadcrumbsEnabled: true,
+        fontSize: 14,
+        tabSize: 2,
+      },
+      terminal: { defaultShell: 'default' },
+      extensions: { autoUpdate: true, enableTelemetry: false },
+      agents: { defaultConnectionId: null },
+      sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+    });
   });
 
   it('renders empty state when no runs exist', async () => {
     render(<AgentsPanel />);
+
+    const runsTab = screen.getByRole('tab', { name: 'Runs' });
+    fireEvent.click(runsTab);
 
     await waitFor(() => {
       expect(screen.getByText('No agent runs yet.')).toBeInTheDocument();
@@ -61,6 +120,8 @@ describe('AgentsPanel', () => {
     mockApi.agents.startRun.mockResolvedValue({ run });
 
     render(<AgentsPanel />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Runs' }));
 
     const input = screen.getByPlaceholderText('Describe the goal...');
     fireEvent.change(input, { target: { value: 'Analyze repo status' } });
@@ -104,6 +165,8 @@ describe('AgentsPanel', () => {
     mockApi.agents.startRun.mockResolvedValue({ run });
 
     render(<AgentsPanel />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Runs' }));
 
     const select = await screen.findByRole('combobox');
     fireEvent.change(select, { target: { value: connectionId } });

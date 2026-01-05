@@ -32,17 +32,34 @@ export function EditorArea() {
     openTabs,
     activeTabIndex,
     workspace,
+    expandedFolders,
     toggleFolder,
     openFile,
     draftContents,
     setDraftContent,
     setSavedContent,
+    setSelectedEntry,
   } = useFileTree();
   const [fileContent, setFileContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [breadcrumbsEnabled, setBreadcrumbsEnabled] = useState(
     SETTINGS_DEFAULTS.editor.breadcrumbsEnabled
+  );
+  const [lineNumbersEnabled, setLineNumbersEnabled] = useState(
+    SETTINGS_DEFAULTS.editor.lineNumbers
+  );
+  const [minimapEnabled, setMinimapEnabled] = useState(
+    SETTINGS_DEFAULTS.editor.minimap
+  );
+  const [wordWrapEnabled, setWordWrapEnabled] = useState(
+    SETTINGS_DEFAULTS.editor.wordWrap
+  );
+  const [fontSize, setFontSize] = useState(
+    SETTINGS_DEFAULTS.editor.fontSize
+  );
+  const [tabSize, setTabSize] = useState(
+    SETTINGS_DEFAULTS.editor.tabSize
   );
   const [symbols, setSymbols] = useState<BreadcrumbSymbol[]>([]);
   const [cursorPosition, setCursorPosition] = useState<BreadcrumbPosition | null>(null);
@@ -63,6 +80,11 @@ export function EditorArea() {
         const settings = await window.api.getSettings();
         if (isMounted) {
           setBreadcrumbsEnabled(settings.editor.breadcrumbsEnabled);
+          setLineNumbersEnabled(settings.editor.lineNumbers);
+          setMinimapEnabled(settings.editor.minimap);
+          setWordWrapEnabled(settings.editor.wordWrap);
+          setFontSize(settings.editor.fontSize);
+          setTabSize(settings.editor.tabSize);
         }
       } catch (error) {
         console.error('Failed to load breadcrumbs setting:', error);
@@ -77,7 +99,24 @@ export function EditorArea() {
     const handleSettingsUpdated: SettingsUpdateListener = (event) => {
       const updated = event.detail;
       if (updated?.editor) {
-        setBreadcrumbsEnabled(updated.editor.breadcrumbsEnabled);
+        if (updated.editor.breadcrumbsEnabled !== undefined) {
+          setBreadcrumbsEnabled(updated.editor.breadcrumbsEnabled);
+        }
+        if (updated.editor.lineNumbers !== undefined) {
+          setLineNumbersEnabled(updated.editor.lineNumbers);
+        }
+        if (updated.editor.minimap !== undefined) {
+          setMinimapEnabled(updated.editor.minimap);
+        }
+        if (updated.editor.wordWrap !== undefined) {
+          setWordWrapEnabled(updated.editor.wordWrap);
+        }
+        if (updated.editor.fontSize !== undefined) {
+          setFontSize(updated.editor.fontSize);
+        }
+        if (updated.editor.tabSize !== undefined) {
+          setTabSize(updated.editor.tabSize);
+        }
       }
     };
 
@@ -170,92 +209,6 @@ export function EditorArea() {
       isMounted = false;
     };
   }, [activeFilePath, draftContents, setSavedContent]);
-
-  // Infer Monaco language from file extension
-  const getLanguageFromPath = (filePath: string): string => {
-    const fileName = filePath.split(/[\\/]/).pop()?.toLowerCase();
-    const ext = filePath.split('.').pop()?.toLowerCase();
-    
-    if (fileName === 'dockerfile') {
-      return 'dockerfile';
-    }
-
-    switch (ext) {
-      case 'ts':
-      case 'tsx':
-        return 'typescript';
-      case 'js':
-      case 'jsx':
-      case 'mjs':
-      case 'cjs':
-        return 'javascript';
-      case 'json':
-      case 'jsonc':
-        return 'json';
-      case 'md':
-      case 'markdown':
-      case 'mdx':
-        return 'markdown';
-      case 'html':
-      case 'htm':
-        return 'html';
-      case 'css':
-        return 'css';
-      case 'scss':
-      case 'sass':
-        return 'scss';
-      case 'less':
-        return 'less';
-      case 'yaml':
-      case 'yml':
-        return 'yaml';
-      case 'xml':
-      case 'svg':
-        return 'xml';
-      case 'py':
-        return 'python';
-      case 'sh':
-      case 'bash':
-        return 'shell';
-      case 'ps1':
-      case 'psm1':
-      case 'psd1':
-        return 'powershell';
-      case 'bat':
-      case 'cmd':
-        return 'bat';
-      case 'ini':
-      case 'properties':
-      case 'editorconfig':
-        return 'ini';
-      case 'c':
-      case 'h':
-        return 'c';
-      case 'cpp':
-      case 'cc':
-      case 'cxx':
-      case 'hpp':
-      case 'hh':
-      case 'hxx':
-        return 'cpp';
-      case 'cs':
-        return 'csharp';
-      case 'java':
-        return 'java';
-      case 'go':
-        return 'go';
-      case 'rs':
-        return 'rust';
-      case 'rb':
-        return 'ruby';
-      case 'php':
-        return 'php';
-      case 'sql':
-        return 'sql';
-      default:
-        return 'plaintext';
-    }
-  };
 
   const handleSymbolsChange = useCallback((nextSymbols: BreadcrumbSymbol[]) => {
     setSymbols(nextSymbols);
@@ -357,6 +310,9 @@ export function EditorArea() {
 
     const segments: BreadcrumbSegment[] = [];
     const canNavigateFolders = Boolean(workspace && isInsideWorkspace);
+    const expandablePaths = canNavigateFolders
+      ? relativeParts.map((_part, index) => buildWorkspacePath(relativeParts.slice(0, index + 1)))
+      : [];
 
     if (workspace && isInsideWorkspace) {
       const workspaceLabel =
@@ -365,9 +321,10 @@ export function EditorArea() {
         id: workspace.path,
         label: workspaceLabel,
         title: workspace.path,
-        icon: <span className="codicon codicon-root-folder" aria-hidden="true" />,
+        icon: <span className="codicon codicon-root-folder text-[12px]" aria-hidden="true" />,
         onClick: () => {
-          void toggleFolder(workspace.path);
+          setSelectedEntry({ path: workspace.path, type: 'directory' });
+          window.dispatchEvent(new CustomEvent('ai-shell:focus-explorer'));
         },
       });
     }
@@ -378,28 +335,43 @@ export function EditorArea() {
         ? buildWorkspacePath(relativeParts.slice(0, index + 1))
         : buildAbsolutePath(relativeParts.slice(0, index + 1));
 
+      const folderPaths = canNavigateFolders ? expandablePaths.slice(0, index + 1) : [];
+
       segments.push({
         id: fullPath,
         label: part,
         title: fullPath,
         icon: (
           <span
-            className={`codicon ${isLast ? 'codicon-file' : 'codicon-folder'}`}
+            className={`codicon ${isLast ? 'codicon-file' : 'codicon-folder'} text-[12px]`}
             aria-hidden="true"
           />
         ),
-        onClick: isLast
-          ? () => openFile(activeFilePath)
-          : canNavigateFolders
-            ? () => {
-                void toggleFolder(fullPath);
+        onClick: () => {
+          if (isLast) {
+            openFile(activeFilePath);
+          } else {
+            void (async () => {
+              for (const path of folderPaths) {
+                if (expandedFolders.has(path)) {
+                  continue;
+                }
+                try {
+                  await toggleFolder(path);
+                } catch (expandError) {
+                  console.error('Failed to expand folder:', expandError);
+                }
               }
-            : undefined,
+            })();
+          }
+          setSelectedEntry({ path: fullPath, type: isLast ? 'file' : 'directory' });
+          window.dispatchEvent(new CustomEvent('ai-shell:focus-explorer'));
+        },
       });
     });
 
     return segments;
-  }, [activeFilePath, openFile, toggleFolder, workspace]);
+  }, [activeFilePath, expandedFolders, openFile, toggleFolder, workspace, setSelectedEntry]);
 
   const symbolPath = useMemo(() => {
     if (!cursorPosition || symbols.length === 0) {
@@ -526,7 +498,11 @@ export function EditorArea() {
             <EditorLoader
               filePath={activeFilePath}
               content={fileContent}
-              language={getLanguageFromPath(activeFilePath)}
+              fontSize={fontSize}
+              tabSize={tabSize}
+              lineNumbers={lineNumbersEnabled}
+              minimap={minimapEnabled}
+              wordWrap={wordWrapEnabled}
               onChange={handleContentChange}
               onEditorReady={handleEditorReady}
               onCursorChange={breadcrumbsEnabled ? handleCursorChange : undefined}

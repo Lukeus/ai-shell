@@ -27,6 +27,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@headlessui/react": "2.2.9",
+    "@heroicons/react": "2.2.0",
     "@tanstack/react-virtual": "^3.10.8",
     "packages-api-contracts": "workspace:*"
   },

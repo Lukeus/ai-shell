@@ -134,6 +134,16 @@ export class AgentRunStore {
     this.saveStore(store);
   }
 
+  public resetRunEvents(runId: string): void {
+    const store = this.loadStore();
+    if (!store.runs[runId]) {
+      throw new Error(`Agent run not found: ${runId}`);
+    }
+
+    store.events[runId] = [];
+    this.saveStore(store);
+  }
+
   public listEvents(request: ListAgentTraceRequest): ListAgentTraceResponse {
     const validated = ListAgentTraceRequestSchema.parse(request);
     const store = this.loadStore();

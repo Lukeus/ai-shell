@@ -166,4 +166,46 @@ describe('BrokerMain with VFS tools', () => {
     expect(auditLog).toHaveLength(1);
     expect(auditLog[0].allowed).toBe(false);
   });
+
+  it('applies per-run policy overrides on tool calls', async () => {
+    const mockVfs = {
+      ls: () => [],
+      read: () => '',
+      write: () => {},
+      edit: () => {},
+      glob: () => [],
+      grep: () => [],
+    };
+
+    const vfsTools = createVfsToolDefinitions(mockVfs);
+    for (const tool of vfsTools) {
+      broker.registerToolDefinition(tool);
+    }
+
+    const runId = randomUUID();
+    broker.setRunPolicy(runId, { allowlist: ['vfs.ls'] });
+    const readEnvelope: ToolCallEnvelope = {
+      callId: randomUUID(),
+      toolId: 'vfs.read',
+      requesterId: 'agent-host',
+      runId,
+      input: { path: '/workspace/test.txt' },
+    };
+
+    const result = await broker.handleAgentToolCall(readEnvelope);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('POLICY_DENIED');
+
+    broker.setRunPolicy(runId, { allowlist: ['vfs.read'] });
+    const allowedEnvelope: ToolCallEnvelope = {
+      callId: randomUUID(),
+      toolId: 'vfs.read',
+      requesterId: 'agent-host',
+      runId,
+      input: { path: '/workspace/test.txt' },
+    };
+
+    const allowedResult = await broker.handleAgentToolCall(allowedEnvelope);
+    expect(allowedResult.ok).toBe(true);
+  });
 });

@@ -1,3 +1,5 @@
+import { ChevronUpIcon } from '@heroicons/react/20/solid';
+
 /**
  * Props for the PanelHeader component.
  */
@@ -34,9 +36,11 @@ export interface PanelHeaderProps {
  * ```
  */
 export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderProps) {
+  const isOpen = !collapsed;
+
   return (
     <div
-      className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary"
+      className="flex items-center justify-between border-b border-border bg-surface-secondary"
       style={{
         height: 'var(--vscode-panelHeader-height)',
         paddingLeft: 'var(--vscode-space-2)',
@@ -55,30 +59,25 @@ export function PanelHeader({ title, collapsed, onToggleCollapse }: PanelHeaderP
           {title}
         </h2>
       </div>
-      
+
       {/* Collapse/expand button */}
       <button
+        type="button"
         onClick={onToggleCollapse}
         className="
           p-1 rounded-none transition-colors duration-150
           hover:bg-surface-hover
           group focus:outline-none focus:ring-1 focus:ring-accent
         "
-        aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
-        aria-expanded={!collapsed}
+        aria-label={isOpen ? 'Collapse panel' : 'Expand panel'}
+        aria-expanded={isOpen}
       >
-        <svg
-          className="w-4 h-4 text-secondary transition-transform duration-200 group-hover:text-primary"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        <ChevronUpIcon
+          className="h-4 w-4 text-secondary transition-transform duration-200 group-hover:text-primary"
           style={{
-            transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+            transform: isOpen ? 'rotate(0deg)' : 'rotate(180deg)',
           }}
-        >
-          {/* Chevron up - rotates 180deg when collapsed */}
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-        </svg>
+        />
       </button>
     </div>
   );

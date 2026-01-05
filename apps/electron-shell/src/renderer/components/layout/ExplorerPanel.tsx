@@ -2,10 +2,6 @@ import React, { useState } from 'react';
 import { useFileTree } from '../explorer/FileTreeContext';
 import { FileTree } from '../explorer/FileTree';
 import { ConfirmDeleteModal } from '../explorer/ConfirmDeleteModal';
-import { ExtensionsPanel } from '../extensions/ExtensionsPanel';
-import { SearchPanel } from '../search/SearchPanel';
-import { SourceControlPanel } from '../scm/SourceControlPanel';
-import { SddPanel } from '../sdd/SddPanel';
 
 /**
  * ExplorerPanel - Root explorer component with file tree and header actions.
@@ -29,11 +25,7 @@ interface DeleteTarget {
   isFolder: boolean;
 }
 
-interface ExplorerPanelProps {
-  activeView?: string;
-}
-
-export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
+export function ExplorerPanel() {
   const {
     workspace,
     error,
@@ -50,42 +42,6 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  if (activeView === 'extensions') {
-    return <ExtensionsPanel />;
-  }
-
-  if (activeView === 'search') {
-    return <SearchPanel />;
-  }
-
-  if (activeView === 'source-control') {
-    return <SourceControlPanel />;
-  }
-
-  if (activeView === 'sdd') {
-    return <SddPanel />;
-  }
-
-  if (activeView !== 'explorer') {
-    return (
-      <div className="flex flex-col h-full min-h-0 bg-surface">
-        <div
-          className="flex items-center justify-center flex-1 text-center text-secondary animate-fade-in"
-          style={{
-            paddingLeft: 'var(--vscode-space-4)',
-            paddingRight: 'var(--vscode-space-4)',
-          }}
-        >
-          <div className="flex flex-col items-center gap-3">
-            <span className="codicon codicon-compass text-2xl opacity-50" aria-hidden="true" />
-            <p className="text-tertiary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
-              This view is not available yet.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -179,10 +135,10 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
   // Empty state: no workspace
   if (!workspace) {
     return (
-      <div className="flex flex-col h-full min-h-0 bg-surface">
+      <div className="flex flex-col h-full w-full min-h-0 bg-surface">
         {/* Header */}
         <div
-          className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary shrink-0"
+          className="flex items-center justify-between border-b border-[var(--vscode-panel-border)] bg-surface-secondary shrink-0"
           style={{
             paddingLeft: 'var(--vscode-space-2)',
             paddingRight: 'var(--vscode-space-2)',
@@ -256,7 +212,7 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col h-full min-h-0 bg-surface">
+      <div className="flex flex-col h-full w-full min-h-0 bg-surface">
         {/* Header */}
         <div
           className="flex items-center justify-between border-b border-border-subtle bg-surface-secondary shrink-0"
@@ -343,7 +299,7 @@ export function ExplorerPanel({ activeView = 'explorer' }: ExplorerPanelProps) {
 
   // Normal state: workspace open
   return (
-    <div className="flex flex-col h-full min-h-0 bg-surface">
+    <div className="flex flex-col h-full w-full min-h-0 bg-surface">
       {/* Header with actions */}
       <div
         className="flex items-center gap-2 border-b border-border-subtle bg-surface-secondary shrink-0"

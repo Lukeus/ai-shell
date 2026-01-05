@@ -5,8 +5,10 @@
  * Extensions are Node.js modules with an exported activate() function.
  */
 
-import { ExtensionManifest, ExtensionContext } from 'packages-api-contracts';
+import { ExtensionManifest } from 'packages-api-contracts';
 import * as path from 'path';
+import { readFile } from 'fs/promises';
+import * as vm from 'vm';
 
 /**
  * Extension module interface.
@@ -25,6 +27,74 @@ export interface LoadedExtension {
   extensionPath: string;
   module: ExtensionModule;
 }
+
+const EXTENSION_EVAL_TIMEOUT_MS = 5000;
+
+const buildExtensionConsole = (extensionId: string) => {
+  return {
+    log: (...args: unknown[]) => console.log(`[Extension ${extensionId}]`, ...args),
+    warn: (...args: unknown[]) => console.warn(`[Extension ${extensionId}]`, ...args),
+    error: (...args: unknown[]) => console.error(`[Extension ${extensionId}]`, ...args),
+  };
+};
+
+const createSandbox = (extensionId: string): vm.Context => {
+  const sandbox: Record<string, unknown> = {
+    console: buildExtensionConsole(extensionId),
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
+  };
+  sandbox.globalThis = sandbox;
+
+  return vm.createContext(sandbox, {
+    codeGeneration: {
+      strings: false,
+      wasm: false,
+    },
+  });
+};
+
+const createBlockedRequire = (extensionId: string) => {
+  return () => {
+    throw new Error(`Extension ${extensionId} attempted to use require(), which is not allowed.`);
+  };
+};
+
+const loadExtensionModule = async (
+  manifest: ExtensionManifest,
+  extensionPath: string
+): Promise<ExtensionModule> => {
+  const mainPath = path.join(extensionPath, manifest.main);
+  const source = await readFile(mainPath, 'utf-8');
+
+  const wrapperSource = [
+    '(function (exports, module, require, __filename, __dirname) {',
+    '"use strict";',
+    source,
+    '\n})',
+  ].join('\n');
+
+  const sandbox = createSandbox(manifest.id);
+  const script = new vm.Script(wrapperSource, {
+    filename: mainPath,
+    displayErrors: true,
+  });
+
+  const module = { exports: {} as Record<string, unknown> };
+  const exports = module.exports;
+  const blockedRequire = createBlockedRequire(manifest.id);
+  const compiledWrapper = script.runInContext(sandbox, { timeout: EXTENSION_EVAL_TIMEOUT_MS });
+
+  if (typeof compiledWrapper !== 'function') {
+    throw new Error(`Extension ${manifest.id} failed to load in sandbox.`);
+  }
+
+  compiledWrapper(exports, module, blockedRequire, mainPath, path.dirname(mainPath));
+
+  return module.exports as unknown as ExtensionModule;
+};
 
 /**
  * ExtensionLoader handles loading extension modules from disk.
@@ -46,12 +116,8 @@ export class ExtensionLoader {
     }
 
     try {
-      // Resolve main entry point
-      const mainPath = path.join(extensionPath, manifest.main);
-      
-      // Dynamically import the extension module
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const module = require(mainPath) as ExtensionModule;
+      // Load extension module in VM sandbox (no Node built-ins)
+      const module = await loadExtensionModule(manifest, extensionPath);
 
       // Validate module has activate function
       if (typeof module.activate !== 'function') {

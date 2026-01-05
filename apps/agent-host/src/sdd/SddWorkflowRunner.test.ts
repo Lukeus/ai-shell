@@ -8,9 +8,24 @@ type FileMap = Record<string, string>;
 const buildContextFiles = (featureId: string): FileMap => ({
   'memory/constitution.md': 'constitution',
   'memory/context/00-overview.md': 'overview',
-  [`specs/${featureId}/spec.md`]: 'spec',
-  [`specs/${featureId}/plan.md`]: 'plan',
-  [`specs/${featureId}/tasks.md`]: 'tasks',
+  [`specs/${featureId}/spec.md`]: 'Constitution alignment: yes\nspec',
+  [`specs/${featureId}/plan.md`]: 'Constitution alignment: yes\nplan',
+  [`specs/${featureId}/tasks.md`]: 'Constitution alignment: yes\ntasks',
+  'docs/architecture/architecture.md': 'architecture',
+});
+
+const buildBaseContextFiles = (): FileMap => ({
+  'memory/constitution.md': 'constitution',
+  'memory/context/00-overview.md': 'overview',
+  'docs/architecture/architecture.md': 'architecture',
+});
+
+const buildContextFilesForRoot = (featureRoot: string): FileMap => ({
+  'memory/constitution.md': 'constitution',
+  'memory/context/00-overview.md': 'overview',
+  [`${featureRoot}/spec.md`]: 'Constitution alignment: yes\nspec',
+  [`${featureRoot}/plan.md`]: 'Constitution alignment: yes\nplan',
+  [`${featureRoot}/tasks.md`]: 'Constitution alignment: yes\ntasks',
   'docs/architecture/architecture.md': 'architecture',
 });
 
@@ -85,6 +100,28 @@ describe('SddWorkflowRunner', () => {
     expect(events[2]).toMatchObject({ type: 'stepStarted', step: 'spec' });
   });
 
+  it('allows /spec when feature docs do not exist yet', async () => {
+    const featureId = '999-new-feature';
+    const toolExecutor = createToolExecutor(buildBaseContextFiles(), 'Spec output');
+    const events: SddRunEvent[] = [];
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+    });
+
+    const runId = randomUUID();
+    await runner.startRun(runId, { featureId, goal: 'Bootstrap spec', step: 'spec' });
+
+    const proposalEvent = events.find((event) => event.type === 'proposalReady');
+    expect(proposalEvent?.type).toBe('proposalReady');
+    if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.writes[0]).toMatchObject({
+        path: `specs/${featureId}/spec.md`,
+        content: 'Spec output',
+      });
+    }
+  });
+
   it('fails when required context files are missing', async () => {
     const featureId = '151-sdd-workflow';
     const files = buildContextFiles(featureId);
@@ -126,5 +163,96 @@ describe('SddWorkflowRunner', () => {
         content: 'Plan content',
       });
     }
+  });
+
+  it('resolves doc paths when feature id points to a doc path', async () => {
+    const featureRoot = 'specs/151-sdd-workflow';
+    const featureId = `${featureRoot}/spec.md`;
+    const toolExecutor = createToolExecutor(buildContextFilesForRoot(featureRoot), 'Spec output');
+    const events: SddRunEvent[] = [];
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+    });
+
+    const runId = randomUUID();
+    await runner.startRun(runId, { featureId, goal: 'Test SDD', step: 'spec' });
+
+    const proposalEvent = events.find((event) => event.type === 'proposalReady');
+    expect(proposalEvent?.type).toBe('proposalReady');
+    if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.writes[0]).toMatchObject({
+        path: `${featureRoot}/spec.md`,
+      });
+    }
+  });
+
+  it('fails when constitution alignment is missing', async () => {
+    const featureId = '151-sdd-workflow';
+    const files = buildContextFiles(featureId);
+    files[`specs/${featureId}/plan.md`] = 'plan without alignment';
+
+    const toolExecutor = createToolExecutor(files, 'Plan output');
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: () => undefined,
+    });
+
+    const runId = randomUUID();
+    await expect(
+      runner.startRun(runId, { featureId, goal: 'Test SDD', step: 'plan' })
+    ).rejects.toThrow('SDD constitution alignment check failed');
+  });
+
+  it('builds an implementation proposal with multiple files', async () => {
+    const featureId = '151-sdd-workflow';
+    const modelText = JSON.stringify({
+      writes: [
+        { path: 'apps/example/src/alpha.ts', content: 'export const alpha = true;\n' },
+        { path: 'apps/example/src/beta.ts', content: 'export const beta = false;\n' },
+      ],
+    });
+    const toolExecutor = createToolExecutor(buildContextFiles(featureId), modelText);
+    const events: SddRunEvent[] = [];
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+    });
+
+    const runId = randomUUID();
+    await runner.startRun(runId, { featureId, goal: 'Implement task', step: 'implement' });
+
+    const proposalEvent = events.find((event) => event.type === 'proposalReady');
+    expect(proposalEvent?.type).toBe('proposalReady');
+    if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.writes).toHaveLength(2);
+      expect(proposalEvent.proposal.summary.filesChanged).toBe(2);
+    }
+  });
+
+  it('emits runCanceled when cancel is requested', async () => {
+    const featureId = '151-sdd-workflow';
+    const deferred: { resolve: () => void } = { resolve: () => undefined };
+    const contextLoader = () =>
+      new Promise<{ files: Map<string, string> }>((resolve) => {
+        deferred.resolve = () => resolve({ files: new Map(Object.entries(buildBaseContextFiles())) });
+      });
+
+    const toolExecutor = createToolExecutor(buildBaseContextFiles(), 'Spec output');
+    const events: SddRunEvent[] = [];
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+      contextLoader: async (...args) => contextLoader(...args),
+    });
+
+    const runId = randomUUID();
+    const runPromise = runner.startRun(runId, { featureId, goal: 'Cancel me', step: 'spec' });
+    runner.controlRun({ runId, action: 'cancel', reason: 'User requested' });
+    deferred.resolve();
+    await runPromise;
+
+    const cancelEvent = events.find((event) => event.type === 'runCanceled');
+    expect(cancelEvent?.type).toBe('runCanceled');
   });
 });

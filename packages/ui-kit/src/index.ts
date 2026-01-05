@@ -15,6 +15,11 @@ export * from './components/ResizablePanel';
 export * from './components/ActivityBar';
 export * from './components/StatusBar';
 export * from './components/PanelHeader';
+export * from './components/Modal';
+export * from './components/CommandPalette';
+export * from './components/Menu';
+export * from './components/Badge';
+export * from './components/Breadcrumbs';
 
 // Export form control components
 export * from './components/ToggleSwitch';
@@ -24,6 +29,7 @@ export * from './components/Input';
 // Export navigation and list components
 export * from './components/TabBar';
 export * from './components/VirtualizedList';
+export * from './components/Icon';
 
 // Package version
 export const UI_KIT_VERSION = '0.0.1';

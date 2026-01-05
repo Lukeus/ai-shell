@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SddStepSchema } from './sdd';
 
 /**
  * Theme options for the application.
@@ -86,6 +87,12 @@ export const EditorSettingsSchema = z.object({
 
   /** Show editor breadcrumbs (default: true) */
   breadcrumbsEnabled: z.boolean().default(true),
+
+  /** Editor font size in pixels (min: 10, max: 24, default: 14) */
+  fontSize: z.number().int().min(10).max(24).default(14),
+
+  /** Number of spaces per tab (default: 2) */
+  tabSize: z.number().int().min(1).max(8).default(2),
 });
 
 /**
@@ -146,12 +153,24 @@ export type TerminalSettings = z.infer<typeof TerminalSettingsSchema>;
  *
  * Controls whether SDD tracing is enabled and whether commit enforcement applies.
  */
+export const SddCustomCommandSchema = z.object({
+  command: z.string().min(2).regex(/^\/[a-z0-9][a-z0-9-]*$/),
+  label: z.string().min(1).optional(),
+  step: SddStepSchema,
+  goalTemplate: z.string().min(1).optional(),
+});
+
+export type SddCustomCommand = z.infer<typeof SddCustomCommandSchema>;
+
 export const SddSettingsSchema = z.object({
   /** Enable SDD tracing and parity computation (default: false) */
   enabled: z.boolean().default(false),
 
   /** Block commits when untracked code changes exist (default: false) */
   blockCommitOnUntrackedCodeChanges: z.boolean().default(false),
+
+  /** Custom slash commands for SDD workflows */
+  customCommands: z.array(SddCustomCommandSchema).default([]),
 });
 
 /**

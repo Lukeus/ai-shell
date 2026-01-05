@@ -75,6 +75,16 @@ export function FileTreeNode({
   const isExpanded = isDirectory && expandedFolders.has(entry.path);
   const children = isExpanded ? directoryCache.get(entry.path) || [] : [];
   const isSelected = selectedEntry?.path === entry.path;
+
+  useEffect(() => {
+    if (isSelected) {
+      const element = document.getElementById(`file-tree-node-${entry.path.replace(/[:\\/]/g, '-')}`);
+      if (element) {
+        element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [isSelected, entry.path]);
+
   const showInlineInput = Boolean(inlineInputMode) && isDirectory && inlineInputTargetPath === entry.path;
   const isUntracked = Boolean(sddEnabled && sddStatus?.parity?.driftFiles?.includes(entry.path));
   const trackedRun = fileTrace?.runs?.[0];
@@ -193,8 +203,9 @@ export function FileTreeNode({
   return (
     <>
       <div
+        id={`file-tree-node-${entry.path.replace(/[:\\/]/g, '-')}`}
         className={`
-          flex items-center cursor-pointer select-none
+          flex items-center w-full cursor-pointer select-none
           ${isSelected ? 'bg-[var(--vscode-list-activeSelectionBackground)]' : 'hover:bg-[var(--vscode-list-hoverBackground)]'}
           text-primary
         `}

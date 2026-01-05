@@ -1,4 +1,5 @@
 import React from 'react';
+import { Badge, type BadgeVariant } from 'packages-ui-kit';
 
 type SddBadgeStatus = 'tracked' | 'untracked';
 
@@ -9,39 +10,52 @@ interface SddBadgeProps {
   as?: 'button' | 'span';
 }
 
+const STATUS_CONFIG: Record<
+  SddBadgeStatus,
+  { label: string; variant: BadgeVariant; className: string }
+> = {
+  tracked: {
+    label: 'Tracked',
+    variant: 'muted',
+    className: 'text-status-success border-border-subtle bg-surface-elevated normal-case tracking-normal text-[10px] rounded-sm px-1.5 py-0',
+  },
+  untracked: {
+    label: 'Untracked',
+    variant: 'muted',
+    className: 'text-status-warning border-border-subtle bg-surface-elevated normal-case tracking-normal text-[10px] rounded-sm px-1.5 py-0',
+  },
+};
+
 export function SddBadge({ status, title, onClick, as }: SddBadgeProps) {
-  const label = status === 'tracked' ? 'Tracked' : 'Untracked';
-  const toneClass =
-    status === 'tracked'
-      ? 'border-status-success text-status-success'
-      : 'border-border-subtle text-status-warning';
-  const baseClass =
-    `inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide`;
-
+  const { label, variant, className } = STATUS_CONFIG[status];
   const elementType = as ?? (onClick ? 'button' : 'span');
-  const className = `${baseClass} ${toneClass}`;
+  const interactiveClassName = onClick ? 'cursor-pointer hover:bg-surface-hover' : '';
+  const combinedClassName = `${className} ${interactiveClassName}`.trim();
 
-  if (elementType === 'button') {
+  if (elementType === 'span') {
     return (
-      <button
-        type="button"
+      <span
+        role={onClick ? 'button' : undefined}
         onClick={onClick}
-        title={title}
-        className={`${className} hover:bg-surface-hover`}
+        className="inline-flex"
       >
-        {label}
-      </button>
+        <Badge
+          label={label}
+          variant={variant}
+          title={title}
+          className={combinedClassName}
+        />
+      </span>
     );
   }
 
   return (
-    <span
+    <Badge
+      label={label}
+      variant={variant}
       title={title}
-      className={className}
-      role={onClick ? 'button' : undefined}
-      onClick={onClick}
-    >
-      {label}
-    </span>
+      onClick={onClick ? (event) => onClick(event) : undefined}
+      className={combinedClassName}
+    />
   );
 }

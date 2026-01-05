@@ -68,7 +68,11 @@ describe('SddWatcher', () => {
           close: vi.fn(),
         };
         watchers.push(registration);
-        return { close: registration.close } as fs.FSWatcher;
+        return {
+          close: registration.close,
+          ref: vi.fn(),
+          unref: vi.fn(),
+        } as unknown as fs.FSWatcher;
       }
     );
     setSddWatchForTesting(watchMock as unknown as typeof fs.watch);

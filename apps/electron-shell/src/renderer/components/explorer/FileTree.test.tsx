@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { FileTree } from './FileTree';
 import { FileTreeContextProvider } from './FileTreeContext';
 import type { Workspace, FileEntry } from 'packages-api-contracts';
@@ -71,6 +71,13 @@ describe('FileTree', () => {
     { name: 'bbb-file.txt', path: '/test/workspace/bbb-file.txt', type: 'file', size: 200 },
     { name: 'folder2', path: '/test/workspace/folder2', type: 'directory' },
   ];
+
+  beforeAll(() => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      value: vi.fn(),
+      writable: true,
+    });
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -247,7 +254,7 @@ describe('FileTree', () => {
 
       // Find and click expand button
       const expandButton = screen.getByLabelText('Expand folder');
-      expandButton.click();
+      fireEvent.click(expandButton);
 
       // Wait for nested content to load
       await waitFor(() => {
@@ -285,7 +292,7 @@ describe('FileTree', () => {
 
       // Expand
       let expandButton = screen.getByLabelText('Expand folder');
-      expandButton.click();
+      fireEvent.click(expandButton);
 
       await waitFor(() => {
         expect(screen.getByText('nested-file.txt')).toBeInTheDocument();
@@ -295,7 +302,7 @@ describe('FileTree', () => {
 
       // Collapse
       const collapseButton = screen.getByLabelText('Collapse folder');
-      collapseButton.click();
+      fireEvent.click(collapseButton);
 
       await waitFor(() => {
         expect(screen.queryByText('nested-file.txt')).not.toBeInTheDocument();
@@ -303,7 +310,7 @@ describe('FileTree', () => {
 
       // Re-expand (should use cache)
       expandButton = screen.getByLabelText('Expand folder');
-      expandButton.click();
+      fireEvent.click(expandButton);
 
       await waitFor(() => {
         expect(screen.getByText('nested-file.txt')).toBeInTheDocument();

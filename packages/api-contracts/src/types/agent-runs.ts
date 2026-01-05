@@ -32,9 +32,25 @@ export const AgentRunMetadataSchema = z.object({
 
 export type AgentRunMetadata = z.infer<typeof AgentRunMetadataSchema>;
 
+export const AgentMemoryConfigSchema = z.object({
+  maxEntries: z.number().int().min(1).optional(),
+  maxBytes: z.number().int().min(1).optional(),
+});
+
+export type AgentMemoryConfig = z.infer<typeof AgentMemoryConfigSchema>;
+
+export const AgentPolicyConfigSchema = z.object({
+  allowlist: z.array(z.string()).optional(),
+  denylist: z.array(z.string()).optional(),
+});
+
+export type AgentPolicyConfig = z.infer<typeof AgentPolicyConfigSchema>;
+
 export const DeepAgentRunConfigSchema = z.object({
   modelRef: z.string().optional(),
   toolAllowlist: z.array(z.string()).optional(),
+  memory: AgentMemoryConfigSchema.optional(),
+  policy: AgentPolicyConfigSchema.optional(),
   mounts: z
     .array(
       z.object({

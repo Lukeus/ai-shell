@@ -128,6 +128,7 @@ describe('AgentHostManager built-in tools', () => {
         'workspace.write',
         'workspace.update',
         'repo.search',
+        'repo.list',
         'model.generate',
       ])
     );
@@ -143,7 +144,7 @@ describe('AgentHostManager built-in tools', () => {
     };
     const tools = broker.lastInstance?.tools.map((tool) => tool.id) ?? [];
 
-    expect(tools).toHaveLength(5);
+    expect(tools).toHaveLength(6);
   });
 
   it('should allowlist environment variables for child process', async () => {

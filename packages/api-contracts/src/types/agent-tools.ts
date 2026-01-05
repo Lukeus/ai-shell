@@ -14,6 +14,12 @@ export const JsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
   z.union([JsonPrimitiveSchema, z.array(JsonValueSchema), z.record(JsonValueSchema)])
 );
 
+/**
+ * Tool call envelope for agent tool execution.
+ *
+ * Security: tool inputs must be secretRef-only. Never place plaintext secrets
+ * in the input payload; use connectionId/secretRef handles instead.
+ */
 export const ToolCallEnvelopeSchema = z.object({
   callId: z.string().uuid(),
   toolId: z.string(),
@@ -21,6 +27,12 @@ export const ToolCallEnvelopeSchema = z.object({
   runId: z.string().uuid(),
   input: JsonValueSchema,
   reason: z.string().optional(),
+  policyOverride: z
+    .object({
+      allowlist: z.array(z.string()).optional(),
+      denylist: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export type ToolCallEnvelope = z.infer<typeof ToolCallEnvelopeSchema>;

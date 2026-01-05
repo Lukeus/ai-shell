@@ -51,14 +51,16 @@ type MockChild = EventEmitter & {
   kill?: () => void;
 };
 
-const createChild = (): MockChild => {
-  const child = new EventEmitter() as MockChild;
+const createChild = (): any => {
+  const child = new EventEmitter() as any;
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
+  child.stdin = new EventEmitter();
+  child.killed = false;
   return child;
 };
 
-const emitResult = (child: MockChild, stdout: string, stderr = '', code = 0) => {
+const emitResult = (child: any, stdout: string, stderr = '', code = 0) => {
   if (stdout) {
     child.stdout.emit('data', Buffer.from(stdout));
   }
@@ -147,7 +149,7 @@ describe('GitService', () => {
     });
 
     const service = GitService.getInstance();
-    await service.stage({ paths: ['src/app.ts'] });
+    await service.stage({ all: false, paths: ['src/app.ts'] });
 
     expect(vi.mocked(spawn)).toHaveBeenCalledWith(
       'git',
@@ -194,7 +196,7 @@ describe('GitService', () => {
 
     const service = GitService.getInstance();
 
-    await expect(service.stage({ paths: [path.join('..', 'outside.txt')] })).rejects.toThrow(
+    await expect(service.stage({ all: false, paths: [path.join('..', 'outside.txt')] })).rejects.toThrow(
       'Invalid path'
     );
   });
@@ -229,6 +231,7 @@ describe('GitService', () => {
       sdd: {
         enabled: true,
         blockCommitOnUntrackedCodeChanges: true,
+        customCommands: [],
       },
     });
     vi.mocked(sddTraceService.isEnabled).mockReturnValue(true);
@@ -278,6 +281,7 @@ describe('GitService', () => {
       sdd: {
         enabled: true,
         blockCommitOnUntrackedCodeChanges: true,
+        customCommands: [],
       },
     });
     vi.mocked(sddTraceService.isEnabled).mockReturnValue(true);
@@ -321,6 +325,7 @@ describe('GitService', () => {
       sdd: {
         enabled: true,
         blockCommitOnUntrackedCodeChanges: true,
+        customCommands: [],
       },
     });
     vi.mocked(sddTraceService.isEnabled).mockReturnValue(true);

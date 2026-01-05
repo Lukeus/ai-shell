@@ -22,6 +22,8 @@ const formatEvent = (event: AgentEvent): string => {
       return `${event.level.toUpperCase()}: ${event.message}`;
     case 'error':
       return `Error: ${event.message}`;
+    case 'draft':
+      return `Draft ready: ${event.draft.featureId}`;
     default:
       return 'Unknown event';
   }

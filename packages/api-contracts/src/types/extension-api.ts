@@ -22,3 +22,26 @@ export const ExtensionContextSchema = z.object({
  * TypeScript type for extension context.
  */
 export type ExtensionContext = z.infer<typeof ExtensionContextSchema>;
+
+export type ExtensionCommandHandler = (...args: unknown[]) => unknown | Promise<unknown>;
+export type ExtensionViewProvider = () => string | Promise<string>;
+export type ExtensionToolHandler = (input: unknown) => unknown | Promise<unknown>;
+
+export interface ExtensionAPI {
+  readonly context: ExtensionContext;
+  log(message: string): void;
+  commands: {
+    registerCommand(commandId: string, handler: ExtensionCommandHandler): void;
+  };
+  views: {
+    registerView(viewId: string, provider: ExtensionViewProvider): void;
+  };
+  tools: {
+    registerTool(
+      name: string,
+      description: string,
+      inputSchema: Record<string, unknown>,
+      handler: ExtensionToolHandler
+    ): void;
+  };
+}

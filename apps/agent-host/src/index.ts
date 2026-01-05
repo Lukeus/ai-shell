@@ -12,13 +12,24 @@ import type {
   SddRunStartRequest,
   ToolCallEnvelope,
 } from 'packages-api-contracts';
-import { DeepAgentRunner, SddWorkflowRunner, ToolExecutor } from 'packages-agent-runtime';
+import { BrokerClient } from 'packages-broker-client';
+import {
+  DeepAgentRunner,
+  PlanningWorkflowRunner,
+  SddWorkflowRunner,
+} from 'packages-agent-runtime';
 
 type StartRunMessage = {
   type: 'agent-host:start-run';
   runId: string;
   request: AgentRunStartRequest;
   toolCalls?: ToolCallEnvelope[];
+};
+
+type CancelRunMessage = {
+  type: 'agent-host:cancel-run';
+  runId: string;
+  reason?: string;
 };
 
 type SddStartRunMessage = {
@@ -98,6 +109,25 @@ const parseStartRunMessage = (message: unknown): StartRunMessage | null => {
   };
 };
 
+const parseCancelRunMessage = (message: unknown): CancelRunMessage | null => {
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+  const candidate = message as Partial<CancelRunMessage>;
+  if (candidate.type !== 'agent-host:cancel-run' || !candidate.runId) {
+    return null;
+  }
+  if (!isUuid(candidate.runId)) {
+    return null;
+  }
+
+  return {
+    type: 'agent-host:cancel-run',
+    runId: candidate.runId,
+    reason: typeof candidate.reason === 'string' ? candidate.reason : undefined,
+  };
+};
+
 const parseSddStartRunMessage = (message: unknown): SddStartRunMessage | null => {
   if (!message || typeof message !== 'object') {
     return null;
@@ -142,8 +172,15 @@ const parseSddControlRunMessage = (message: unknown): SddControlRunMessage | nul
   };
 };
 
-const toolExecutor = new ToolExecutor();
+const brokerClient = new BrokerClient();
+const toolExecutor = {
+  executeToolCall: (envelope: ToolCallEnvelope) => brokerClient.executeToolCall(envelope),
+};
 const runner = new DeepAgentRunner({
+  toolExecutor,
+  onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
+});
+const planningRunner = new PlanningWorkflowRunner({
   toolExecutor,
   onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
 });
@@ -152,7 +189,41 @@ const sddRunner = new SddWorkflowRunner({
   onEvent: (event: SddRunEvent) => sendToMain({ type: 'agent-host:sdd-event', event }),
 });
 
+const getPlanningFeatureId = (request: AgentRunStartRequest): string | null => {
+  const metadataFeatureId = request.metadata?.featureId;
+  if (typeof metadataFeatureId === 'string' && metadataFeatureId.trim().length > 0) {
+    return metadataFeatureId.trim();
+  }
+
+  const inputs = request.inputs as Record<string, unknown> | undefined;
+  const inputFeatureId = inputs?.featureId;
+  if (typeof inputFeatureId === 'string' && inputFeatureId.trim().length > 0) {
+    return inputFeatureId.trim();
+  }
+
+  return null;
+};
+
+const isPlanningRequest = (request: AgentRunStartRequest): boolean => {
+  const workflow = request.metadata?.workflow;
+  if (typeof workflow !== 'string') {
+    return false;
+  }
+  const normalized = workflow.trim().toLowerCase();
+  return normalized === 'planning' || normalized === 'draft';
+};
+
+const disposeBroker = () => brokerClient.dispose();
+process.on('disconnect', disposeBroker);
+process.on('exit', disposeBroker);
+
 process.on('message', async (message: unknown) => {
+  const cancelMessage = parseCancelRunMessage(message);
+  if (cancelMessage) {
+    runner.cancelRun(cancelMessage.runId, cancelMessage.reason);
+    return;
+  }
+
   const startMessage = parseStartRunMessage(message);
   if (!startMessage) {
     const sddStartMessage = parseSddStartRunMessage(message);
@@ -189,7 +260,19 @@ process.on('message', async (message: unknown) => {
   }
 
   try {
-    await runner.startRun(startMessage.runId, startMessage.request, startMessage.toolCalls ?? []);
+    if (isPlanningRequest(startMessage.request)) {
+      const featureId = getPlanningFeatureId(startMessage.request);
+      if (!featureId) {
+        throw new Error('Planning runs require a featureId in metadata or inputs.');
+      }
+      await planningRunner.startRun(startMessage.runId, startMessage.request, featureId);
+    } else {
+      await runner.startRun(
+        startMessage.runId,
+        startMessage.request,
+        startMessage.toolCalls ?? []
+      );
+    }
   } catch (error) {
     const messageText = error instanceof Error ? error.message : 'Agent run failed';
     sendToMain({ type: 'agent-host:run-error', runId: startMessage.runId, message: messageText });

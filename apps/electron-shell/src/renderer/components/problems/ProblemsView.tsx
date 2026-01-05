@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Diagnostic, DiagnosticsUpdateEvent, DiagnosticSeverity } from 'packages-api-contracts';
 import { ProblemsTable } from './ProblemsTable';
 
@@ -23,71 +23,39 @@ const SEVERITY_ORDER: Record<DiagnosticSeverity, number> = {
 const formatCount = (count: number, singular: string, plural: string) =>
   count === 1 ? `${count} ${singular}` : `${count} ${plural}`;
 
-const MOCK_DIAGNOSTICS: Diagnostic[] = [
-  {
-    id: '11111111-1111-1111-1111-111111111111',
-    severity: 'error',
-    message: "Type 'string' is not assignable to type 'number'.",
-    filePath: 'src/components/App.tsx',
-    location: {
-      startLine: 42,
-      startColumn: 13,
-      endLine: 42,
-      endColumn: 19,
-    },
-    source: 'TypeScript',
-    code: 'TS2322',
-    createdAt: '2024-01-01T12:00:00.000Z',
-  },
-  {
-    id: '22222222-2222-2222-2222-222222222222',
-    severity: 'warning',
-    message: 'Unexpected console statement.',
-    filePath: 'src/services/logger.ts',
-    location: {
-      startLine: 18,
-      startColumn: 3,
-      endLine: 18,
-      endColumn: 15,
-    },
-    source: 'ESLint',
-    code: 'no-console',
-    createdAt: '2024-01-01T12:00:01.000Z',
-  },
-  {
-    id: '33333333-3333-3333-3333-333333333333',
-    severity: 'info',
-    message: 'Unused variable "result".',
-    filePath: 'src/utils/math.ts',
-    location: {
-      startLine: 9,
-      startColumn: 7,
-      endLine: 9,
-      endColumn: 13,
-    },
-    source: 'TypeScript',
-    code: 'TS6133',
-    createdAt: '2024-01-01T12:00:02.000Z',
-  },
-];
-
 export function ProblemsView({ className = '' }: ProblemsViewProps) {
   const [diagnosticsByKey, setDiagnosticsByKey] = useState<Map<string, Diagnostic[]>>(
-    () =>
-      new Map([
-        ['mock::TypeScript', MOCK_DIAGNOSTICS.filter((d) => d.source === 'TypeScript')],
-        ['mock::ESLint', MOCK_DIAGNOSTICS.filter((d) => d.source === 'ESLint')],
-      ])
+    () => new Map()
   );
-  const hasRealUpdatesRef = useRef(false);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialDiagnostics = async () => {
+      try {
+        const response = await window.api.diagnostics.list({});
+        if (!isMounted) {
+          return;
+        }
+
+        setDiagnosticsByKey(() => {
+          const next = new Map<string, Diagnostic[]>();
+          for (const diagnostic of response.diagnostics) {
+            const key = `${diagnostic.filePath}::${diagnostic.source}`;
+            const existing = next.get(key) ?? [];
+            existing.push(diagnostic);
+            next.set(key, existing);
+          }
+          return next;
+        });
+      } catch {
+        // Ignore initial diagnostics load errors; live updates still apply.
+      }
+    };
+
     const handleUpdate = (event: DiagnosticsUpdateEvent) => {
       setDiagnosticsByKey((prev) => {
-        const next = hasRealUpdatesRef.current ? new Map(prev) : new Map();
-        if (!hasRealUpdatesRef.current) {
-          hasRealUpdatesRef.current = true;
-        }
+        const next = new Map(prev);
         const key = `${event.filePath}::${event.source}`;
 
         if (event.diagnostics.length === 0) {
@@ -100,9 +68,11 @@ export function ProblemsView({ className = '' }: ProblemsViewProps) {
       });
     };
 
+    void loadInitialDiagnostics();
     const unsubscribe = window.api.diagnostics.onUpdate(handleUpdate);
 
     return () => {
+      isMounted = false;
       unsubscribe();
     };
   }, []);

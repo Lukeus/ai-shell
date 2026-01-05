@@ -229,7 +229,7 @@ describe('ThemeProvider', () => {
         expect(setThemeFn).not.toBeNull();
       });
 
-      await expect(setThemeFn?.('light')).rejects.toThrow('Failed to update settings');
+      await expect((setThemeFn as any)('light')).rejects.toThrow('Failed to update settings');
       expect(consoleSpy).toHaveBeenCalledWith(
         'Failed to update theme:',
         expect.any(Error)

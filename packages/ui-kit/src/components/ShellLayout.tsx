@@ -104,7 +104,7 @@ export function ShellLayout({
     >
       {/* Activity Bar - Leftmost vertical icon bar */}
       <div
-        className="bg-surface-elevated border-r border-border-subtle overflow-hidden min-h-0 min-w-0"
+        className="bg-surface-elevated border-r border-border overflow-hidden min-h-0 min-w-0"
         style={{ gridArea: 'activity-bar' }}
       >
         {activityBar}
@@ -112,8 +112,8 @@ export function ShellLayout({
 
       {/* Primary Sidebar - Left collapsible/resizable panel */}
       <div
-        className="bg-surface-secondary border-r border-border-subtle overflow-hidden min-h-0 min-w-0"
-        style={{ gridArea: 'primary-sidebar', paddingBottom: statusBarHeight }}
+        className="bg-surface-secondary border-r border-border overflow-hidden min-h-0 min-w-0"
+        style={{ gridArea: 'primary-sidebar' }}
       >
         {primarySidebar}
       </div>
@@ -128,15 +128,15 @@ export function ShellLayout({
 
       {/* Secondary Sidebar - Right collapsible/resizable panel */}
       <div
-        className="bg-surface-secondary border-l border-border-subtle overflow-visible min-h-0 min-w-0"
-        style={{ gridArea: 'secondary-sidebar', paddingBottom: statusBarHeight }}
+        className="bg-surface-secondary border-l border-border overflow-visible min-h-0 min-w-0"
+        style={{ gridArea: 'secondary-sidebar' }}
       >
         {secondarySidebar}
       </div>
 
       {/* Bottom Panel - Bottom horizontal collapsible/resizable panel */}
       <div
-        className="bg-surface-secondary border-t border-border-subtle overflow-visible min-h-0 min-w-0"
+        className="bg-surface-secondary border-t border-border overflow-visible min-h-0 min-w-0"
         style={{ gridArea: 'bottom-panel' }}
       >
         {bottomPanel}
@@ -144,7 +144,7 @@ export function ShellLayout({
 
       {/* Status Bar - Bottom fixed-height bar */}
       <div
-        className="bg-transparent min-h-0 min-w-0"
+        className="min-h-0 min-w-0"
         style={{ gridArea: 'status-bar' }}
       >
         {statusBar}

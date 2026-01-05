@@ -18,6 +18,8 @@ export interface RegisteredView {
   extensionId: string;
 }
 
+type ExtensionActivationHandler = (extensionId: string, event?: string) => Promise<void>;
+
 /**
  * View rendering result.
  */
@@ -33,10 +35,15 @@ export interface ViewRenderResult {
 export class ExtensionViewService {
   private extensionHostManager: ExtensionHostManager;
   private views: Map<string, RegisteredView>;
+  private activateExtension?: ExtensionActivationHandler;
 
-  constructor(extensionHostManager: ExtensionHostManager) {
+  constructor(
+    extensionHostManager: ExtensionHostManager,
+    activateExtension?: ExtensionActivationHandler
+  ) {
     this.extensionHostManager = extensionHostManager;
     this.views = new Map();
+    this.activateExtension = activateExtension;
   }
 
   /**
@@ -91,6 +98,10 @@ export class ExtensionViewService {
     }
 
     try {
+      if (this.activateExtension) {
+        await this.activateExtension(view.extensionId, `onView:${viewId}`);
+      }
+
       // Request view rendering from Extension Host
       const content = await this.extensionHostManager.sendRequest('view.render', {
         viewId,
@@ -122,6 +133,13 @@ export class ExtensionViewService {
    */
   listViews(): RegisteredView[] {
     return Array.from(this.views.values());
+  }
+
+  /**
+   * Reset all registered views (used during contribution sync).
+   */
+  reset(): void {
+    this.views.clear();
   }
 
   /**

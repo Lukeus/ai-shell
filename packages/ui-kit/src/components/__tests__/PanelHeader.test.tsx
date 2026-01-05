@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 import { PanelHeader } from '../PanelHeader';
 
 describe('PanelHeader', () => {
@@ -52,6 +53,15 @@ describe('PanelHeader', () => {
     expect(mockOnToggleCollapse).toHaveBeenCalledTimes(1);
   });
 
+  it('supports focus for keyboard navigation', () => {
+    render(<PanelHeader title="Explorer" collapsed={false} onToggleCollapse={mockOnToggleCollapse} />);
+
+    const button = screen.getByLabelText('Collapse panel');
+    button.focus();
+
+    expect(button).toHaveFocus();
+  });
+
   it('sets aria-expanded to false when collapsed', () => {
     render(<PanelHeader title="Explorer" collapsed={true} onToggleCollapse={mockOnToggleCollapse} />);
     
@@ -69,21 +79,17 @@ describe('PanelHeader', () => {
   it('renders chevron icon with rotation when collapsed', () => {
     const { container } = render(<PanelHeader title="Explorer" collapsed={true} onToggleCollapse={mockOnToggleCollapse} />);
     
-    // Check for chevron path (always up, rotated via style)
     const svg = container.querySelector('svg');
     expect(svg).toBeInTheDocument();
     // The chevron is rotated 180deg when collapsed
     expect(svg).toHaveStyle({ transform: 'rotate(180deg)' });
   });
 
-  it('renders chevron up icon when not collapsed', () => {
+  it('renders chevron icon when not collapsed', () => {
     const { container } = render(<PanelHeader title="Explorer" collapsed={false} onToggleCollapse={mockOnToggleCollapse} />);
     
-    // Check for chevron up path (M5 15l7-7 7 7)
     const svg = container.querySelector('svg');
     expect(svg).toBeInTheDocument();
-    const path = svg?.querySelector('path[d="M5 15l7-7 7 7"]');
-    expect(path).toBeInTheDocument();
     // The chevron is not rotated when not collapsed
     expect(svg).toHaveStyle({ transform: 'rotate(0deg)' });
   });

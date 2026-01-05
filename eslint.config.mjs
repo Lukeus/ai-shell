@@ -137,6 +137,7 @@ export default [
         'packages/agent-runtime/**/*.ts',
         'packages/agent-tools/**/*.ts',
         'packages/broker-main/**/*.ts',
+        'packages/broker-client/**/*.ts',
       ],
     languageOptions: {
       globals: {

@@ -482,22 +482,26 @@ export function MenuBar({
       ref={menuBarRef}
       role="menubar"
       aria-label="Application menu bar"
-      className="menubar flex items-center border-b border-border-subtle bg-[var(--vscode-titleBar-activeBackground)]"
+      className="
+        menubar flex items-center border-b border-border-subtle
+        bg-[var(--vscode-titleBar-activeBackground)]
+        px-[var(--vscode-space-1)]
+        text-[var(--vscode-font-size-ui)]
+      "
       style={{
         height: 'var(--vscode-menuBar-height, var(--vscode-titleBar-height))',
-        padding: `0 var(--vscode-space-1)`,
-        fontSize: 'var(--vscode-font-size-ui)',
         ...dragRegionStyle(isMac ? 'no-drag' : 'drag'),
       }}
     >
       <div className="flex items-center flex-1 min-w-0">
         <div
-          className="flex items-center justify-center"
+          className="
+            flex items-center justify-center
+            w-4 h-4
+            mr-[var(--vscode-space-2)]
+            text-[var(--vscode-titleBar-activeForeground)]
+          "
           style={{
-            width: '16px',
-            height: '16px',
-            marginRight: 'var(--vscode-space-2)',
-            color: 'var(--vscode-titleBar-activeForeground)',
             ...dragRegionStyle('no-drag'),
           }}
           aria-label="App icon"
@@ -562,27 +566,23 @@ export function MenuBar({
                   captureLastFocus();
                   openMenuAt(index, 0);
                 }}
-                className="menubar-menu-button flex items-center cursor-default select-none whitespace-nowrap"
+                className="
+                  menubar-menu-button flex items-center cursor-default select-none whitespace-nowrap
+                  h-full p-0 m-0 border-0 bg-transparent
+                "
                 style={{
-                  height: '100%',
-                  padding: 0,
-                  margin: 0,
-                  border: 'none',
-                  background: 'transparent',
                   ...dragRegionStyle('no-drag'),
                 }}
               >
                 <span
-                  className="menubar-menu-title"
+                  className="menubar-menu-title rounded-[4px] px-[var(--vscode-space-2)]"
                   style={{
-                    borderRadius: '4px',
                     color: titleColor,
                     backgroundColor: titleBackground,
                     outlineStyle: titleOutlineStyle,
                     outlineWidth: titleOutlineStyle === 'none' ? '0' : '1px',
                     outlineColor: 'var(--vscode-menubar-selectionBorder)',
                     outlineOffset: '-1px',
-                    padding: `0 var(--vscode-space-2)`,
                     ...dragRegionStyle('no-drag'),
                   }}
                 >
@@ -594,12 +594,14 @@ export function MenuBar({
                 <div
                   role="menu"
                   aria-label={`${menu.label} menu`}
-                  className="absolute left-0 top-full mt-[1px] min-w-[180px] border py-[2px]"
+                  className="
+                    absolute left-0 top-full mt-[1px] min-w-[180px] border py-[2px]
+                    bg-[var(--vscode-menu-background)]
+                    border-[var(--vscode-menu-border)]
+                    shadow-[0_2px_8px_var(--color-shadow-medium)]
+                  "
                   style={{
                     zIndex: 'var(--vscode-z-dropdown)',
-                    backgroundColor: 'var(--vscode-menu-background)',
-                    borderColor: 'var(--vscode-menu-border)',
-                    boxShadow: '0 2px 8px var(--color-shadow-medium)',
                     ...dragRegionStyle('no-drag'),
                   }}
                 >
@@ -624,15 +626,14 @@ export function MenuBar({
                         }}
                         className={`
                           flex w-full items-center justify-between gap-4 text-left
+                          h-[var(--vscode-list-rowHeight)]
+                          px-[var(--vscode-space-3)]
+                          text-[var(--vscode-font-size-ui)]
                           ${isDisabled ? 'cursor-not-allowed' : 'cursor-default'}
                           ${isActive && !isDisabled ? 'text-[var(--vscode-menu-selectionForeground)]' : ''}
                           focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]
                         `}
                         style={{
-                          height: 'var(--vscode-list-rowHeight)',
-                          paddingLeft: 'var(--vscode-space-3)',
-                          paddingRight: 'var(--vscode-space-3)',
-                          fontSize: 'var(--vscode-font-size-ui)',
                           color: isDisabled
                             ? 'var(--vscode-foreground-muted)'
                             : 'var(--vscode-menu-foreground)',
@@ -667,19 +668,20 @@ export function MenuBar({
 
       {!isMac && (
         <div
-          className="flex items-center"
-          style={{ ...dragRegionStyle('no-drag'), marginLeft: 'auto' }}
+          className="ml-auto flex items-center"
+          style={{ ...dragRegionStyle('no-drag') }}
         >
           <button
             type="button"
             aria-label="Minimize window"
             onClick={() => window.api?.windowControls?.minimize()}
-            className="flex items-center justify-center hover:bg-[var(--vscode-menubar-selectionBackground)]"
-            style={{
-              width: 'calc(var(--vscode-space-6) + var(--vscode-space-2))',
-              height: 'var(--vscode-menuBar-height)',
-              color: 'var(--vscode-titleBar-activeForeground)',
-            }}
+            className="
+              flex items-center justify-center
+              w-[calc(var(--vscode-space-6)+var(--vscode-space-2))]
+              h-[var(--vscode-menuBar-height)]
+              text-[var(--vscode-titleBar-activeForeground)]
+              hover:bg-[var(--vscode-menubar-selectionBackground)]
+            "
           >
             <span className="sr-only">Minimize</span>
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
@@ -690,12 +692,13 @@ export function MenuBar({
             type="button"
             aria-label={isMaximized ? 'Restore window' : 'Maximize window'}
             onClick={() => window.api?.windowControls?.toggleMaximize()}
-            className="flex items-center justify-center hover:bg-[var(--vscode-menubar-selectionBackground)]"
-            style={{
-              width: 'calc(var(--vscode-space-6) + var(--vscode-space-2))',
-              height: 'var(--vscode-menuBar-height)',
-              color: 'var(--vscode-titleBar-activeForeground)',
-            }}
+            className="
+              flex items-center justify-center
+              w-[calc(var(--vscode-space-6)+var(--vscode-space-2))]
+              h-[var(--vscode-menuBar-height)]
+              text-[var(--vscode-titleBar-activeForeground)]
+              hover:bg-[var(--vscode-menubar-selectionBackground)]
+            "
           >
             <span className="sr-only">{isMaximized ? 'Restore' : 'Maximize'}</span>
             {isMaximized ? (
@@ -713,12 +716,13 @@ export function MenuBar({
             type="button"
             aria-label="Close window"
             onClick={() => window.api?.windowControls?.close()}
-            className="flex items-center justify-center hover:bg-[var(--color-status-error)]"
-            style={{
-              width: 'calc(var(--vscode-space-6) + var(--vscode-space-2))',
-              height: 'var(--vscode-menuBar-height)',
-              color: 'var(--vscode-titleBar-activeForeground)',
-            }}
+            className="
+              flex items-center justify-center
+              w-[calc(var(--vscode-space-6)+var(--vscode-space-2))]
+              h-[var(--vscode-menuBar-height)]
+              text-[var(--vscode-titleBar-activeForeground)]
+              hover:bg-[var(--color-status-error)]
+            "
           >
             <span className="sr-only">Close</span>
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">

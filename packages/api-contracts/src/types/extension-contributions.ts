@@ -62,6 +62,9 @@ export const ToolContributionSchema = z.object({
   
   /** JSON Schema for tool input parameters */
   inputSchema: z.record(z.unknown()),
+
+  /** Optional JSON Schema for tool output */
+  outputSchema: z.record(z.unknown()).optional(),
 });
 
 /**

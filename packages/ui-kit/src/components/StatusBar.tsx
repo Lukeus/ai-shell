@@ -52,20 +52,20 @@ export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
           onClick={item.onClick}
           title={item.tooltip}
           className={`
-            h-full inline-flex items-center gap-1.5
-            text-[var(--vscode-statusBar-foreground)]
-            ${item.active ? 'opacity-100' : 'opacity-80'}
-            hover:bg-[var(--vscode-statusBar-hoverBackground)] hover:opacity-100
+            h-full inline-flex items-center gap-1
+            px-1
+            text-[var(--vscode-font-size-small)]
+            ${item.active
+              ? 'text-[var(--vscode-statusBar-foreground)] font-semibold'
+              : 'text-[color-mix(in srgb,var(--vscode-statusBar-foreground)_90%,var(--vscode-statusBar-background))]'
+            }
+            ${index === 0
+              ? 'border-l-0'
+              : 'border-l border-l-[color-mix(in srgb,var(--vscode-statusBar-foreground)_20%,transparent)]'
+            }
+            hover:bg-[var(--vscode-statusBar-hoverBackground)] hover:text-[var(--vscode-statusBar-foreground)] hover:opacity-100
             focus:outline-none focus:ring-1 focus:ring-accent
           `}
-          style={{
-            borderLeft: index === 0
-              ? 'none'
-              : '1px solid color-mix(in srgb, var(--vscode-statusBar-foreground) 20%, transparent)',
-            paddingLeft: 'var(--vscode-space-2)',
-            paddingRight: 'var(--vscode-space-2)',
-            fontSize: 'var(--vscode-font-size-small)',
-          }}
         >
           {renderIcon(item.icon)}
           <span className="whitespace-nowrap">{item.label}</span>
@@ -76,9 +76,13 @@ export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
 
   return (
     <div
-      className="flex items-center justify-between border-t border-border-subtle"
+      className="
+        flex items-center justify-between border-t border-border
+        h-full
+        bg-[var(--vscode-statusBar-background)]
+        text-[var(--vscode-statusBar-foreground)]
+      "
       style={{
-        height: 'var(--vscode-statusBar-height)',
         backgroundColor: 'var(--vscode-statusBar-background)',
         color: 'var(--vscode-statusBar-foreground)',
       }}

@@ -4,43 +4,31 @@
  * This is the API object that extensions receive in their activate() function.
  * Provides controlled access to platform capabilities.
  * 
- * P1 (Process Isolation): All operations proxy through JSON-RPC to main process.
+ * P1 (Process Isolation): Extensions only access curated APIs (commands/views/tools registration).
  * NO direct filesystem, network, or OS access.
  */
 
-import { ExtensionContext } from 'packages-api-contracts';
-import { JSONRPCClient } from './json-rpc-client';
-
-/**
- * Extension API namespace that extensions can use.
- * This is a minimal stub for Task 5 - will be expanded in later tasks.
- */
-export interface ExtensionAPI {
-  /** Extension context (ID, paths, etc.) */
-  readonly context: ExtensionContext;
-
-  /**
-   * Log a message to Extension Host console.
-   * Later: this will be proxied to Output channel.
-   */
-  log(message: string): void;
-
-  /**
-   * Get the JSON-RPC client for communicating with main process.
-   * Extensions should not use this directly - instead use higher-level API methods.
-   * Exposed for advanced use cases only.
-   */
-  readonly _rpc: JSONRPCClient;
-}
+import type { ExtensionAPI, ExtensionContext } from 'packages-api-contracts';
+import { CommandManager } from './command-manager';
+import { ViewManager } from './view-manager';
+import { ToolManager } from './tool-manager';
 
 /**
  * ExtensionRuntime creates the API object for an extension.
  */
 export class ExtensionRuntime {
-  private rpcClient: JSONRPCClient;
+  private commandManager: CommandManager;
+  private viewManager: ViewManager;
+  private toolManager: ToolManager;
 
-  constructor(rpcClient: JSONRPCClient) {
-    this.rpcClient = rpcClient;
+  constructor(
+    commandManager: CommandManager,
+    viewManager: ViewManager,
+    toolManager: ToolManager
+  ) {
+    this.commandManager = commandManager;
+    this.viewManager = viewManager;
+    this.toolManager = toolManager;
   }
 
   /**
@@ -58,7 +46,29 @@ export class ExtensionRuntime {
         console.log(`[Extension ${context.extensionId}] ${message}`);
       },
 
-      _rpc: this.rpcClient,
+      commands: {
+        registerCommand: (commandId, handler) => {
+          this.commandManager.registerCommand(commandId, handler, context.extensionId);
+        },
+      },
+
+      views: {
+        registerView: (viewId, provider) => {
+          this.viewManager.registerView(viewId, provider, context.extensionId);
+        },
+      },
+
+      tools: {
+        registerTool: (name, description, inputSchema, handler) => {
+          this.toolManager.registerTool(
+            name,
+            description,
+            inputSchema,
+            handler,
+            context.extensionId
+          );
+        },
+      },
     };
 
     return api;
