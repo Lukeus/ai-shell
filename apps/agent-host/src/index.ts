@@ -15,6 +15,7 @@ import type {
 import { BrokerClient } from 'packages-broker-client';
 import {
   DeepAgentRunner,
+  EditWorkflowRunner,
   PlanningWorkflowRunner,
   SddWorkflowRunner,
 } from 'packages-agent-runtime';
@@ -184,6 +185,10 @@ const planningRunner = new PlanningWorkflowRunner({
   toolExecutor,
   onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
 });
+const editRunner = new EditWorkflowRunner({
+  toolExecutor,
+  onEvent: (event: AgentEvent) => sendToMain({ type: 'agent-host:event', event }),
+});
 const sddRunner = new SddWorkflowRunner({
   toolExecutor,
   onEvent: (event: SddRunEvent) => sendToMain({ type: 'agent-host:sdd-event', event }),
@@ -211,6 +216,14 @@ const isPlanningRequest = (request: AgentRunStartRequest): boolean => {
   }
   const normalized = workflow.trim().toLowerCase();
   return normalized === 'planning' || normalized === 'draft';
+};
+
+const isEditRequest = (request: AgentRunStartRequest): boolean => {
+  const workflow = request.metadata?.workflow;
+  if (typeof workflow !== 'string') {
+    return false;
+  }
+  return workflow.trim().toLowerCase() === 'edit';
 };
 
 const disposeBroker = () => brokerClient.dispose();
@@ -260,7 +273,9 @@ process.on('message', async (message: unknown) => {
   }
 
   try {
-    if (isPlanningRequest(startMessage.request)) {
+    if (isEditRequest(startMessage.request)) {
+      await editRunner.startRun(startMessage.runId, startMessage.request);
+    } else if (isPlanningRequest(startMessage.request)) {
       const featureId = getPlanningFeatureId(startMessage.request);
       if (!featureId) {
         throw new Error('Planning runs require a featureId in metadata or inputs.');

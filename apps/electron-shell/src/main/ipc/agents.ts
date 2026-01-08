@@ -5,6 +5,10 @@ import {
   AgentEventSubscriptionRequestSchema,
   AgentRunControlRequestSchema,
   AgentRunStartRequestSchema,
+  AgentEditRequestSchema,
+  AgentEditRequestResponseSchema,
+  ApplyAgentEditProposalRequestSchema,
+  ApplyAgentEditProposalResponseSchema,
   AppendAgentMessageRequestSchema,
   AppendAgentMessageResponseSchema,
   CreateAgentConversationRequestSchema,
@@ -29,10 +33,12 @@ import {
 import { agentRunStore } from '../services/AgentRunStore';
 import { agentConversationStore } from '../services/AgentConversationStore';
 import { agentDraftService } from '../services/AgentDraftService';
+import { agentEditService } from '../services/AgentEditService';
 import { connectionsService } from '../services/ConnectionsService';
 import { settingsService } from '../services/SettingsService';
 import { getAgentHostManager } from '../index';
 import { handleSafe } from './safeIpc';
+import { logInvalidAgentEvent, redactAgentEventForPublish } from './agent-event-redaction';
 
 type AgentSubscriber = {
   sender: WebContents;
@@ -55,80 +61,6 @@ const registerAgentSubscriber = (sender: WebContents, runId?: string): void => {
 
 const unregisterAgentSubscriber = (sender: WebContents): void => {
   agentSubscribers.delete(sender.id);
-};
-
-const redactSensitiveData = (data: unknown): unknown => {
-  if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-    const obj = data as Record<string, unknown>;
-    const redacted: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      const lowerKey = key.toLowerCase();
-      if (
-        lowerKey.includes('secret') ||
-        lowerKey.includes('token') ||
-        lowerKey.includes('password') ||
-        (lowerKey.includes('key') && !lowerKey.includes('keyname'))
-      ) {
-        redacted[key] = '[REDACTED]';
-      } else if (typeof value === 'object' && value !== null) {
-        redacted[key] = redactSensitiveData(value);
-      } else {
-        redacted[key] = value;
-      }
-    }
-
-    return redacted;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map((item) => redactSensitiveData(item));
-  }
-
-  return data;
-};
-
-const redactAgentEventForPublish = (event: AgentEvent): AgentEvent => {
-  if (event.type === 'tool-call') {
-    return {
-      ...event,
-      toolCall: {
-        ...event.toolCall,
-        input: redactSensitiveData(event.toolCall.input) as typeof event.toolCall.input,
-      },
-    };
-  }
-
-  if (event.type === 'tool-result') {
-    return {
-      ...event,
-      result: {
-        ...event.result,
-        output: event.result.output
-          ? (redactSensitiveData(event.result.output) as typeof event.result.output)
-          : undefined,
-      },
-    };
-  }
-
-  return event;
-};
-
-const logInvalidAgentEvent = (error: unknown): void => {
-  if (error && typeof error === 'object' && 'issues' in error) {
-    const issues = Array.isArray((error as { issues?: unknown }).issues)
-      ? (error as { issues: Array<{ path: Array<string | number>; message: string }> }).issues.map(
-          (issue) => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-          })
-        )
-      : undefined;
-    console.warn('[Agent IPC] Dropping invalid agent event.', issues);
-    return;
-  }
-
-  console.warn('[Agent IPC] Dropping invalid agent event.');
 };
 
 const publishAgentEvent = (event: AgentEvent): void => {
@@ -157,22 +89,23 @@ const publishAgentEvent = (event: AgentEvent): void => {
 };
 
 const appendAndPublish = (event: AgentEvent): void => {
-  if (event.type === 'status') {
+  const enriched = agentEditService.handleAgentEvent(event);
+  if (enriched.type === 'status') {
     try {
-      agentRunStore.updateRunStatus(event.runId, event.status);
+      agentRunStore.updateRunStatus(enriched.runId, enriched.status);
     } catch {
       // Ignore missing runs; events may arrive before metadata is created.
     }
   }
 
   try {
-    agentRunStore.appendEvent(event);
+    agentRunStore.appendEvent(enriched);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.warn('[Agent IPC] Failed to persist agent event.', message);
   }
 
-  publishAgentEvent(event);
+  publishAgentEvent(enriched);
 };
 
 const buildStatusEvent = (runId: string, status: AgentRunStatus): AgentEvent =>
@@ -439,5 +372,27 @@ export const registerAgentHandlers = (): void => {
       outputSchema: SaveAgentDraftResponseSchema,
     },
     async (_event, request) => agentDraftService.saveDraft(request)
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_EDITS_REQUEST,
+    {
+      inputSchema: AgentEditRequestSchema,
+      outputSchema: AgentEditRequestResponseSchema,
+    },
+    async (_event, request) => {
+      const response = await agentEditService.requestEdit(request);
+      appendAndPublish(buildStatusEvent(response.runId, 'queued'));
+      return response;
+    }
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_EDITS_APPLY_PROPOSAL,
+    {
+      inputSchema: ApplyAgentEditProposalRequestSchema,
+      outputSchema: ApplyAgentEditProposalResponseSchema,
+    },
+    async (_event, request) => agentEditService.applyProposal(request)
   );
 };

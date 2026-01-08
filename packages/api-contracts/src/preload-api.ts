@@ -93,6 +93,12 @@ import type {
   ListAgentTraceResponse,
 } from './types/agent-events';
 import type {
+  AgentEditRequest,
+  AgentEditRequestResponse,
+  ApplyAgentEditProposalRequest,
+  ApplyAgentEditProposalResponse,
+} from './types/agent-edits';
+import type {
   ListAgentConversationsResponse,
   CreateAgentConversationRequest,
   CreateAgentConversationResponse,
@@ -778,6 +784,18 @@ export interface PreloadAPI {
     saveDraft(
       request: SaveAgentDraftRequest
     ): Promise<Result<SaveAgentDraftResponse>>;
+
+    /**
+     * Requests an edit proposal for the conversation.
+     */
+    requestEdit(request: AgentEditRequest): Promise<Result<AgentEditRequestResponse>>;
+
+    /**
+     * Applies an edit proposal to the workspace.
+     */
+    applyProposal(
+      request: ApplyAgentEditProposalRequest
+    ): Promise<Result<ApplyAgentEditProposalResponse>>;
   };
 
   /**

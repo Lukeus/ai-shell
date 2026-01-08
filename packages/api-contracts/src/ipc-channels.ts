@@ -255,6 +255,12 @@ export const IPC_CHANNELS = {
   /** Save a spec/plan/tasks draft */
   AGENT_DRAFTS_SAVE: 'agent:drafts:save',
 
+  /** Request an edit proposal */
+  AGENT_EDITS_REQUEST: 'agent:edits:request',
+
+  /** Apply an edit proposal */
+  AGENT_EDITS_APPLY_PROPOSAL: 'agent:edits:apply-proposal',
+
   // Connections + Secrets
   /** List connections */
   CONNECTIONS_LIST: 'connections:list',
