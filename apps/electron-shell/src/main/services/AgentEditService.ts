@@ -12,6 +12,7 @@ import { AgentEventSchema } from 'packages-api-contracts';
 import { agentConversationStore } from './AgentConversationStore';
 import { agentRunStore } from './AgentRunStore';
 import { connectionsService } from './ConnectionsService';
+import { getConnectionModelRef } from './connection-model-ref';
 import { settingsService } from './SettingsService';
 import { workspaceService } from './WorkspaceService';
 import { patchApplyService } from './PatchApplyService';
@@ -54,10 +55,7 @@ export class AgentEditService {
       failRun(`Connection not found: ${resolvedConnectionId}`);
     }
 
-    const connectionModel =
-      typeof connection.config.model === 'string'
-        ? connection.config.model
-        : undefined;
+    const connectionModel = getConnectionModelRef(connection);
     const effectiveModelRef = request.modelRef ?? connectionModel;
 
     agentRunStore.updateRunRouting(run.id, {

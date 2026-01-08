@@ -37,14 +37,16 @@
   - `apps/electron-shell/src/preload/index.ts`
   - `apps/electron-shell/src/renderer/components/settings/connections/ConnectionsPanel.tsx`
   - `apps/electron-shell/src/renderer/components/settings/connections/ProviderPicker.tsx`
+  - `specs/150-ollama/screenshots/azure-openai-provider.png`
   - relevant tests
 - Work:
-  - Register core providers (OpenAI + Ollama) in main via `ConnectionProviderRegistry`.
+  - Register core providers (OpenAI + Azure OpenAI + Ollama) in main via `ConnectionProviderRegistry`.
   - Expose provider list via IPC using `ListProvidersResponseSchema`.
   - Update Connections UI to consume provider list from IPC instead of hardcoded data.
   - Ensure the provider form is descriptor-driven:
-    - Render fields from `provider.fields` (no hardcoded “ollama/openai” branching in JSX).
+    - Render fields from `provider.fields` (no hardcoded "ollama/openai" branching in JSX).
   - Cache/memoize provider list in main/preload (lightweight) to avoid UI stalls.
+  - Capture a screenshot of the Connections panel showing the Azure OpenAI provider option.
 - Verify: `pnpm --filter apps/electron-shell test`
 - Invariants:
   - Renderer has no OS access (P1)
@@ -77,7 +79,7 @@
   - Implement `ModelGatewayService` in main:
     - Resolve `connectionId` -> connection config + provider id + (if needed) secret (main-only).
     - Apply consent checks before any secret-backed call.
-    - Execute provider-specific model calls (Ollama via HTTP; OpenAI existing path).
+    - Execute provider-specific model calls (Ollama via HTTP; OpenAI and Azure OpenAI via HTTPS).
     - Enforce timeouts and return actionable errors (unreachable endpoint, invalid model, etc.).
   - Expose a broker tool `model.generate` for agent-host:
     - Input includes `runId`, `connectionId` (optional if you choose to resolve defaults in main), prompt payload, and optional `modelRef` override.

@@ -5,7 +5,7 @@
 - Agent runs have no stable, auditable connection selection or defaulting behavior.
 
 ## Goals
-- Ship a core Ollama provider for MVP and keep OpenAI as a core provider.
+- Ship core providers for MVP (OpenAI, Azure OpenAI, Ollama).
 - Make the provider catalog dynamic (core providers now, extension contributions later).
 - Use the connection registry as the source of truth; per-run config selects `connectionId`.
 - Settings provide a default connection when a run does not specify one.
@@ -18,6 +18,7 @@
 
 ## User stories
 - As a user, I can create an Ollama connection and run an agent against it.
+- As a user, I can create an Azure OpenAI connection for my deployment.
 - As a user, I can set a default connection and start an agent run without extra prompts.
 - As an admin, I can audit which connection/model was used for each agent run.
 
@@ -30,7 +31,7 @@
 - Settings categories share a consistent header layout (title + search when applicable).
 
 ## Functional requirements
-- Add a provider registry in main that exposes core providers (OpenAI + Ollama) and future
+- Add a provider registry in main that exposes core providers (OpenAI + Azure OpenAI + Ollama) and future
   extension-contributed providers via IPC.
 - Extend agent run start requests to include `connectionId` and optional `modelRef`.
 - Store connection selection on the run metadata for reproducibility and audit.
@@ -54,8 +55,9 @@
 - Avoid blocking the renderer; model execution stays in main or background workers.
 
 ## Acceptance criteria
-- Connections panel shows OpenAI + Ollama from the provider registry.
+- Connections panel shows OpenAI + Azure OpenAI + Ollama from the provider registry.
 - Users can create an Ollama connection and run an agent using it.
+- Users can create an Azure OpenAI connection and run an agent using it.
 - Agent runs store `routing.connectionId/providerId/modelRef` and expose it in run metadata or trace.
 - Model calls are executed in main with consent + audit logging.
 - No secrets are exposed to renderer or agent-host (verified by tests).

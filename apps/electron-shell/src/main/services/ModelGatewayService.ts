@@ -59,6 +59,15 @@ const fetchWithTimeout = async (
   }
 };
 
+const buildChatMessages = (request: ModelGenerateRequest) => {
+  const messages = [];
+  if (request.systemPrompt) {
+    messages.push({ role: 'system', content: request.systemPrompt });
+  }
+  messages.push({ role: 'user', content: request.prompt });
+  return messages;
+};
+
 export class ModelGatewayService {
   private readonly deps: Required<ModelGatewayDeps>;
 
@@ -117,10 +126,18 @@ export class ModelGatewayService {
     }
 
     const providerId = connection.metadata.providerId;
-    const modelRef = validated.modelRef ?? getStringConfig(connection, 'model');
+    const modelRef =
+      validated.modelRef ??
+      (providerId === 'azure-openai'
+        ? getStringConfig(connection, 'deployment') ?? getStringConfig(connection, 'model')
+        : getStringConfig(connection, 'model'));
 
     if (!modelRef) {
-      throw new Error('No model configured for this connection.');
+      throw new Error(
+        providerId === 'azure-openai'
+          ? 'No deployment configured for this connection.'
+          : 'No model configured for this connection.'
+      );
     }
 
     const startedAt = Date.now();
@@ -133,6 +150,8 @@ export class ModelGatewayService {
         text = await this.generateWithOllama(connection, modelRef, validated);
       } else if (providerId === 'openai') {
         text = await this.generateWithOpenAI(connection, modelRef, validated, context);
+      } else if (providerId === 'azure-openai') {
+        text = await this.generateWithAzureOpenAI(connection, modelRef, validated, context);
       } else {
         throw new Error(`Unsupported provider: ${providerId}`);
       }
@@ -239,11 +258,7 @@ export class ModelGatewayService {
     const apiKey = this.deps.getSecret(secretRef);
     const organization = getStringConfig(connection, 'organization');
 
-    const messages = [];
-    if (request.systemPrompt) {
-      messages.push({ role: 'system', content: request.systemPrompt });
-    }
-    messages.push({ role: 'user', content: request.prompt });
+    const messages = buildChatMessages(request);
 
     const body: Record<string, unknown> = {
       model: modelRef,
@@ -287,6 +302,90 @@ export class ModelGatewayService {
     const content = data.choices?.[0]?.message?.content;
     if (!content) {
       throw new Error('OpenAI response missing output.');
+    }
+
+    return content;
+  }
+
+  private async generateWithAzureOpenAI(
+    connection: Connection,
+    deployment: string,
+    request: ModelGenerateRequest,
+    context: ModelGatewayContext
+  ): Promise<string> {
+    const endpoint = getStringConfig(connection, 'endpoint');
+    if (!endpoint) {
+      throw new Error('Azure OpenAI connection is missing an endpoint.');
+    }
+
+    const apiVersion = getStringConfig(connection, 'apiVersion') ?? '2024-02-15-preview';
+    const url = `${endpoint.replace(/\/$/, '')}/openai/deployments/${encodeURIComponent(
+      deployment
+    )}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
+
+    const secretRef = connection.metadata.secretRef;
+    if (!secretRef) {
+      throw new Error('Azure OpenAI connection is missing a secret.');
+    }
+
+    const decision = this.deps.evaluateAccess(connection.metadata.id, context.requesterId);
+    if (!decision) {
+      this.deps.logSecretAccess({
+        connectionId: connection.metadata.id,
+        requesterId: context.requesterId,
+        reason: 'model.generate',
+        allowed: false,
+      });
+      throw new Error('Consent required for Azure OpenAI connection.');
+    }
+
+    this.deps.logSecretAccess({
+      connectionId: connection.metadata.id,
+      requesterId: context.requesterId,
+      reason: 'model.generate',
+      allowed: true,
+    });
+
+    const apiKey = this.deps.getSecret(secretRef);
+    const messages = buildChatMessages(request);
+
+    const body: Record<string, unknown> = {
+      messages,
+    };
+
+    if (request.temperature !== undefined) {
+      body.temperature = request.temperature;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'api-key': apiKey,
+    };
+
+    const response = await fetchWithTimeout(
+      this.deps.fetchFn,
+      url,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      },
+      this.deps.timeoutMs
+    );
+
+    if (!response.ok) {
+      const message = await response.text().catch(() => '');
+      throw new Error(
+        `Azure OpenAI request failed (${response.status}): ${message || response.statusText}`
+      );
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error('Azure OpenAI response missing output.');
     }
 
     return content;

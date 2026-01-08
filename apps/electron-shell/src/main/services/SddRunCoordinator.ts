@@ -7,11 +7,11 @@ import {
   type SddRunStartRequest,
   type SddRunControlRequest,
   type SddStep,
-  type Connection,
 } from 'packages-api-contracts';
 import type { AgentHostManager } from './agent-host-manager';
 import { settingsService } from './SettingsService';
 import { connectionsService } from './ConnectionsService';
+import { getConnectionModelRef } from './connection-model-ref';
 
 type SddRunRecord = {
   runId: string;
@@ -25,11 +25,6 @@ type SddRunRecord = {
   };
   createdAt: string;
   updatedAt: string;
-};
-
-const getConnectionModelRef = (connection: Connection): string | undefined => {
-  const model = connection.config.model;
-  return typeof model === 'string' ? model : undefined;
 };
 
 /**

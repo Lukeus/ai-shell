@@ -98,4 +98,62 @@ describe('ModelGatewayService', () => {
       )
     ).rejects.toThrow('Consent required for OpenAI connection.');
   });
+
+  it('sends Azure OpenAI requests with deployment and api-version', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: 'hello' } }],
+      }),
+    });
+
+    const service = new ModelGatewayService({
+      getSettings: () => ({
+        appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
+        editor: { fontSize: 14, wordWrap: false, lineNumbers: true, minimap: true, breadcrumbsEnabled: true, tabSize: 2 },
+        terminal: { defaultShell: 'default' },
+        extensions: { autoUpdate: true, enableTelemetry: false },
+        agents: { defaultConnectionId: null },
+        sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+      }),
+      listConnections: () => [
+        {
+          ...baseConnection,
+          metadata: {
+            ...baseConnection.metadata,
+            id: '55555555-5555-5555-5555-555555555555',
+            providerId: 'azure-openai',
+            secretRef: 'secret-ref',
+          },
+          config: {
+            endpoint: 'https://example.openai.azure.com',
+            deployment: 'gpt-4o-mini',
+            apiVersion: '2024-02-15-preview',
+          },
+        },
+      ],
+      getSecret: () => 'azure-key',
+      evaluateAccess: () => true,
+      logSecretAccess: vi.fn(),
+      logModelCall: vi.fn(),
+      fetchFn: fetchMock,
+    });
+
+    const result = await service.generate(
+      { prompt: 'Hello', connectionId: '55555555-5555-5555-5555-555555555555' },
+      { runId: '66666666-6666-6666-6666-666666666666', requesterId: 'agent-host' }
+    );
+
+    expect(result.text).toBe('hello');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://example.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-15-preview',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          'api-key': 'azure-key',
+        }),
+      })
+    );
+  });
 });

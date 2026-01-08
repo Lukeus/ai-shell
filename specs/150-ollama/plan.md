@@ -3,7 +3,7 @@
 - Add `ConnectionProviderRegistry` in the main process to expose core providers and
   accept extension contributions in the future.
 - Add `ModelGatewayService` in main to execute provider-specific model calls
-  (Ollama + OpenAI) using connection config and secrets.
+  (Ollama + OpenAI + Azure OpenAI) using connection config and secrets.
 - Extend agent run orchestration so model calls are made via main (preferred path).
 - Register a broker tool (for example `model.generate`) that the agent-host invokes
   so the main process can execute the model call without exposing secrets.

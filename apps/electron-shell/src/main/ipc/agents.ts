@@ -35,6 +35,7 @@ import { agentConversationStore } from '../services/AgentConversationStore';
 import { agentDraftService } from '../services/AgentDraftService';
 import { agentEditService } from '../services/AgentEditService';
 import { connectionsService } from '../services/ConnectionsService';
+import { getConnectionModelRef } from '../services/connection-model-ref';
 import { settingsService } from '../services/SettingsService';
 import { getAgentHostManager } from '../index';
 import { handleSafe } from './safeIpc';
@@ -207,8 +208,7 @@ export const registerAgentHandlers = (): void => {
         return failRun(`Connection not found: ${resolvedConnectionId}`);
       }
 
-      const connectionModel =
-        typeof connection.config.model === 'string' ? connection.config.model : undefined;
+      const connectionModel = getConnectionModelRef(connection);
       const effectiveModelRef = validated.config?.modelRef ?? connectionModel;
 
       run = agentRunStore.updateRunRouting(run.id, {
