@@ -82,6 +82,13 @@ sequenceDiagram
   AgentHost-->>AgentRuntime: tool result
 ```
 
+### Agent Edit Workflow (Copilot Chat)
+
+- Renderer collects attachments (active file or selection) and sends `window.api.agents.requestEdit`.
+- Main validates the request and starts an agent-host run with `workflow=edit`.
+- Agent-host emits `edit-proposal` events that are persisted as conversation entries; stored attachments omit snippets.
+- Renderer previews the proposal diff and applies edits via `PatchApplyService` with workspace path validation.
+
 ### Built-in Agent Tools
 
 Initial built-in tools registered via `packages/agent-tools`:

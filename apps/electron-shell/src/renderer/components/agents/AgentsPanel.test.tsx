@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { AgentsPanel } from './AgentsPanel';
+import { FileTreeContextProvider } from '../explorer/FileTreeContext';
 
 const runId = '123e4567-e89b-12d3-a456-426614174000';
 
@@ -20,6 +21,20 @@ const mockApi = {
     getConversation: vi.fn(),
     appendMessage: vi.fn(),
     saveDraft: vi.fn(),
+  },
+  workspace: {
+    getCurrent: vi.fn(),
+    open: vi.fn(),
+    close: vi.fn(),
+  },
+  fs: {
+    readDirectory: vi.fn(),
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+    createFile: vi.fn(),
+    createDirectory: vi.fn(),
+    rename: vi.fn(),
+    delete: vi.fn(),
   },
   connections: {
     list: vi.fn(),
@@ -90,10 +105,18 @@ describe('AgentsPanel', () => {
       agents: { defaultConnectionId: null },
       sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
     });
+    mockApi.workspace.getCurrent.mockResolvedValue(null);
   });
 
+  const renderAgentsPanel = () =>
+    render(
+      <FileTreeContextProvider>
+        <AgentsPanel />
+      </FileTreeContextProvider>
+    );
+
   it('renders empty state when no runs exist', async () => {
-    render(<AgentsPanel />);
+    renderAgentsPanel();
 
     const runsTab = screen.getByRole('tab', { name: 'Runs' });
     fireEvent.click(runsTab);
@@ -119,7 +142,7 @@ describe('AgentsPanel', () => {
       .mockResolvedValue({ runs: [run] });
     mockApi.agents.startRun.mockResolvedValue({ run });
 
-    render(<AgentsPanel />);
+    renderAgentsPanel();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Runs' }));
 
@@ -164,7 +187,7 @@ describe('AgentsPanel', () => {
     mockApi.agents.listRuns.mockResolvedValue({ runs: [] });
     mockApi.agents.startRun.mockResolvedValue({ run });
 
-    render(<AgentsPanel />);
+    renderAgentsPanel();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Runs' }));
 

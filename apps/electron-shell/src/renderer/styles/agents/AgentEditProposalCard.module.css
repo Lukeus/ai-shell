@@ -1,0 +1,109 @@
+.card {
+  border: 1px solid var(--vscode-border-subtle);
+  background: var(--vscode-activityBar-background);
+  padding: var(--vscode-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--vscode-space-2);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--vscode-foreground-secondary);
+}
+
+.summary {
+  font-size: 12px;
+  color: var(--vscode-foreground);
+}
+
+.applied,
+.discarded,
+.error,
+.notice {
+  font-size: 12px;
+  padding: var(--vscode-space-1) var(--vscode-space-2);
+  border: 1px solid var(--vscode-border-subtle);
+  background: var(--vscode-editor-background);
+}
+
+.applied {
+  color: var(--color-status-success, #4ec9b0);
+  border-color: var(--color-status-success, #4ec9b0);
+}
+
+.discarded {
+  color: var(--vscode-foreground-secondary);
+}
+
+.error {
+  color: var(--color-status-error, #f48771);
+  border-color: var(--color-status-error, #f48771);
+}
+
+.notice {
+  color: var(--vscode-foreground-secondary);
+}
+
+.toggle {
+  align-self: flex-start;
+  border: 1px solid var(--vscode-border-subtle);
+  background: transparent;
+  color: var(--vscode-foreground-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  padding: var(--vscode-space-1) var(--vscode-space-2);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  color: var(--vscode-foreground);
+  border-color: var(--vscode-border);
+}
+
+.actions {
+  display: flex;
+  gap: var(--vscode-space-2);
+}
+
+.applyButton {
+  border: 1px solid var(--vscode-button-background);
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--vscode-font-size-small);
+  padding: var(--vscode-space-1) var(--vscode-space-3);
+  cursor: pointer;
+}
+
+.applyButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.discardButton {
+  border: 1px solid var(--vscode-border-subtle);
+  background: transparent;
+  color: var(--vscode-foreground-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--vscode-font-size-small);
+  padding: var(--vscode-space-1) var(--vscode-space-3);
+  cursor: pointer;
+}
+
+.discardButton:hover {
+  color: var(--vscode-foreground);
+  border-color: var(--vscode-border);
+}
+
+.discardButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

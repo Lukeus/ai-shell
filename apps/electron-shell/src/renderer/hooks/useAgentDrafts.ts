@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type {
+  AgentContextAttachment,
   AgentDraft,
   AgentEvent,
   AgentMessage,
@@ -17,7 +18,8 @@ type UseAgentDraftsOptions = {
   appendMessage: (
     content: string,
     role: AgentMessage['role'],
-    conversationId?: string
+    conversationId?: string,
+    attachments?: AgentContextAttachment[]
   ) => Promise<void>;
   createConversation: (title?: string) => Promise<string | null>;
   onError: (message: string | null) => void;

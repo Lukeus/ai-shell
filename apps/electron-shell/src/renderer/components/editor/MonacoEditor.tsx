@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as monacoType from 'monaco-editor';
+import { EDITOR_SELECTION_EVENT } from '../../hooks/useEditorContext';
 
 /**
  * MonacoEditor - Code editor component with lazy-loaded Monaco Editor.
@@ -66,6 +67,8 @@ export interface MonacoEditorProps {
   /** Optional callback when document symbols change */
   onSymbolsChange?: (symbols: BreadcrumbSymbol[]) => void;
 }
+
+const MAX_SELECTION_SNIPPET_CHARS = 4000;
 
 const resolveMonacoTheme = (): string => {
   const theme = document.documentElement.getAttribute('data-theme') ?? 'dark';
@@ -421,6 +424,62 @@ export function MonacoEditor({
       disposable.dispose();
     };
   }, [editor, onCursorChange]);
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const emitSelection = () => {
+      const model = editor.getModel?.();
+      if (!model) {
+        return;
+      }
+
+      const selection = editor.getSelection?.();
+      if (!selection || selection.isEmpty()) {
+        window.dispatchEvent(
+          new CustomEvent(EDITOR_SELECTION_EVENT, {
+            detail: { filePath, selection: null },
+          })
+        );
+        return;
+      }
+
+      const start = selection.getStartPosition();
+      const end = selection.getEndPosition();
+      const snippet = model.getValueInRange(selection);
+      const trimmed = snippet.length > MAX_SELECTION_SNIPPET_CHARS
+        ? snippet.slice(0, MAX_SELECTION_SNIPPET_CHARS)
+        : snippet;
+
+      window.dispatchEvent(
+        new CustomEvent(EDITOR_SELECTION_EVENT, {
+          detail: {
+            filePath,
+            selection: {
+              range: {
+                startLineNumber: start.lineNumber,
+                startColumn: start.column,
+                endLineNumber: end.lineNumber,
+                endColumn: end.column,
+              },
+              snippet: trimmed,
+            },
+          },
+        })
+      );
+    };
+
+    emitSelection();
+    const disposable = editor.onDidChangeCursorSelection(() => {
+      emitSelection();
+    });
+
+    return () => {
+      disposable.dispose();
+    };
+  }, [editor, filePath]);
 
   useEffect(() => {
     if (!editor || !onSymbolsChange) {

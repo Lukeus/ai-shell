@@ -250,6 +250,10 @@ const api: PreloadAPI = {
       invokeSafe(IPC_CHANNELS.AGENT_MESSAGES_APPEND, request),
     saveDraft: (request) =>
       invokeSafe(IPC_CHANNELS.AGENT_DRAFTS_SAVE, request),
+    requestEdit: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_EDITS_REQUEST, request),
+    applyProposal: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_EDITS_APPLY_PROPOSAL, request),
   },
 
   // Connections + secrets methods (metadata only)

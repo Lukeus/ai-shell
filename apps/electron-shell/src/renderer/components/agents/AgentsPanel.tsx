@@ -18,7 +18,7 @@ export function AgentsPanel() {
 
   const subscribedRunId = activeTab === 'runs'
     ? runs.activeRunId
-    : conversations.activeDraftRunId;
+    : conversations.activeEditRunId ?? conversations.activeDraftRunId;
 
   const handleRunEvent = runs.handleAgentEvent;
   const handleConversationEvent = conversations.handleAgentEvent;
@@ -76,7 +76,7 @@ export function AgentsPanel() {
           <AgentsConversationsView
             conversations={conversations.conversations}
             selectedConversationId={conversations.selectedConversationId}
-            messages={conversations.messages}
+            entries={conversations.entries}
             draft={conversations.draft}
             isLoading={conversations.isLoading}
             isSavingDraft={conversations.isSavingDraft}
@@ -84,10 +84,21 @@ export function AgentsPanel() {
             sddEnabled={sddEnabled}
             onSelectConversation={conversations.selectConversation}
             onCreateConversation={() => conversations.createConversation()}
-            onSendMessage={(content) => conversations.appendMessage(content, 'user')}
+            onSendMessage={(content, attachments) =>
+              conversations.appendMessage(content, 'user', undefined, attachments)
+            }
+            onRequestEdit={(content, attachments, options) =>
+              conversations.requestEdit(content, attachments, options)
+            }
             onDraftRequest={conversations.startDraft}
             onSaveDraft={conversations.saveDraft}
             onRunSdd={handleRunSdd}
+            onApplyProposal={conversations.applyProposal}
+            onDiscardProposal={conversations.discardProposal}
+            isApplyingProposal={conversations.isApplyingProposal}
+            isProposalDiscarded={conversations.isProposalDiscarded}
+            proposalApplyResult={conversations.proposalApplyResult}
+            proposalApplyError={conversations.proposalApplyError}
           />
         ) : (
           <AgentsRunsView

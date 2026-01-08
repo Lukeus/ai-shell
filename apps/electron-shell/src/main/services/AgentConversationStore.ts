@@ -4,25 +4,39 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import {
   AgentConversationSchema,
+  AgentConversationMessageEntrySchema,
+  AgentConversationProposalEntrySchema,
   AgentMessageSchema,
   type AgentConversation,
+  type AgentConversationEntry,
+  type AgentConversationProposalEntry,
+  type AgentEditProposal,
   type AgentMessage,
   type AppendAgentMessageRequest,
 } from 'packages-api-contracts';
+import {
+  buildEntriesFromMessagesMap,
+  buildMessagesFromEntries,
+  buildMessagesFromEntriesMap,
+  normalizeEntries,
+} from './agent-conversation-entries';
 
 type AgentConversationStoreData = {
-  version: 1;
+  version: 2;
   conversations: Record<string, AgentConversation>;
   messages: Record<string, AgentMessage[]>;
+  entries: Record<string, AgentConversationEntry[]>;
 };
 
 const MAX_CONVERSATIONS = 100;
 const MAX_MESSAGES_PER_CONVERSATION = 200;
+const MAX_ENTRIES_PER_CONVERSATION = 250;
 
 const EMPTY_STORE: AgentConversationStoreData = {
-  version: 1,
+  version: 2,
   conversations: {},
   messages: {},
+  entries: {},
 };
 
 /**
@@ -56,7 +70,7 @@ export class AgentConversationStore {
 
   public getConversation(
     conversationId: string
-  ): { conversation: AgentConversation; messages: AgentMessage[] } {
+  ): { conversation: AgentConversation; messages: AgentMessage[]; entries: AgentConversationEntry[] } {
     const store = this.loadStore();
     const conversation = store.conversations[conversationId];
     if (!conversation) {
@@ -65,6 +79,7 @@ export class AgentConversationStore {
     return {
       conversation,
       messages: store.messages[conversationId] ?? [],
+      entries: store.entries[conversationId] ?? [],
     };
   }
 
@@ -82,6 +97,7 @@ export class AgentConversationStore {
     const store = this.loadStore();
     store.conversations[conversation.id] = conversation;
     store.messages[conversation.id] = [];
+    store.entries[conversation.id] = [];
     this.enforceConversationLimit(store);
     this.saveStore(store);
     return conversation;
@@ -95,28 +111,48 @@ export class AgentConversationStore {
     }
 
     const now = new Date().toISOString();
+    const attachments = this.sanitizeAttachments(request.attachments);
     const message = AgentMessageSchema.parse({
       id: randomUUID(),
       conversationId: request.conversationId,
       role: request.role,
       content: request.content,
+      attachments,
       createdAt: now,
     });
 
-    const messages = store.messages[request.conversationId] ?? [];
-    messages.push(message);
-    if (messages.length > MAX_MESSAGES_PER_CONVERSATION) {
-      messages.splice(0, messages.length - MAX_MESSAGES_PER_CONVERSATION);
-    }
-    store.messages[request.conversationId] = messages;
-
-    store.conversations[request.conversationId] = AgentConversationSchema.parse({
-      ...conversation,
-      updatedAt: now,
+    const entry = AgentConversationMessageEntrySchema.parse({
+      ...message,
+      type: 'message',
     });
+    this.appendEntry(store, conversation, entry);
 
     this.saveStore(store);
     return message;
+  }
+
+  public appendProposal(
+    conversationId: string,
+    proposal: AgentEditProposal
+  ): AgentConversationProposalEntry {
+    const store = this.loadStore();
+    const conversation = store.conversations[conversationId];
+    if (!conversation) {
+      throw new Error(`Conversation not found: ${conversationId}`);
+    }
+
+    const now = new Date().toISOString();
+    const entry = AgentConversationProposalEntrySchema.parse({
+      id: randomUUID(),
+      conversationId,
+      type: 'proposal',
+      proposal,
+      createdAt: now,
+    });
+
+    this.appendEntry(store, conversation, entry);
+    this.saveStore(store);
+    return entry;
   }
 
   private enforceConversationLimit(store: AgentConversationStoreData): void {
@@ -133,6 +169,7 @@ export class AgentConversationStore {
     for (const conversation of toRemove) {
       delete store.conversations[conversation.id];
       delete store.messages[conversation.id];
+      delete store.entries[conversation.id];
     }
   }
 
@@ -143,14 +180,55 @@ export class AgentConversationStore {
       if (!parsed || typeof parsed !== 'object') {
         return { ...EMPTY_STORE };
       }
+      const conversations = parsed.conversations ?? {};
+      const messages = parsed.messages ?? {};
+      const entries = normalizeEntries(
+        parsed.entries ?? buildEntriesFromMessagesMap(messages),
+        conversations,
+        MAX_ENTRIES_PER_CONVERSATION
+      );
       return {
-        version: 1,
-        conversations: parsed.conversations ?? {},
-        messages: parsed.messages ?? {},
+        version: 2,
+        conversations,
+        messages: buildMessagesFromEntriesMap(entries, MAX_MESSAGES_PER_CONVERSATION),
+        entries,
       };
     } catch {
       return { ...EMPTY_STORE };
     }
+  }
+
+  private appendEntry(
+    store: AgentConversationStoreData,
+    conversation: AgentConversation,
+    entry: AgentConversationEntry
+  ): void {
+    const entries = store.entries[entry.conversationId] ?? [];
+    entries.push(entry);
+    if (entries.length > MAX_ENTRIES_PER_CONVERSATION) {
+      entries.splice(0, entries.length - MAX_ENTRIES_PER_CONVERSATION);
+    }
+    store.entries[entry.conversationId] = entries;
+
+    const messages = buildMessagesFromEntries(entries, MAX_MESSAGES_PER_CONVERSATION);
+    store.messages[entry.conversationId] = messages;
+
+    store.conversations[entry.conversationId] = AgentConversationSchema.parse({
+      ...conversation,
+      updatedAt: entry.createdAt,
+    });
+  }
+
+  private sanitizeAttachments(
+    attachments: AppendAgentMessageRequest['attachments']
+  ): AgentMessage['attachments'] {
+    if (!attachments || attachments.length === 0) {
+      return undefined;
+    }
+    return attachments.map((attachment) => ({
+      ...attachment,
+      snippet: undefined,
+    }));
   }
 
   private saveStore(store: AgentConversationStoreData): void {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentContextAttachmentSchema, AgentEditProposalSchema } from './agent-edits';
 
 export const AgentConversationSchema = z.object({
   id: z.string().uuid(),
@@ -18,10 +19,38 @@ export const AgentMessageSchema = z.object({
   conversationId: z.string().uuid(),
   role: AgentMessageRoleSchema,
   content: z.string().min(1),
+  attachments: z.array(AgentContextAttachmentSchema).optional(),
   createdAt: z.string().datetime(),
 });
 
 export type AgentMessage = z.infer<typeof AgentMessageSchema>;
+
+export const AgentConversationMessageEntrySchema = AgentMessageSchema.extend({
+  type: z.literal('message'),
+});
+
+export type AgentConversationMessageEntry = z.infer<
+  typeof AgentConversationMessageEntrySchema
+>;
+
+export const AgentConversationProposalEntrySchema = z.object({
+  id: z.string().uuid(),
+  conversationId: z.string().uuid(),
+  type: z.literal('proposal'),
+  proposal: AgentEditProposalSchema,
+  createdAt: z.string().datetime(),
+});
+
+export type AgentConversationProposalEntry = z.infer<
+  typeof AgentConversationProposalEntrySchema
+>;
+
+export const AgentConversationEntrySchema = z.discriminatedUnion('type', [
+  AgentConversationMessageEntrySchema,
+  AgentConversationProposalEntrySchema,
+]);
+
+export type AgentConversationEntry = z.infer<typeof AgentConversationEntrySchema>;
 
 export const ListAgentConversationsRequestSchema = z.object({});
 
@@ -64,6 +93,7 @@ export type GetAgentConversationRequest = z.infer<
 export const GetAgentConversationResponseSchema = z.object({
   conversation: AgentConversationSchema,
   messages: z.array(AgentMessageSchema),
+  entries: z.array(AgentConversationEntrySchema).optional(),
 });
 
 export type GetAgentConversationResponse = z.infer<
@@ -74,6 +104,7 @@ export const AppendAgentMessageRequestSchema = z.object({
   conversationId: z.string().uuid(),
   role: AgentMessageRoleSchema,
   content: z.string().min(1),
+  attachments: z.array(AgentContextAttachmentSchema).optional(),
 });
 
 export type AppendAgentMessageRequest = z.infer<

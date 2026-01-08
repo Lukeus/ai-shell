@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AgentRunStatusSchema } from './agent-runs';
 import { AgentDraftSchema } from './agent-drafts';
+import { AgentEditProposalSchema } from './agent-edits';
 import { ToolCallEnvelopeSchema, ToolCallResultSchema } from './agent-tools';
 
 const AgentEventBaseSchema = z.object({
@@ -80,6 +81,12 @@ export const AgentDraftEventSchema = AgentEventBaseSchema.extend({
   draft: AgentDraftSchema,
 });
 
+export const AgentEditProposalEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('edit-proposal'),
+  proposal: AgentEditProposalSchema,
+  conversationId: z.string().uuid().optional(),
+});
+
 export const AgentEventSchema = z.discriminatedUnion('type', [
   AgentStatusEventSchema,
   AgentPlanEventSchema,
@@ -90,6 +97,7 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
   AgentLogEventSchema,
   AgentErrorEventSchema,
   AgentDraftEventSchema,
+  AgentEditProposalEventSchema,
 ]);
 
 export type AgentEvent = z.infer<typeof AgentEventSchema>;

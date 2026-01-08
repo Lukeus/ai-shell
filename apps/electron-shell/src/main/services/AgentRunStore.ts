@@ -198,6 +198,13 @@ export class AgentRunStore {
       };
     }
 
+    if (event.type === 'edit-proposal') {
+      return {
+        ...event,
+        proposal: this.redactSensitiveData(event.proposal) as typeof event.proposal,
+      };
+    }
+
     return event;
   }
 
