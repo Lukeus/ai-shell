@@ -22,7 +22,8 @@ type UseAgentDraftsOptions = {
     content: string,
     role: AgentMessage['role'],
     conversationId?: string,
-    attachments?: AgentContextAttachment[]
+    attachments?: AgentContextAttachment[],
+    format?: AgentMessage['format']
   ) => Promise<void>;
   createConversation: (title?: string) => Promise<string | null>;
   getConversation: (conversationId: string) => AgentConversation | null;
@@ -112,6 +113,7 @@ export function useAgentDrafts({
             id: 'pending',
             conversationId,
             role: 'user',
+            format: 'text',
             content: trimmedPrompt,
             createdAt: new Date().toISOString(),
           },

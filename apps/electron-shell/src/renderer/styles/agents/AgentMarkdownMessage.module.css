@@ -1,0 +1,105 @@
+.markdown {
+  color: var(--vscode-foreground);
+  font-size: var(--vscode-font-size-ui);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.markdown p {
+  margin: 0 0 var(--vscode-space-2);
+}
+
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: var(--vscode-space-3) 0 var(--vscode-space-2);
+  font-weight: var(--vscode-font-weight-semibold);
+  color: var(--vscode-foreground);
+}
+
+.markdown h1,
+.markdown h2 {
+  font-size: var(--vscode-font-size-large);
+}
+
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  font-size: var(--vscode-font-size-ui);
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 var(--vscode-space-2);
+  padding-left: var(--vscode-space-4);
+}
+
+.markdown li {
+  margin-bottom: var(--vscode-space-1);
+}
+
+.markdown blockquote {
+  margin: 0 0 var(--vscode-space-2);
+  padding-left: var(--vscode-space-2);
+  border-left: 2px solid var(--vscode-border-subtle);
+  color: var(--vscode-foreground-secondary);
+}
+
+.markdown a {
+  color: var(--vscode-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown code {
+  font-family: var(--vscode-editor-font-family);
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  padding: 0 var(--vscode-space-1);
+}
+
+.markdown pre {
+  margin: 0 0 var(--vscode-space-2);
+  padding: var(--vscode-space-2);
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  overflow-x: auto;
+}
+
+.markdown pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.markdown table {
+  width: 100%;
+  margin: 0 0 var(--vscode-space-2);
+  border-collapse: collapse;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--vscode-border-subtle);
+  padding: var(--vscode-space-1) var(--vscode-space-2);
+  text-align: left;
+}
+
+.markdown th {
+  background: var(--vscode-list-hoverBackground);
+  font-weight: var(--vscode-font-weight-semibold);
+}
+
+.markdown hr {
+  margin: var(--vscode-space-3) 0;
+  border: none;
+  border-top: 1px solid var(--vscode-border-subtle);
+}

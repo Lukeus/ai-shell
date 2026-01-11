@@ -14,6 +14,7 @@ import { AgentsConversationList } from './AgentsConversationList';
 import { AgentsConversationThread } from './AgentsConversationThread';
 import { AgentsConversationComposer } from './AgentsConversationComposer';
 import { AgentDraftPreview } from './AgentDraftPreview';
+import type { AgentStreamingMessage, AgentStreamingStatus } from '../../hooks/useAgentChatStreaming';
 
 type DraftState = {
   draft: AgentDraft;
@@ -24,6 +25,8 @@ type AgentsConversationsViewProps = {
   conversations: AgentConversation[];
   selectedConversationId: string | null;
   entries: AgentConversationEntry[];
+  streamingMessage: AgentStreamingMessage | null;
+  streamingStatus: AgentStreamingStatus | null;
   draft: DraftState | null;
   isLoading: boolean;
   isSavingDraft: boolean;
@@ -73,6 +76,8 @@ export function AgentsConversationsView({
   conversations,
   selectedConversationId,
   entries,
+  streamingMessage,
+  streamingStatus,
   draft,
   isLoading,
   isSavingDraft,
@@ -173,9 +178,20 @@ export function AgentsConversationsView({
     setAttachments((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   }, []);
 
+  const visibleStreamingMessage =
+    streamingMessage && streamingMessage.conversationId === selectedConversationId
+      ? streamingMessage
+      : null;
+  const visibleStreamingStatus =
+    streamingStatus && streamingStatus.conversationId === selectedConversationId
+      ? streamingStatus
+      : null;
+
   const threadProps = useMemo(
     () => ({
       entries,
+      streamingMessage: visibleStreamingMessage,
+      streamingStatus: visibleStreamingStatus,
       canApplyProposals,
       isApplying: isApplyingProposal,
       isDiscarded: isProposalDiscarded,
@@ -186,6 +202,8 @@ export function AgentsConversationsView({
     }),
     [
       entries,
+      visibleStreamingMessage,
+      visibleStreamingStatus,
       canApplyProposals,
       isApplyingProposal,
       isProposalDiscarded,

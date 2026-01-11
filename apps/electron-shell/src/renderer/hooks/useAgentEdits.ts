@@ -26,7 +26,8 @@ type UseAgentEditsOptions = {
     content: string,
     role: AgentMessage['role'],
     conversationId?: string,
-    attachments?: AgentContextAttachment[]
+    attachments?: AgentContextAttachment[],
+    format?: AgentMessage['format']
   ) => Promise<void>;
   onError: (message: string | null) => void;
 };

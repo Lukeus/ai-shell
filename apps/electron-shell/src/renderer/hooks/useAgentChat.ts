@@ -10,6 +10,11 @@ import type {
 } from 'packages-api-contracts';
 import { useConnectionsContext } from '../contexts/ConnectionsContext';
 import { describeMissingConnection } from '../utils/agentConnections';
+import {
+  useAgentChatStreaming,
+  type AgentStreamingMessage,
+  type AgentStreamingStatus,
+} from './useAgentChatStreaming';
 
 const FINAL_RUN_STATUSES = new Set(['completed', 'failed', 'canceled']);
 
@@ -38,6 +43,7 @@ const toMessageFromEvent = (
   id: event.messageId ?? event.id,
   conversationId: event.conversationId,
   role: event.role,
+  format: event.format ?? 'text',
   content: event.content,
   createdAt: event.createdAt ?? event.timestamp,
 });
@@ -66,7 +72,8 @@ type UseAgentChatOptions = {
     content: string,
     role: AgentMessage['role'],
     conversationId?: string,
-    attachments?: AgentContextAttachment[]
+    attachments?: AgentContextAttachment[],
+    format?: AgentMessage['format']
   ) => Promise<void>;
   resolveConversationConnection: (
     conversationId: string
@@ -79,6 +86,8 @@ type UseAgentChatOptions = {
 
 type UseAgentChatResult = {
   activeChatRunId: string | null;
+  streamingMessage: AgentStreamingMessage | null;
+  streamingStatus: AgentStreamingStatus | null;
   sendMessage: (content: string, attachments?: AgentContextAttachment[]) => Promise<void>;
   handleChatEvent: (event: AgentEvent) => void;
 };
@@ -96,6 +105,41 @@ export function useAgentChat({
 }: UseAgentChatOptions): UseAgentChatResult {
   const { requestSecretAccess } = useConnectionsContext();
   const [activeChatRunId, setActiveChatRunId] = useState<string | null>(null);
+  const handleMessageComplete = useCallback(
+    (message: AgentMessage, conversationId: string, updatedAt: string) => {
+      touchConversation(conversationId, updatedAt);
+      if (conversationId === selectedConversationId) {
+        setMessages((prev) => [...prev, message]);
+        setEntries((prev) => [...prev, toMessageEntry(message)]);
+      }
+    },
+    [selectedConversationId, setEntries, setMessages, touchConversation]
+  );
+
+  const handleMessageEvent = useCallback(
+    (messageEvent: Extract<AgentEvent, { type: 'message' }> & { conversationId: string }) => {
+      const updatedAt = messageEvent.createdAt ?? messageEvent.timestamp;
+      touchConversation(messageEvent.conversationId, updatedAt);
+      if (messageEvent.conversationId === selectedConversationId) {
+        const message = toMessageFromEvent(messageEvent);
+        setMessages((prev) => [...prev, message]);
+        setEntries((prev) => [...prev, toMessageEntryFromEvent(messageEvent)]);
+      }
+    },
+    [selectedConversationId, setEntries, setMessages, touchConversation]
+  );
+
+  const {
+    streamingMessage,
+    streamingStatus,
+    startStreaming,
+    clearStreaming,
+    handleStreamingEvent,
+  } = useAgentChatStreaming({
+    selectedConversationId,
+    onMessageComplete: handleMessageComplete,
+    onMessageEvent: handleMessageEvent,
+  });
 
   const sendMessage = useCallback(
     async (content: string, attachments?: AgentContextAttachment[]) => {
@@ -159,6 +203,7 @@ export function useAgentChat({
           },
         });
         setActiveChatRunId(response.run.id);
+        startStreaming(conversationId);
 
         if (shouldReloadConversation && conversationId === selectedConversationId) {
           const result = await window.api.agents.getConversation({ conversationId });
@@ -184,6 +229,7 @@ export function useAgentChat({
       requestSecretAccess,
       resolveConversationConnection,
       selectedConversationId,
+      startStreaming,
     ]
   );
 
@@ -195,37 +241,23 @@ export function useAgentChat({
         FINAL_RUN_STATUSES.has(event.status)
       ) {
         setActiveChatRunId(null);
+        clearStreaming();
       }
 
       if (event.type === 'error' && event.runId === activeChatRunId) {
         onError(event.message);
+        clearStreaming();
       }
 
-      if (event.type === 'message' && event.conversationId) {
-        const messageEvent = event as Extract<AgentEvent, { type: 'message' }> & {
-          conversationId: string;
-        };
-        const updatedAt = messageEvent.createdAt ?? messageEvent.timestamp;
-        touchConversation(messageEvent.conversationId, updatedAt);
-        if (messageEvent.conversationId === selectedConversationId) {
-          const message = toMessageFromEvent(messageEvent);
-          setMessages((prev) => [...prev, message]);
-          setEntries((prev) => [...prev, toMessageEntryFromEvent(messageEvent)]);
-        }
-      }
+      handleStreamingEvent(event, activeChatRunId);
     },
-    [
-      activeChatRunId,
-      onError,
-      selectedConversationId,
-      setEntries,
-      setMessages,
-      touchConversation,
-    ]
+    [activeChatRunId, clearStreaming, handleStreamingEvent, onError]
   );
 
   return {
     activeChatRunId,
+    streamingMessage,
+    streamingStatus,
     sendMessage,
     handleChatEvent,
   };

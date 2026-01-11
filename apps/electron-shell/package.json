@@ -25,6 +25,8 @@
     "packages-api-contracts": "workspace:*",
     "packages-broker-main": "workspace:*",
     "packages-ui-kit": "workspace:*",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-webgl": "^0.16.0"

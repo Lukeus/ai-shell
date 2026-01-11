@@ -79,6 +79,8 @@ export function AgentsPanel() {
             conversations={conversations.conversations}
             selectedConversationId={conversations.selectedConversationId}
             entries={conversations.entries}
+            streamingMessage={conversations.streamingMessage}
+            streamingStatus={conversations.streamingStatus}
             draft={conversations.draft}
             isLoading={conversations.isLoading}
             isSavingDraft={conversations.isSavingDraft}

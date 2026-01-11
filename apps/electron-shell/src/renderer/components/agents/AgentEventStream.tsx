@@ -15,6 +15,8 @@ const formatEvent = (event: AgentEvent): string => {
   switch (event.type) {
     case 'status':
       return `Status: ${event.status}`;
+    case 'status-update':
+      return `Status: ${event.phase} - ${event.label}`;
     case 'plan-step':
       return `Step: ${event.title} (${event.status})`;
     case 'plan':
@@ -28,7 +30,11 @@ const formatEvent = (event: AgentEvent): string => {
     case 'log':
       return `${event.level.toUpperCase()}: ${event.message}`;
     case 'message':
-      return `${event.role}: ${truncateMessage(event.content, 120)}`;
+      return `${event.role} (${event.format}): ${truncateMessage(event.content, 120)}`;
+    case 'message-delta':
+      return `Message delta #${event.sequence}: ${truncateMessage(event.contentDelta, 120)}`;
+    case 'message-complete':
+      return `Message complete (${event.format}): ${truncateMessage(event.content, 120)}`;
     case 'error':
       return `Error: ${event.message}`;
     case 'draft':

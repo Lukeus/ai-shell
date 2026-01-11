@@ -1,5 +1,6 @@
 import {
   AgentConversationMessageEntrySchema,
+  AgentConversationEntrySchema,
   type AgentConversation,
   type AgentConversationEntry,
   type AgentConversationMessageEntry,
@@ -63,8 +64,12 @@ export const normalizeEntries = (
   const normalized: Record<string, AgentConversationEntry[]> = {};
   for (const [conversationId, entryList] of Object.entries(entries)) {
     const list = Array.isArray(entryList) ? entryList : [];
+    const parsed = list
+      .map((entry) => AgentConversationEntrySchema.safeParse(entry))
+      .filter((result) => result.success)
+      .map((result) => result.data);
     normalized[conversationId] =
-      list.length > maxEntries ? list.slice(-maxEntries) : list;
+      parsed.length > maxEntries ? parsed.slice(-maxEntries) : parsed;
   }
   for (const conversationId of Object.keys(conversations)) {
     if (!normalized[conversationId]) {

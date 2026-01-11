@@ -116,6 +116,7 @@ export class AgentConversationStore {
       id: randomUUID(),
       conversationId: request.conversationId,
       role: request.role,
+      format: request.format,
       content: request.content,
       attachments,
       createdAt: now,

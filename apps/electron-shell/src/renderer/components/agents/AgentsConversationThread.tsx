@@ -5,11 +5,16 @@ import type {
   ApplyAgentEditProposalResponse,
   Proposal,
 } from 'packages-api-contracts';
+import type { AgentStreamingMessage, AgentStreamingStatus } from '../../hooks/useAgentChatStreaming';
 import { AgentContextChips } from './AgentContextChips';
 import { AgentEditProposalCard } from './AgentEditProposalCard';
+import { AgentMarkdownMessage } from './AgentMarkdownMessage';
+import { AgentStreamingIndicator } from './AgentStreamingIndicator';
 
 type AgentsConversationThreadProps = {
   entries: AgentConversationEntry[];
+  streamingMessage: AgentStreamingMessage | null;
+  streamingStatus: AgentStreamingStatus | null;
   canApplyProposals: boolean;
   isApplying: (entryId: string) => boolean;
   isDiscarded: (entryId: string) => boolean;
@@ -41,6 +46,17 @@ const buildMessageBubbleClass = (role: AgentConversationMessageEntry['role']) =>
   return `${bubbleBase} bg-[var(--vscode-input-background)] text-primary`;
 };
 
+const renderMessageContent = (
+  content: string,
+  role: AgentConversationMessageEntry['role'],
+  format: AgentConversationMessageEntry['format']
+) => {
+  if (role === 'agent' && format === 'markdown') {
+    return <AgentMarkdownMessage content={content} />;
+  }
+  return <div className="whitespace-pre-wrap break-words">{content}</div>;
+};
+
 const renderMessageEntry = (entry: AgentConversationMessageEntry) => {
   const isUser = entry.role === 'user';
   const bubbleClass = buildMessageBubbleClass(entry.role);
@@ -53,12 +69,55 @@ const renderMessageEntry = (entry: AgentConversationMessageEntry) => {
         {entry.role} - {formatTimestamp(entry.createdAt)}
       </div>
       <div className="flex flex-col gap-3">
-        <div className={bubbleClass}>{entry.content}</div>
+        <div className={bubbleClass}>
+          {renderMessageContent(entry.content, entry.role, entry.format)}
+        </div>
         {attachments.length > 0 ? (
           <div className={attachmentWrapClass}>
             <AgentContextChips attachments={attachments} />
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+};
+
+const renderStreamingEntry = (
+  streamingMessage: AgentStreamingMessage,
+  streamingStatus: AgentStreamingStatus | null
+) => {
+  const bubbleClass = buildMessageBubbleClass('agent');
+  const indicatorClass = streamingMessage.content ? 'mt-2' : undefined;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-[11px] uppercase tracking-wide text-secondary">
+        agent - {formatTimestamp(streamingMessage.startedAt)}
+      </div>
+      <div className="flex flex-col gap-3">
+        <div className={bubbleClass}>
+          {streamingMessage.content
+            ? renderMessageContent(streamingMessage.content, 'agent', streamingMessage.format)
+            : null}
+          <AgentStreamingIndicator status={streamingStatus} className={indicatorClass} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const renderStreamingStatusOnly = (streamingStatus: AgentStreamingStatus) => {
+  const bubbleClass = buildMessageBubbleClass('agent');
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-[11px] uppercase tracking-wide text-secondary">
+        agent - {formatTimestamp(streamingStatus.startedAt)}
+      </div>
+      <div className="flex flex-col gap-3">
+        <div className={bubbleClass}>
+          <AgentStreamingIndicator status={streamingStatus} />
+        </div>
       </div>
     </div>
   );
@@ -95,6 +154,8 @@ const renderProposalEntry = (
 
 export function AgentsConversationThread({
   entries,
+  streamingMessage,
+  streamingStatus,
   canApplyProposals,
   isApplying,
   isDiscarded,
@@ -125,6 +186,8 @@ export function AgentsConversationThread({
           return renderMessageEntry(entry);
         })
       )}
+      {streamingMessage ? renderStreamingEntry(streamingMessage, streamingStatus) : null}
+      {!streamingMessage && streamingStatus ? renderStreamingStatusOnly(streamingStatus) : null}
     </div>
   );
 }

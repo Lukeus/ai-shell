@@ -9,6 +9,7 @@ import type {
 } from 'packages-api-contracts';
 import { resolveAgentConnection } from '../utils/agentConnections';
 import { useAgentChat } from './useAgentChat';
+import type { AgentStreamingMessage, AgentStreamingStatus } from './useAgentChatStreaming';
 import { useAgentDrafts } from './useAgentDrafts';
 import { useAgentEdits } from './useAgentEdits';
 
@@ -19,6 +20,8 @@ type UseAgentConversationsResult = {
   entries: AgentConversationEntry[];
   draft: ReturnType<typeof useAgentDrafts>['draft'];
   activeChatRunId: string | null;
+  streamingMessage: AgentStreamingMessage | null;
+  streamingStatus: AgentStreamingStatus | null;
   activeDraftRunId: ReturnType<typeof useAgentDrafts>['activeDraftRunId'];
   activeEditRunId: ReturnType<typeof useAgentEdits>['activeEditRunId'];
   isLoading: boolean;
@@ -34,7 +37,8 @@ type UseAgentConversationsResult = {
     content: string,
     role: AgentMessage['role'],
     conversationId?: string,
-    attachments?: AgentContextAttachment[]
+    attachments?: AgentContextAttachment[],
+    format?: AgentMessage['format']
   ) => Promise<void>;
   startDraft: ReturnType<typeof useAgentDrafts>['startDraft'];
   saveDraft: ReturnType<typeof useAgentDrafts>['saveDraft'];
@@ -188,7 +192,8 @@ export function useAgentConversations(): UseAgentConversationsResult {
       content: string,
       role: AgentMessage['role'],
       targetConversationId?: string,
-      attachments?: AgentContextAttachment[]
+      attachments?: AgentContextAttachment[],
+      format?: AgentMessage['format']
     ) => {
       const conversationId = targetConversationId ?? selectedConversationId;
       if (!conversationId) {
@@ -199,6 +204,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
         const result = await window.api.agents.appendMessage({
           conversationId,
           role,
+          format,
           content,
           attachments,
         });
@@ -233,17 +239,18 @@ export function useAgentConversations(): UseAgentConversationsResult {
     onError: setErrorMessage,
   });
 
-  const { activeChatRunId, sendMessage, handleChatEvent } = useAgentChat({
-    messages,
-    selectedConversationId,
-    createConversation,
-    appendMessage,
-    resolveConversationConnection,
-    touchConversation,
-    onError: setErrorMessage,
-    setMessages,
-    setEntries,
-  });
+  const { activeChatRunId, streamingMessage, streamingStatus, sendMessage, handleChatEvent } =
+    useAgentChat({
+      messages,
+      selectedConversationId,
+      createConversation,
+      appendMessage,
+      resolveConversationConnection,
+      touchConversation,
+      onError: setErrorMessage,
+      setMessages,
+      setEntries,
+    });
 
   const handleAgentEvent = useCallback(
     (event) => {
@@ -268,6 +275,8 @@ export function useAgentConversations(): UseAgentConversationsResult {
     entries,
     draft: draftState.draft,
     activeChatRunId,
+    streamingMessage,
+    streamingStatus,
     activeDraftRunId: draftState.activeDraftRunId,
     activeEditRunId: editState.activeEditRunId,
     isLoading,

@@ -3,7 +3,10 @@ import { AgentRunStatusSchema } from './agent-runs';
 import { AgentDraftSchema } from './agent-drafts';
 import { AgentEditProposalSchema } from './agent-edits';
 import { ToolCallEnvelopeSchema, ToolCallResultSchema } from './agent-tools';
-import { AgentMessageRoleSchema } from './agent-conversations';
+import {
+  AgentMessageFormatSchema,
+  AgentMessageRoleSchema,
+} from './agent-conversations';
 
 const AgentEventBaseSchema = z.object({
   id: z.string().uuid(),
@@ -74,10 +77,35 @@ export const AgentLogEventSchema = AgentEventBaseSchema.extend({
 export const AgentMessageEventSchema = AgentEventBaseSchema.extend({
   type: z.literal('message'),
   role: AgentMessageRoleSchema,
+  format: AgentMessageFormatSchema.default('text'),
   content: z.string().min(1),
   conversationId: z.string().uuid().optional(),
   messageId: z.string().uuid().optional(),
   createdAt: z.string().datetime().optional(),
+});
+
+export const AgentMessageDeltaEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('message-delta'),
+  contentDelta: z.string(),
+  sequence: z.number().int().min(0),
+  format: AgentMessageFormatSchema,
+  conversationId: z.string().uuid().optional(),
+  messageId: z.string().uuid().optional(),
+});
+
+export const AgentMessageCompleteEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('message-complete'),
+  content: z.string().min(1),
+  format: AgentMessageFormatSchema,
+  conversationId: z.string().uuid().optional(),
+  messageId: z.string().uuid().optional(),
+});
+
+export const AgentStatusUpdateEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('status-update'),
+  phase: z.string().min(1),
+  label: z.string().min(1),
+  conversationId: z.string().uuid().optional(),
 });
 
 export const AgentErrorEventSchema = AgentEventBaseSchema.extend({
@@ -106,6 +134,9 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
   AgentToolResultEventSchema,
   AgentLogEventSchema,
   AgentMessageEventSchema,
+  AgentMessageDeltaEventSchema,
+  AgentMessageCompleteEventSchema,
+  AgentStatusUpdateEventSchema,
   AgentErrorEventSchema,
   AgentDraftEventSchema,
   AgentEditProposalEventSchema,

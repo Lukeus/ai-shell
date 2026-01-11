@@ -7,7 +7,7 @@ import {
   AgentRunStartRequestSchema,
   type AgentContextAttachment,
   type AgentEvent,
-  type AgentMessageRole,
+  type AgentMessageFormat,
   type AgentRunStartRequest,
   type AgentRunStatus,
   type JsonValue,
@@ -36,6 +36,9 @@ const ChatHistoryEntrySchema = z.object({
   createdAt: z.string().datetime().optional(),
 });
 
+const CHAT_MESSAGE_FORMAT: AgentMessageFormat = 'markdown';
+const STREAMING_CHUNK_SIZE = 160;
+
 export class ChatWorkflowRunner {
   private readonly toolExecutor: ChatToolExecutor;
   private readonly onEvent: (event: AgentEvent) => void;
@@ -59,13 +62,15 @@ export class ChatWorkflowRunner {
       attachments,
       history,
     });
+    const conversationId = this.resolveConversationId(validatedRequest, inputs);
 
     this.emitStatus(runId, 'running');
+    this.emitStatusUpdate(runId, 'thinking', 'Thinking', conversationId);
 
     try {
       const text = await this.generateWithModel(runId, validatedRequest, prompt);
-      const conversationId = this.resolveConversationId(validatedRequest, inputs);
-      this.emitMessage(runId, text, conversationId);
+      this.emitStatusUpdate(runId, 'drafting', 'Drafting response', conversationId);
+      await this.emitStreamingMessage(runId, text, conversationId);
       this.emitStatus(runId, 'completed');
     } catch (error) {
       this.emitError(runId, error);
@@ -157,20 +162,56 @@ export class ChatWorkflowRunner {
     return output.text;
   }
 
-  private emitMessage(
+  private async emitStreamingMessage(
     runId: string,
     content: string,
     conversationId?: string
-  ): void {
-    const trimmed = content.trim();
-    const role: AgentMessageRole = 'agent';
+  ): Promise<void> {
+    const normalized = this.normalizeContent(content);
+    const messageId = this.idProvider();
+    const chunks = this.chunkContent(normalized, STREAMING_CHUNK_SIZE);
+    let sequence = 0;
+
+    for (const chunk of chunks) {
+      this.emitEvent({
+        id: this.idProvider(),
+        runId,
+        timestamp: this.now(),
+        type: 'message-delta',
+        contentDelta: chunk,
+        sequence,
+        format: CHAT_MESSAGE_FORMAT,
+        conversationId,
+        messageId,
+      });
+      sequence += 1;
+    }
+
     this.emitEvent({
       id: this.idProvider(),
       runId,
       timestamp: this.now(),
-      type: 'message',
-      role,
-      content: trimmed.length > 0 ? trimmed : content,
+      type: 'message-complete',
+      content: normalized,
+      format: CHAT_MESSAGE_FORMAT,
+      conversationId,
+      messageId,
+    });
+  }
+
+  private emitStatusUpdate(
+    runId: string,
+    phase: string,
+    label: string,
+    conversationId?: string
+  ): void {
+    this.emitEvent({
+      id: this.idProvider(),
+      runId,
+      timestamp: this.now(),
+      type: 'status-update',
+      phase,
+      label,
       conversationId,
     });
   }
@@ -199,5 +240,32 @@ export class ChatWorkflowRunner {
   private emitEvent(event: AgentEvent): void {
     const validated = AgentEventSchema.parse(event);
     this.onEvent(validated);
+  }
+
+  private normalizeContent(content: string): string {
+    const trimmed = content.trim();
+    return trimmed.length > 0 ? trimmed : content;
+  }
+
+  private chunkContent(content: string, maxChunkSize: number): string[] {
+    if (content.length <= maxChunkSize) {
+      return [content];
+    }
+
+    const chunks: string[] = [];
+    let start = 0;
+    while (start < content.length) {
+      let end = Math.min(start + maxChunkSize, content.length);
+      if (end < content.length) {
+        const lastSpace = content.lastIndexOf(' ', end);
+        if (lastSpace > start + 20) {
+          end = lastSpace;
+        }
+      }
+      chunks.push(content.slice(start, end));
+      start = end;
+    }
+
+    return chunks;
   }
 }

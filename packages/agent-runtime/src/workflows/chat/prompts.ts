@@ -97,8 +97,13 @@ const formatHistory = (history: ChatHistoryEntry[]): string => {
   return ['History:', ...lines].join('\n');
 };
 
-export const CHAT_SYSTEM_PROMPT =
-  'You are a helpful assistant. Use the provided context and respond clearly.';
+export const CHAT_SYSTEM_PROMPT = [
+  'You are a helpful assistant.',
+  'Respond in GitHub-flavored Markdown.',
+  'Do not include raw HTML.',
+  'Do not reveal chain-of-thought; provide concise, user-facing answers.',
+  'Use the provided context and respond clearly.',
+].join(' ');
 
 export const buildChatPrompt = ({
   prompt,

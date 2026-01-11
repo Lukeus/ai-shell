@@ -16,10 +16,15 @@ export const AgentMessageRoleSchema = z.enum(['user', 'agent', 'system']);
 
 export type AgentMessageRole = z.infer<typeof AgentMessageRoleSchema>;
 
+export const AgentMessageFormatSchema = z.enum(['text', 'markdown']);
+
+export type AgentMessageFormat = z.infer<typeof AgentMessageFormatSchema>;
+
 export const AgentMessageSchema = z.object({
   id: z.string().uuid(),
   conversationId: z.string().uuid(),
   role: AgentMessageRoleSchema,
+  format: AgentMessageFormatSchema.default('text'),
   content: z.string().min(1),
   attachments: z.array(AgentContextAttachmentSchema).optional(),
   createdAt: z.string().datetime(),
@@ -105,6 +110,7 @@ export type GetAgentConversationResponse = z.infer<
 export const AppendAgentMessageRequestSchema = z.object({
   conversationId: z.string().uuid(),
   role: AgentMessageRoleSchema,
+  format: AgentMessageFormatSchema.optional(),
   content: z.string().min(1),
   attachments: z.array(AgentContextAttachmentSchema).optional(),
 });
