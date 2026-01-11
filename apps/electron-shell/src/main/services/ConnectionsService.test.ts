@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectionsService } from './ConnectionsService';
 import * as fs from 'fs';
 import * as path from 'path';
+import { secretsService } from './SecretsService';
 
 const mockUserDataPath = vi.hoisted(() => 'C:\\mock\\userdata');
 const mockConnectionsPath = path.join(mockUserDataPath, 'connections.json');
@@ -18,6 +19,12 @@ vi.mock('fs', () => ({
   writeFileSync: vi.fn(),
   existsSync: vi.fn(),
   mkdirSync: vi.fn(),
+}));
+
+vi.mock('./SecretsService', () => ({
+  secretsService: {
+    deleteSecret: vi.fn(),
+  },
 }));
 
 describe('ConnectionsService', () => {
@@ -101,6 +108,20 @@ describe('ConnectionsService', () => {
     service.deleteConnection(created.metadata.id);
     const list = service.listConnections();
     expect(list).toHaveLength(0);
+  });
+
+  it('purges secrets when deleting connections', () => {
+    const created = service.createConnection({
+      providerId: 'mcp',
+      scope: 'user',
+      displayName: 'To Delete',
+      config: { host: 'localhost' },
+    });
+
+    const updated = service.setSecretRef(created.metadata.id, 'secret-ref-1');
+    service.deleteConnection(updated.metadata.id);
+
+    expect(secretsService.deleteSecret).toHaveBeenCalledWith('secret-ref-1');
   });
 
   it('rejects invalid config values', () => {

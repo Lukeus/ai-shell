@@ -4,7 +4,6 @@ import type {
   ConnectionProvider,
   ConnectionScope,
 } from 'packages-api-contracts';
-import { ConnectionsProvider } from '../../../contexts/ConnectionsContext';
 import { ConnectionsList } from './ConnectionsList';
 import { ConnectionDetail, type ConnectionFormValues } from './ConnectionDetail';
 
@@ -173,43 +172,41 @@ export function ConnectionsPanel() {
   );
 
   return (
-    <ConnectionsProvider connections={connections}>
-      <div className="flex h-full">
-        <ConnectionsList
-          connections={connections}
-          providers={providers}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          onCreate={handleCreateClick}
-        />
+    <div className="flex h-full">
+      <ConnectionsList
+        connections={connections}
+        providers={providers}
+        selectedId={selectedId}
+        onSelect={handleSelect}
+        onCreate={handleCreateClick}
+      />
 
-        <div className="flex-1 flex flex-col">
-          {isLoading || isProvidersLoading ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-secondary">
-              Loading connections...
-            </div>
-          ) : (
-            <>
-              {error && (
-                <div className="px-6 py-2 text-xs text-status-error border-b border-border">
-                  {error}
-                </div>
-              )}
-              <ConnectionDetail
-                key={`${mode}:${selectedConnection?.metadata.id ?? 'new'}`}
-                mode={mode}
-                connection={selectedConnection}
-                providers={providers}
-                isBusy={isBusy}
-                onCreate={handleCreate}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-                onReplaceSecret={handleReplaceSecret}
-              />
-            </>
-          )}
-        </div>
+      <div className="flex-1 flex flex-col">
+        {isLoading || isProvidersLoading ? (
+          <div className="flex-1 flex items-center justify-center text-sm text-secondary">
+            Loading connections...
+          </div>
+        ) : (
+          <>
+            {error && (
+              <div className="px-6 py-2 text-xs text-status-error border-b border-border">
+                {error}
+              </div>
+            )}
+            <ConnectionDetail
+              key={`${mode}:${selectedConnection?.metadata.id ?? 'new'}`}
+              mode={mode}
+              connection={selectedConnection}
+              providers={providers}
+              isBusy={isBusy}
+              onCreate={handleCreate}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+              onReplaceSecret={handleReplaceSecret}
+            />
+          </>
+        )}
       </div>
-    </ConnectionsProvider>
+    </div>
   );
 }

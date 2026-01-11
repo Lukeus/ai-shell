@@ -108,7 +108,7 @@ export function AgentsConversationComposer({
   };
 
   return (
-    <div className="border-t border-border-subtle px-4 py-3 bg-surface-secondary">
+    <div className="border-t border-border-subtle px-4 py-4 bg-surface-secondary">
       <div className="flex items-center justify-between">
         <div className="uppercase text-secondary text-[11px] tracking-wide">
           Copilot chat
@@ -157,11 +157,11 @@ export function AgentsConversationComposer({
         </div>
       </div>
       {attachments.length > 0 ? (
-        <div className="mt-2">
+        <div className="mt-3">
           <AgentContextChips attachments={attachments} onRemove={onRemoveAttachment} />
         </div>
       ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {quickActions.map((action) => {
           const isActive = action.id === activeQuickAction;
           return (
@@ -198,7 +198,7 @@ export function AgentsConversationComposer({
         onChange={handleMessageChange}
         placeholder="Ask for help or request edits..."
         className="
-          w-full rounded-none mt-2
+          w-full rounded-none mt-3
           bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] text-primary
           placeholder:text-tertiary
           focus:outline-none focus:ring-1 focus:ring-accent
@@ -209,7 +209,7 @@ export function AgentsConversationComposer({
           fontSize: 'var(--vscode-font-size-ui)',
         }}
       />
-      <div className="mt-2">
+      <div className="mt-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -252,7 +252,7 @@ export function AgentsConversationComposer({
           </button>
         </div>
       </div>
-      <div className="mt-4 border-t border-border-subtle pt-3">
+      <div className="mt-5 border-t border-border-subtle pt-4">
         <div className="uppercase text-secondary text-[10px] tracking-wide">
           Draft spec/plan/tasks
         </div>
@@ -262,7 +262,7 @@ export function AgentsConversationComposer({
           onChange={(event) => setFeatureId(event.target.value)}
           placeholder="Feature id (e.g., 159-agents-panel-context)"
           className="
-            w-full rounded-none mt-2
+            w-full rounded-none mt-3
             bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] text-primary
             placeholder:text-tertiary
             focus:outline-none focus:ring-1 focus:ring-accent
@@ -275,7 +275,7 @@ export function AgentsConversationComposer({
           }}
         />
       </div>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2">
         <button
           type="button"
           onClick={handleDraft}

@@ -11,6 +11,7 @@ import {
   type CreateConnectionRequest,
   type UpdateConnectionRequest,
 } from 'packages-api-contracts';
+import { secretsService } from './SecretsService';
 
 type ConnectionsStore = {
   version: 1;
@@ -99,11 +100,21 @@ export class ConnectionsService {
 
   public deleteConnection(id: string): void {
     const store = this.loadStore();
-    if (!store.connections[id]) {
+    const existing = store.connections[id];
+    if (!existing) {
       return;
     }
+    const secretRef = existing.metadata.secretRef;
     delete store.connections[id];
     this.saveStore(store);
+
+    if (secretRef) {
+      try {
+        secretsService.deleteSecret(secretRef);
+      } catch {
+        // Ignore secret cleanup failures to avoid blocking deletion.
+      }
+    }
   }
 
   public setSecretRef(connectionId: string, secretRef: string | undefined): Connection {

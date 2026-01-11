@@ -1,23 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
-import * as path from 'path';
 import type { AgentEditProposal } from 'packages-api-contracts';
 
-const mockUserDataPath = 'C:\\mock\\userdata';
-const mockStorePath = path.join(mockUserDataPath, 'agent-conversations.json');
+const mockPaths = vi.hoisted(() => ({
+  userDataPath: 'C:\\mock\\userdata',
+  storePath: 'C:\\mock\\userdata\\agent-conversations.json',
+}));
 
 let savedContent = '';
 
 vi.mock('electron', () => ({
   app: {
-    getPath: vi.fn(() => mockUserDataPath),
+    getPath: vi.fn(() => mockPaths.userDataPath),
   },
 }));
 
 vi.mock('fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn((file: string, data: string) => {
-    if (file === mockStorePath) {
+    if (file === mockPaths.storePath) {
       savedContent = data;
     }
   }),
@@ -101,7 +102,7 @@ describe('AgentConversationStore entries', () => {
       messages: {
         [conversationId]: [
           {
-            id: 'message-1',
+            id: '123e4567-e89b-12d3-a456-426614174222',
             conversationId,
             role: 'user',
             content: 'Legacy message',

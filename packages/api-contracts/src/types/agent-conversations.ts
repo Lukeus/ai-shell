@@ -4,6 +4,8 @@ import { AgentContextAttachmentSchema, AgentEditProposalSchema } from './agent-e
 export const AgentConversationSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1),
+  connectionId: z.string().uuid().optional(),
+  modelRef: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

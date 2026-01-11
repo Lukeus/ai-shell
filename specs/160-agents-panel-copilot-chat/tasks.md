@@ -137,3 +137,91 @@
 
 **Invariants**:
 - P6 (Contracts-first)
+
+---
+
+## Task 7 - Contracts-first: chat message events + conversation metadata
+**Files**:
+- `packages/api-contracts/src/types/agent-events.ts`
+- `packages/api-contracts/src/types/agent-conversations.ts`
+
+**Work**:
+- Add a message event for chat responses (role, content, conversationId).
+- Extend conversations with optional connectionId/modelRef metadata.
+
+**Verify**:
+- `pnpm --filter packages-api-contracts typecheck`
+
+**Invariants**:
+- P6 (Contracts-first)
+
+---
+
+## Task 8 - Agent host + runtime chat workflow
+**Files**:
+- `packages/agent-runtime/src/workflows/chat/` (new)
+- `packages/agent-runtime/src/index.ts`
+- `apps/agent-host/src/index.ts`
+
+**Work**:
+- Implement ChatWorkflowRunner to call model.generate and emit message events.
+- Route `workflow=chat` to ChatWorkflowRunner in agent-host.
+
+**Verify**:
+- `pnpm --filter packages-agent-runtime test`
+- `pnpm --filter apps-agent-host test`
+
+**Invariants**:
+- P1 (Process isolation)
+- P6 (Contracts-first)
+
+---
+
+## Task 9 - Main process: chat persistence + connection overrides + secret purge
+**Files**:
+- `apps/electron-shell/src/main/ipc/agents.ts`
+- `apps/electron-shell/src/main/services/AgentEditService.ts`
+- `apps/electron-shell/src/main/services/ConnectionsService.ts`
+
+**Work**:
+- Persist message events into conversation entries.
+- Resolve conversation-level connection/model overrides with default fallback.
+- Append a warning when a conversation override is missing and fallback is used.
+- Purge secrets when deleting a connection.
+
+**Verify**:
+- `pnpm --filter apps-electron-shell test`
+
+**Invariants**:
+- P1 (Process isolation)
+- P2 (Security defaults)
+- P6 (Contracts-first)
+
+---
+
+## Task 10 - Renderer: chat send + consent preflight + global prompt
+**Files**:
+- `apps/electron-shell/src/renderer/hooks/useAgentConversations.ts`
+- `apps/electron-shell/src/renderer/hooks/useAgentRuns.ts`
+- `apps/electron-shell/src/renderer/hooks/useAgentEdits.ts`
+- `apps/electron-shell/src/renderer/hooks/useAgentEventStream.ts`
+- `apps/electron-shell/src/renderer/components/agents/AgentsPanel.tsx`
+- `apps/electron-shell/src/renderer/components/agents/AgentEventStream.tsx`
+- `apps/electron-shell/src/renderer/contexts/ConnectionsContext.tsx`
+- `apps/electron-shell/src/renderer/components/settings/connections/ConnectionsPanel.tsx`
+- `apps/electron-shell/src/renderer/main.tsx`
+- `specs/160-agents-panel-copilot-chat/screenshots/` (new)
+
+**Work**:
+- Start chat runs from Send and render agent message events.
+- Preflight secret consent for runs/edits; show a global prompt when needed.
+- Subscribe to chat run events from the conversations tab.
+- Add a screenshot for the updated Agents panel.
+
+**Verify**:
+- `pnpm --filter apps-electron-shell test`
+
+**Invariants**:
+- P1 (Process isolation)
+- P5 (Monaco lazy-load preserved)
+- UI guardrails (no library migration)

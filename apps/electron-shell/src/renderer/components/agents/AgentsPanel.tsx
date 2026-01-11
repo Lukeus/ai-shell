@@ -18,7 +18,9 @@ export function AgentsPanel() {
 
   const subscribedRunId = activeTab === 'runs'
     ? runs.activeRunId
-    : conversations.activeEditRunId ?? conversations.activeDraftRunId;
+    : conversations.activeChatRunId ??
+      conversations.activeEditRunId ??
+      conversations.activeDraftRunId;
 
   const handleRunEvent = runs.handleAgentEvent;
   const handleConversationEvent = conversations.handleAgentEvent;
@@ -85,7 +87,7 @@ export function AgentsPanel() {
             onSelectConversation={conversations.selectConversation}
             onCreateConversation={() => conversations.createConversation()}
             onSendMessage={(content, attachments) =>
-              conversations.appendMessage(content, 'user', undefined, attachments)
+              conversations.sendMessage(content, attachments)
             }
             onRequestEdit={(content, attachments, options) =>
               conversations.requestEdit(content, attachments, options)

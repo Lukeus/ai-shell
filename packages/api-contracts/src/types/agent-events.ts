@@ -3,6 +3,7 @@ import { AgentRunStatusSchema } from './agent-runs';
 import { AgentDraftSchema } from './agent-drafts';
 import { AgentEditProposalSchema } from './agent-edits';
 import { ToolCallEnvelopeSchema, ToolCallResultSchema } from './agent-tools';
+import { AgentMessageRoleSchema } from './agent-conversations';
 
 const AgentEventBaseSchema = z.object({
   id: z.string().uuid(),
@@ -70,6 +71,15 @@ export const AgentLogEventSchema = AgentEventBaseSchema.extend({
   message: z.string(),
 });
 
+export const AgentMessageEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('message'),
+  role: AgentMessageRoleSchema,
+  content: z.string().min(1),
+  conversationId: z.string().uuid().optional(),
+  messageId: z.string().uuid().optional(),
+  createdAt: z.string().datetime().optional(),
+});
+
 export const AgentErrorEventSchema = AgentEventBaseSchema.extend({
   type: z.literal('error'),
   message: z.string(),
@@ -95,6 +105,7 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
   AgentToolCallEventSchema,
   AgentToolResultEventSchema,
   AgentLogEventSchema,
+  AgentMessageEventSchema,
   AgentErrorEventSchema,
   AgentDraftEventSchema,
   AgentEditProposalEventSchema,

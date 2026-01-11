@@ -8,6 +8,10 @@ Constitution alignment: yes. Aligned with memory/constitution.md (P1, P2, P5, P6
 - Extend agent-host to route edit requests and emit edit proposal events.
 - Update main process to persist conversation entries and apply proposals via PatchApplyService.
 - Update renderer Agents panel to attach editor context and render proposal cards.
+- Add a chat workflow that emits message events for conversation threads.
+- Introduce global consent prompting for secret access on first use.
+- Store optional conversation-level connection/model overrides.
+- Purge secrets when connections are deleted.
 
 ## Contracts (api-contracts updates)
 - New schemas:

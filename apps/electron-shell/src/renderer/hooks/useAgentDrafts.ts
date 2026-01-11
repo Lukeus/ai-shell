@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type {
+  AgentConversation,
   AgentContextAttachment,
   AgentDraft,
   AgentEvent,
   AgentMessage,
   Result,
 } from 'packages-api-contracts';
+import { useConnectionsContext } from '../contexts/ConnectionsContext';
+import { describeMissingConnection, resolveAgentConnection } from '../utils/agentConnections';
 
 type DraftState = {
   draft: AgentDraft;
@@ -22,6 +25,7 @@ type UseAgentDraftsOptions = {
     attachments?: AgentContextAttachment[]
   ) => Promise<void>;
   createConversation: (title?: string) => Promise<string | null>;
+  getConversation: (conversationId: string) => AgentConversation | null;
   onError: (message: string | null) => void;
 };
 
@@ -53,14 +57,33 @@ export function useAgentDrafts({
   selectedConversationId,
   appendMessage,
   createConversation,
+  getConversation,
   onError,
 }: UseAgentDraftsOptions): UseAgentDraftsResult {
+  const { requestSecretAccess } = useConnectionsContext();
   const [draftsByConversation, setDraftsByConversation] = useState<
     Record<string, DraftState>
   >({});
   const [activeDraftRunId, setActiveDraftRunId] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const runToConversation = useRef(new Map<string, string>());
+
+  const resolveConversationConnection = useCallback(
+    async (conversationId: string) => {
+      const [connectionsResponse, settings] = await Promise.all([
+        window.api.connections.list(),
+        window.api.getSettings(),
+      ]);
+      const conversation = getConversation(conversationId);
+      const resolution = resolveAgentConnection({
+        connections: connectionsResponse.connections,
+        settings,
+        conversation,
+      });
+      return { ...resolution, connections: connectionsResponse.connections, settings, conversation };
+    },
+    [getConversation]
+  );
 
   const startDraft = useCallback(
     async (featureId: string, prompt: string) => {
@@ -94,6 +117,28 @@ export function useAgentDrafts({
           },
         ]);
         await appendMessage(trimmedPrompt, 'user', conversationId);
+        const { connectionId, connections, settings, conversation } =
+          await resolveConversationConnection(conversationId);
+        if (!connectionId) {
+          onError(
+            describeMissingConnection({
+              connections,
+              settings,
+              conversation,
+            })
+          );
+          return;
+        }
+
+        const access = await requestSecretAccess({
+          connectionId,
+          requesterId: 'agent-host',
+          reason: 'agent.draft',
+        });
+        if (!access.granted) {
+          onError('Secret access denied for this connection.');
+          return;
+        }
         const response = await window.api.agents.startRun({
           goal: trimmedPrompt,
           inputs: {
@@ -113,7 +158,15 @@ export function useAgentDrafts({
         onError(message);
       }
     },
-    [appendMessage, createConversation, messages, onError, selectedConversationId]
+    [
+      appendMessage,
+      createConversation,
+      messages,
+      onError,
+      requestSecretAccess,
+      resolveConversationConnection,
+      selectedConversationId,
+    ]
   );
 
   const saveDraft = useCallback(

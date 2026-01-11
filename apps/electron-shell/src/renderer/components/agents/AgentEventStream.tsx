@@ -4,6 +4,13 @@ type AgentEventStreamProps = {
   events: AgentEvent[];
 };
 
+const truncateMessage = (content: string, maxLength: number) => {
+  if (content.length <= maxLength) {
+    return content;
+  }
+  return `${content.slice(0, Math.max(0, maxLength - 3))}...`;
+};
+
 const formatEvent = (event: AgentEvent): string => {
   switch (event.type) {
     case 'status':
@@ -20,10 +27,14 @@ const formatEvent = (event: AgentEvent): string => {
       return `Tool result: ${event.result.toolId} (${event.result.ok ? 'ok' : 'error'})`;
     case 'log':
       return `${event.level.toUpperCase()}: ${event.message}`;
+    case 'message':
+      return `${event.role}: ${truncateMessage(event.content, 120)}`;
     case 'error':
       return `Error: ${event.message}`;
     case 'draft':
       return `Draft ready: ${event.draft.featureId}`;
+    case 'edit-proposal':
+      return `Edit proposal: ${truncateMessage(event.proposal.summary, 120)}`;
     default:
       return 'Unknown event';
   }

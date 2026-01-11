@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Proposal } from 'packages-api-contracts';
 
-const applyProposalMock = vi.fn();
-const getWorkspaceMock = vi.fn();
+const { applyProposalMock, getWorkspaceMock } = vi.hoisted(() => ({
+  applyProposalMock: vi.fn(),
+  getWorkspaceMock: vi.fn(),
+}));
+
+vi.mock('electron', () => ({
+  app: {
+    getPath: vi.fn(() => 'C:\\mock\\userdata'),
+  },
+}));
+
+vi.mock('../../index', () => ({
+  getAgentHostManager: vi.fn(() => null),
+}));
 
 vi.mock('../WorkspaceService', () => ({
   workspaceService: {

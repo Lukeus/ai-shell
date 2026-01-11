@@ -62,5 +62,9 @@ export const buildChildProcessEnv = (options: ChildEnvOptions = {}): Record<stri
     }
   }
 
+  if (!env.ELECTRON_RUN_AS_NODE) {
+    env.ELECTRON_RUN_AS_NODE = '1';
+  }
+
   return env;
 };

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type {
+  AgentConversation,
   AgentContextAttachment,
   AgentEditRequestOptions,
   AgentEvent,
@@ -8,6 +9,8 @@ import type {
   Proposal,
   Result,
 } from 'packages-api-contracts';
+import { useConnectionsContext } from '../contexts/ConnectionsContext';
+import { describeMissingConnection, resolveAgentConnection } from '../utils/agentConnections';
 
 type ApplyState =
   | { status: 'idle' }
@@ -18,6 +21,7 @@ type ApplyState =
 type UseAgentEditsOptions = {
   selectedConversationId: string | null;
   createConversation: (title?: string) => Promise<string | null>;
+  getConversation: (conversationId: string) => AgentConversation | null;
   appendMessage: (
     content: string,
     role: AgentMessage['role'],
@@ -55,12 +59,31 @@ const unwrapResult = <T,>(result: Result<T>): T => {
 export function useAgentEdits({
   selectedConversationId,
   createConversation,
+  getConversation,
   appendMessage,
   onError,
 }: UseAgentEditsOptions): UseAgentEditsResult {
+  const { requestSecretAccess } = useConnectionsContext();
   const [activeEditRunId, setActiveEditRunId] = useState<string | null>(null);
   const [applyStateByEntry, setApplyStateByEntry] = useState<Record<string, ApplyState>>({});
   const [discardedEntries, setDiscardedEntries] = useState<Set<string>>(new Set());
+
+  const resolveConversationConnection = useCallback(
+    async (conversationId: string) => {
+      const [connectionsResponse, settings] = await Promise.all([
+        window.api.connections.list(),
+        window.api.getSettings(),
+      ]);
+      const conversation = getConversation(conversationId);
+      const resolution = resolveAgentConnection({
+        connections: connectionsResponse.connections,
+        settings,
+        conversation,
+      });
+      return { ...resolution, connections: connectionsResponse.connections, settings, conversation };
+    },
+    [getConversation]
+  );
 
   const requestEdit = useCallback(
     async (
@@ -83,6 +106,29 @@ export function useAgentEdits({
       try {
         onError(null);
         await appendMessage(trimmed, 'user', conversationId, attachments);
+        const { connectionId, connections, settings, conversation } =
+          await resolveConversationConnection(conversationId);
+        if (!connectionId) {
+          onError(
+            describeMissingConnection({
+              connections,
+              settings,
+              conversation,
+            })
+          );
+          return;
+        }
+
+        const access = await requestSecretAccess({
+          connectionId,
+          requesterId: 'agent-host',
+          reason: 'agent.edit',
+        });
+        if (!access.granted) {
+          onError('Secret access denied for this connection.');
+          return;
+        }
+
         const response = await window.api.agents.requestEdit({
           conversationId,
           prompt: trimmed,
@@ -97,7 +143,14 @@ export function useAgentEdits({
         onError(message);
       }
     },
-    [appendMessage, createConversation, onError, selectedConversationId]
+    [
+      appendMessage,
+      createConversation,
+      onError,
+      requestSecretAccess,
+      resolveConversationConnection,
+      selectedConversationId,
+    ]
   );
 
   const applyProposal = useCallback(

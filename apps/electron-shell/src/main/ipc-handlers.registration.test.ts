@@ -281,7 +281,7 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.SDD_RUNS_START)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SDD_RUNS_CONTROL)).toBe(true);
 
-      // Agent handlers (8)
+      // Agent handlers (15)
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_GET)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_RUNS_START)).toBe(true);
@@ -290,6 +290,13 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.AGENT_EVENTS_SUBSCRIBE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_EVENTS_UNSUBSCRIBE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_TRACE_LIST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_CONVERSATIONS_LIST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_CONVERSATIONS_CREATE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_CONVERSATIONS_GET)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_MESSAGES_APPEND)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_DRAFTS_SAVE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_EDITS_REQUEST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_EDITS_APPLY_PROPOSAL)).toBe(true);
 
       // Connections handlers (9)
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_PROVIDERS_LIST)).toBe(true);
@@ -325,8 +332,8 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.OUTPUT_LIST_CHANNELS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.OUTPUT_READ)).toBe(true);
 
-      // Total: 78 handlers
-      expect(handlers.size).toBe(78);
+      // Total: 85 handlers
+      expect(handlers.size).toBe(85);
     });
   });
 });

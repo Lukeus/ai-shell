@@ -4,3 +4,4 @@ export type { ToolExecutorTransport } from './runtime/ToolExecutor';
 export { SddWorkflowRunner } from './workflows/sdd/SddWorkflowRunner';
 export { PlanningWorkflowRunner } from './workflows/planning/PlanningWorkflowRunner';
 export { EditWorkflowRunner } from './workflows/edit/EditWorkflowRunner';
+export { ChatWorkflowRunner } from './workflows/chat/ChatWorkflowRunner';

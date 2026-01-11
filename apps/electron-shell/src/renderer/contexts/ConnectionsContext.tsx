@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import type {
   Connection,
+  ConnectionProvider,
   ConsentDecision,
   SecretAccessRequest,
   SecretAccessResponse,
@@ -29,7 +30,6 @@ const ConnectionsContext = createContext<ConnectionsContextValue | undefined>(un
 
 interface ConnectionsProviderProps {
   children: ReactNode;
-  connections: Connection[];
 }
 
 const createRequestId = () => {
@@ -40,27 +40,68 @@ const createRequestId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-export function ConnectionsProvider({ children, connections }: ConnectionsProviderProps) {
+const resolveConnectionSnapshot = async (
+  connectionId: string
+): Promise<{
+  connection: Connection | null;
+  provider: ConnectionProvider | null;
+  requiresSecret: boolean;
+  connectionName: string;
+}> => {
+  const [connectionsResponse, providersResponse] = await Promise.all([
+    window.api.connections.list(),
+    window.api.connections.listProviders().catch(() => ({ providers: [] })),
+  ]);
+
+  const connection =
+    connectionsResponse.connections.find((item) => item.metadata.id === connectionId) ??
+    null;
+  const provider = connection
+    ? providersResponse.providers.find(
+      (item) => item.id === connection.metadata.providerId
+    ) ?? null
+    : null;
+  const requiresSecret = provider
+    ? provider.fields.some((field) => field.type === 'secret')
+    : Boolean(connection?.metadata.secretRef);
+  const connectionName = connection?.metadata.displayName ?? 'Unknown connection';
+
+  return { connection, provider, requiresSecret, connectionName };
+};
+
+export function ConnectionsProvider({ children }: ConnectionsProviderProps) {
   const [queue, setQueue] = useState<PendingConsent[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const resolversRef = useRef(new Map<string, (response: SecretAccessResponse) => void>());
 
-  const connectionNameById = useMemo(() => {
-    return new Map(connections.map((item) => [item.metadata.id, item.metadata.displayName]));
-  }, [connections]);
-
   const requestSecretAccess = useCallback(
-    (request: SecretAccessRequest) => {
-      const id = createRequestId();
-      const connectionName =
-        connectionNameById.get(request.connectionId) ?? 'Unknown connection';
+    async (request: SecretAccessRequest) => {
+      const snapshot = await resolveConnectionSnapshot(request.connectionId);
+      if (!snapshot.connection) {
+        throw new Error(`Connection not found: ${request.connectionId}`);
+      }
+      if (!snapshot.requiresSecret) {
+        return { granted: true };
+      }
+      if (!snapshot.connection.metadata.secretRef) {
+        throw new Error('Connection secret is missing.');
+      }
 
+      const preflight = await window.api.connections.requestSecretAccess(request);
+      if (preflight.granted) {
+        return preflight;
+      }
+
+      const id = createRequestId();
       return new Promise<SecretAccessResponse>((resolve) => {
         resolversRef.current.set(id, resolve);
-        setQueue((prev) => [...prev, { id, request, connectionName }]);
+        setQueue((prev) => [
+          ...prev,
+          { id, request, connectionName: snapshot.connectionName },
+        ]);
       });
     },
-    [connectionNameById]
+    []
   );
 
   const activeRequest = queue[0] ?? null;

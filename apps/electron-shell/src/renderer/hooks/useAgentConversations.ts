@@ -7,6 +7,8 @@ import type {
   AgentContextAttachment,
   Result,
 } from 'packages-api-contracts';
+import { resolveAgentConnection } from '../utils/agentConnections';
+import { useAgentChat } from './useAgentChat';
 import { useAgentDrafts } from './useAgentDrafts';
 import { useAgentEdits } from './useAgentEdits';
 
@@ -16,6 +18,7 @@ type UseAgentConversationsResult = {
   messages: AgentMessage[];
   entries: AgentConversationEntry[];
   draft: ReturnType<typeof useAgentDrafts>['draft'];
+  activeChatRunId: string | null;
   activeDraftRunId: ReturnType<typeof useAgentDrafts>['activeDraftRunId'];
   activeEditRunId: ReturnType<typeof useAgentEdits>['activeEditRunId'];
   isLoading: boolean;
@@ -23,6 +26,10 @@ type UseAgentConversationsResult = {
   errorMessage: string | null;
   selectConversation: (conversationId: string) => void;
   createConversation: (title?: string) => Promise<string | null>;
+  sendMessage: (
+    content: string,
+    attachments?: AgentContextAttachment[]
+  ) => Promise<void>;
   appendMessage: (
     content: string,
     role: AgentMessage['role'],
@@ -52,6 +59,15 @@ const toMessageEntry = (message: AgentMessage): AgentConversationEntry => ({
   ...message,
   type: 'message',
 });
+
+const updateConversationTimestamp = (
+  conversations: AgentConversation[],
+  conversationId: string,
+  updatedAt: string
+) =>
+  conversations.map((conversation) =>
+    conversation.id === conversationId ? { ...conversation, updatedAt } : conversation
+  );
 
 export function useAgentConversations(): UseAgentConversationsResult {
   const [conversations, setConversations] = useState<AgentConversation[]>([]);
@@ -119,6 +135,35 @@ export function useAgentConversations(): UseAgentConversationsResult {
     };
   }, [loadConversation, selectedConversationId]);
 
+  const getConversationById = useCallback(
+    (conversationId: string) =>
+      conversations.find((conversation) => conversation.id === conversationId) ?? null,
+    [conversations]
+  );
+
+  const touchConversation = useCallback((conversationId: string, updatedAt: string) => {
+    setConversations((prev) =>
+      updateConversationTimestamp(prev, conversationId, updatedAt)
+    );
+  }, []);
+
+  const resolveConversationConnection = useCallback(
+    async (conversationId: string) => {
+      const [connectionsResponse, settings] = await Promise.all([
+        window.api.connections.list(),
+        window.api.getSettings(),
+      ]);
+      const conversation = getConversationById(conversationId);
+      const resolution = resolveAgentConnection({
+        connections: connectionsResponse.connections,
+        settings,
+        conversation,
+      });
+      return { ...resolution, connections: connectionsResponse.connections, settings, conversation };
+    },
+    [getConversationById]
+  );
+
   const selectConversation = useCallback((conversationId: string) => {
     setSelectedConversationId(conversationId);
   }, []);
@@ -158,6 +203,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
           attachments,
         });
         const data = unwrapResult(result);
+        touchConversation(conversationId, data.message.createdAt);
         if (conversationId === selectedConversationId) {
           setMessages((prev) => [...prev, data.message]);
           setEntries((prev) => [...prev, toMessageEntry(data.message)]);
@@ -167,7 +213,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
         setErrorMessage(message);
       }
     },
-    [selectedConversationId]
+    [selectedConversationId, touchConversation]
   );
 
   const draftState = useAgentDrafts({
@@ -175,20 +221,35 @@ export function useAgentConversations(): UseAgentConversationsResult {
     selectedConversationId,
     appendMessage,
     createConversation,
+    getConversation: getConversationById,
     onError: setErrorMessage,
   });
 
   const editState = useAgentEdits({
     selectedConversationId,
     createConversation,
+    getConversation: getConversationById,
     appendMessage,
     onError: setErrorMessage,
+  });
+
+  const { activeChatRunId, sendMessage, handleChatEvent } = useAgentChat({
+    messages,
+    selectedConversationId,
+    createConversation,
+    appendMessage,
+    resolveConversationConnection,
+    touchConversation,
+    onError: setErrorMessage,
+    setMessages,
+    setEntries,
   });
 
   const handleAgentEvent = useCallback(
     (event) => {
       draftState.handleAgentEvent(event);
       editState.handleAgentEvent(event);
+      handleChatEvent(event);
       if (
         event.type === 'edit-proposal' &&
         event.conversationId &&
@@ -197,7 +258,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
         void loadConversation(event.conversationId);
       }
     },
-    [draftState, editState, loadConversation, selectedConversationId]
+    [draftState, editState, handleChatEvent, loadConversation, selectedConversationId]
   );
 
   return {
@@ -206,6 +267,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
     messages,
     entries,
     draft: draftState.draft,
+    activeChatRunId,
     activeDraftRunId: draftState.activeDraftRunId,
     activeEditRunId: editState.activeEditRunId,
     isLoading,
@@ -213,6 +275,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
     errorMessage,
     selectConversation,
     createConversation,
+    sendMessage,
     appendMessage,
     startDraft: draftState.startDraft,
     saveDraft: draftState.saveDraft,

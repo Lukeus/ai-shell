@@ -38,6 +38,12 @@ import { connectionsService } from '../services/ConnectionsService';
 import { getConnectionModelRef } from '../services/connection-model-ref';
 import { settingsService } from '../services/SettingsService';
 import { getAgentHostManager } from '../index';
+import {
+  persistMessageEvent,
+  resolveConversationId,
+  resolveConversationOverrides,
+  warnMissingConversationConnection,
+} from './agent-conversation-helpers';
 import { handleSafe } from './safeIpc';
 import { logInvalidAgentEvent, redactAgentEventForPublish } from './agent-event-redaction';
 
@@ -91,22 +97,23 @@ const publishAgentEvent = (event: AgentEvent): void => {
 
 const appendAndPublish = (event: AgentEvent): void => {
   const enriched = agentEditService.handleAgentEvent(event);
-  if (enriched.type === 'status') {
+  const persisted = persistMessageEvent(enriched);
+  if (persisted.type === 'status') {
     try {
-      agentRunStore.updateRunStatus(enriched.runId, enriched.status);
+      agentRunStore.updateRunStatus(persisted.runId, persisted.status);
     } catch {
       // Ignore missing runs; events may arrive before metadata is created.
     }
   }
 
   try {
-    agentRunStore.appendEvent(enriched);
+    agentRunStore.appendEvent(persisted);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.warn('[Agent IPC] Failed to persist agent event.', message);
   }
 
-  publishAgentEvent(enriched);
+  publishAgentEvent(persisted);
 };
 
 const buildStatusEvent = (runId: string, status: AgentRunStatus): AgentEvent =>
@@ -192,24 +199,44 @@ export const registerAgentHandlers = (): void => {
         return { run: failedRun };
       };
 
+      const conversationId = resolveConversationId(validated);
+      const overrides = resolveConversationOverrides(conversationId);
       const settings = settingsService.getSettings();
-      const resolvedConnectionId =
-        validated.connectionId ?? settings.agents.defaultConnectionId;
+      const defaultConnectionId = settings.agents.defaultConnectionId;
+      const explicitConnectionId = validated.connectionId;
+      let resolvedConnectionId =
+        explicitConnectionId ?? overrides.connectionId ?? defaultConnectionId;
 
       if (!resolvedConnectionId) {
         return failRun('No connection configured for this run.');
       }
 
-      const connection = connectionsService
+      let connection = connectionsService
         .listConnections()
         .find((item) => item.metadata.id === resolvedConnectionId);
+
+      if (!connection && overrides.connectionId && !explicitConnectionId) {
+        if (conversationId) {
+          warnMissingConversationConnection(conversationId, overrides.connectionId);
+        }
+        resolvedConnectionId = defaultConnectionId ?? resolvedConnectionId;
+        connection = connectionsService
+          .listConnections()
+          .find((item) => item.metadata.id === resolvedConnectionId);
+      }
 
       if (!connection) {
         return failRun(`Connection not found: ${resolvedConnectionId}`);
       }
 
       const connectionModel = getConnectionModelRef(connection);
-      const effectiveModelRef = validated.config?.modelRef ?? connectionModel;
+      const overrideModelRef =
+        !validated.config?.modelRef &&
+        overrides.modelRef &&
+        (!overrides.connectionId || overrides.connectionId === resolvedConnectionId)
+          ? overrides.modelRef
+          : undefined;
+      const effectiveModelRef = validated.config?.modelRef ?? overrideModelRef ?? connectionModel;
 
       run = agentRunStore.updateRunRouting(run.id, {
         connectionId: resolvedConnectionId,
@@ -223,9 +250,14 @@ export const registerAgentHandlers = (): void => {
         return failRun('Agent Host not available.');
       }
 
+      const requestConfig = overrideModelRef
+        ? { ...validated.config, modelRef: overrideModelRef }
+        : validated.config;
+
       const requestForHost: AgentRunStartRequest = {
         ...validated,
         connectionId: resolvedConnectionId,
+        config: requestConfig,
       };
       cachedRunRequests.set(run.id, requestForHost);
 

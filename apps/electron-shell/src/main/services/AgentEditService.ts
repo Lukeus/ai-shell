@@ -28,6 +28,36 @@ const FINAL_RUN_STATUSES: AgentRunStatus[] = ['completed', 'failed', 'canceled']
 export class AgentEditService {
   private readonly runContexts = new Map<string, EditRunContext>();
 
+  private resolveConversationOverrides(conversationId: string): {
+    connectionId?: string;
+    modelRef?: string;
+  } {
+    try {
+      const { conversation } = agentConversationStore.getConversation(conversationId);
+      return {
+        connectionId: conversation.connectionId,
+        modelRef: conversation.modelRef,
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  private warnMissingConversationConnection(
+    conversationId: string,
+    connectionId: string
+  ): void {
+    try {
+      agentConversationStore.appendMessage({
+        conversationId,
+        role: 'system',
+        content: `Connection ${connectionId} not found. Using default connection.`,
+      });
+    } catch {
+      // Ignore failures when writing warning messages.
+    }
+  }
+
   public async requestEdit(
     request: AgentEditRequest
   ): Promise<AgentEditRequestResponse> {
@@ -35,8 +65,11 @@ export class AgentEditService {
 
     const run = agentRunStore.createRun('user');
     const settings = settingsService.getSettings();
-    const resolvedConnectionId =
-      request.connectionId ?? settings.agents.defaultConnectionId;
+    const overrides = this.resolveConversationOverrides(request.conversationId);
+    const defaultConnectionId = settings.agents.defaultConnectionId;
+    const explicitConnectionId = request.connectionId;
+    let resolvedConnectionId =
+      explicitConnectionId ?? overrides.connectionId ?? defaultConnectionId;
 
     const failRun = (message: string): never => {
       this.appendRunError(run.id, message);
@@ -47,16 +80,30 @@ export class AgentEditService {
       failRun('No connection configured for this run.');
     }
 
-    const connection = connectionsService
+    let connection = connectionsService
       .listConnections()
       .find((item) => item.metadata.id === resolvedConnectionId);
+
+    if (!connection && overrides.connectionId && !explicitConnectionId) {
+      this.warnMissingConversationConnection(request.conversationId, overrides.connectionId);
+      resolvedConnectionId = defaultConnectionId ?? resolvedConnectionId;
+      connection = connectionsService
+        .listConnections()
+        .find((item) => item.metadata.id === resolvedConnectionId);
+    }
 
     if (!connection) {
       failRun(`Connection not found: ${resolvedConnectionId}`);
     }
 
     const connectionModel = getConnectionModelRef(connection);
-    const effectiveModelRef = request.modelRef ?? connectionModel;
+    const overrideModelRef =
+      !request.modelRef &&
+      overrides.modelRef &&
+      (!overrides.connectionId || overrides.connectionId === resolvedConnectionId)
+        ? overrides.modelRef
+        : undefined;
+    const effectiveModelRef = request.modelRef ?? overrideModelRef ?? connectionModel;
 
     agentRunStore.updateRunRouting(run.id, {
       connectionId: resolvedConnectionId,

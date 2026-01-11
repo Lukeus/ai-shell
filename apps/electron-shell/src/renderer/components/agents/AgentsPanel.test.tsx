@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { AgentsPanel } from './AgentsPanel';
 import { FileTreeContextProvider } from '../explorer/FileTreeContext';
+import { ConnectionsProvider } from '../../contexts/ConnectionsContext';
 
 const runId = '123e4567-e89b-12d3-a456-426614174000';
 
@@ -38,6 +39,8 @@ const mockApi = {
   },
   connections: {
     list: vi.fn(),
+    listProviders: vi.fn(),
+    requestSecretAccess: vi.fn(),
   },
   getSettings: vi.fn(),
 };
@@ -49,6 +52,18 @@ globalWindow.window.api = mockApi;
 describe('AgentsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    const defaultConnectionId = '123e4567-e89b-12d3-a456-426614174111';
+    const defaultConnection = {
+      metadata: {
+        id: defaultConnectionId,
+        providerId: 'ollama',
+        scope: 'user',
+        displayName: 'Local Ollama',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+      config: {},
+    };
     mockApi.agents.listRuns.mockResolvedValue({ runs: [] });
     mockApi.agents.listTrace.mockResolvedValue({ events: [] });
     mockApi.agents.subscribeEvents.mockResolvedValue(undefined);
@@ -89,7 +104,17 @@ describe('AgentsPanel', () => {
         savedAt: '2024-01-01T00:00:00.000Z',
       },
     });
-    mockApi.connections.list.mockResolvedValue({ connections: [] });
+    mockApi.connections.list.mockResolvedValue({ connections: [defaultConnection] });
+    mockApi.connections.listProviders.mockResolvedValue({
+      providers: [
+        {
+          id: 'ollama',
+          name: 'Ollama',
+          fields: [],
+        },
+      ],
+    });
+    mockApi.connections.requestSecretAccess.mockResolvedValue({ granted: true });
     mockApi.getSettings.mockResolvedValue({
       appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
       editor: {
@@ -102,7 +127,7 @@ describe('AgentsPanel', () => {
       },
       terminal: { defaultShell: 'default' },
       extensions: { autoUpdate: true, enableTelemetry: false },
-      agents: { defaultConnectionId: null },
+      agents: { defaultConnectionId },
       sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
     });
     mockApi.workspace.getCurrent.mockResolvedValue(null);
@@ -110,9 +135,11 @@ describe('AgentsPanel', () => {
 
   const renderAgentsPanel = () =>
     render(
-      <FileTreeContextProvider>
-        <AgentsPanel />
-      </FileTreeContextProvider>
+      <ConnectionsProvider>
+        <FileTreeContextProvider>
+          <AgentsPanel />
+        </FileTreeContextProvider>
+      </ConnectionsProvider>
     );
 
   it('renders empty state when no runs exist', async () => {
@@ -183,7 +210,7 @@ describe('AgentsPanel', () => {
       updatedAt: '2024-01-01T00:00:00.000Z',
     };
 
-    mockApi.connections.list.mockResolvedValueOnce({ connections: [connection] });
+    mockApi.connections.list.mockResolvedValue({ connections: [connection] });
     mockApi.agents.listRuns.mockResolvedValue({ runs: [] });
     mockApi.agents.startRun.mockResolvedValue({ run });
 

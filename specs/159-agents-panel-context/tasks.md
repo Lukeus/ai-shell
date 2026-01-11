@@ -116,3 +116,21 @@
 
 **Invariants**:
 - Documentation updated for new behavior
+
+---
+
+## Task 7 - Refactor DeepAgentRunner for guardrail compliance
+**Files**:
+- `packages/agent-runtime/src/runtime/DeepAgentRunner.ts`
+- `packages/agent-runtime/src/runtime/` (new split modules)
+
+**Work**:
+- Split DeepAgentRunner responsibilities into focused modules (model, broker backend, todo handling).
+- Preserve existing behavior and tests.
+
+**Verify**:
+- `pnpm --filter packages-agent-runtime test`
+- `pnpm --filter apps-agent-host test`
+
+**Invariants**:
+- P6 (Contracts-first)

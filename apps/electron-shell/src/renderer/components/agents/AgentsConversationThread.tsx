@@ -31,7 +31,7 @@ const buildMessageBubbleClass = (role: AgentConversationMessageEntry['role']) =>
   const isUser = role === 'user';
   const isSystem = role === 'system';
   const bubbleBase =
-    'max-w-[85%] rounded-none border border-border-subtle px-3 py-2 text-[13px] leading-relaxed';
+    'max-w-[85%] rounded-none border border-border-subtle px-3 py-2.5 text-[13px] leading-relaxed';
   if (isUser) {
     return `${bubbleBase} bg-accent text-[var(--vscode-button-foreground)] ml-auto`;
   }
@@ -48,11 +48,11 @@ const renderMessageEntry = (entry: AgentConversationMessageEntry) => {
   const attachmentWrapClass = `max-w-[85%] ${isUser ? 'ml-auto' : ''}`;
 
   return (
-    <div key={entry.id} className="flex flex-col gap-1">
-      <div className={`text-[10px] uppercase tracking-wide text-secondary ${isUser ? 'text-right' : ''}`}>
+    <div key={entry.id} className="flex flex-col gap-2">
+      <div className={`text-[11px] uppercase tracking-wide text-secondary ${isUser ? 'text-right' : ''}`}>
         {entry.role} - {formatTimestamp(entry.createdAt)}
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <div className={bubbleClass}>{entry.content}</div>
         {attachments.length > 0 ? (
           <div className={attachmentWrapClass}>
@@ -76,8 +76,8 @@ const renderProposalEntry = (
     onDiscardProposal,
   }: Omit<AgentsConversationThreadProps, 'entries'>
 ) => (
-  <div key={entry.id} className="flex flex-col gap-1">
-    <div className="text-[10px] uppercase tracking-wide text-secondary">
+  <div key={entry.id} className="flex flex-col gap-2">
+    <div className="text-[11px] uppercase tracking-wide text-secondary">
       proposal - {formatTimestamp(entry.createdAt)}
     </div>
     <AgentEditProposalCard
@@ -104,7 +104,7 @@ export function AgentsConversationThread({
   onDiscardProposal,
 }: AgentsConversationThreadProps) {
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
       {entries.length === 0 ? (
         <div className="text-[13px] text-secondary">
           Start a conversation to capture planning context.

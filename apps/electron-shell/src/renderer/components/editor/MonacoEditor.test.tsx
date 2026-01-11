@@ -24,6 +24,9 @@ const createMonacoMock = vi.hoisted(() => () => {
     onDidChangeCursorPosition: vi.fn(() => ({
       dispose: vi.fn(),
     })),
+    onDidChangeCursorSelection: vi.fn(() => ({
+      dispose: vi.fn(),
+    })),
     onDidChangeModel: vi.fn(() => ({
       dispose: vi.fn(),
     })),

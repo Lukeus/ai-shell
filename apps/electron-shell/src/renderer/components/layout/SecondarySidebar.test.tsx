@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { SecondarySidebar } from './SecondarySidebar';
+import { ConnectionsProvider } from '../../contexts/ConnectionsContext';
+import { FileTreeContextProvider } from '../explorer/FileTreeContext';
 
 const mockApi = {
   agents: {
@@ -22,6 +24,21 @@ const mockApi = {
   getSettings: vi.fn(),
   connections: {
     list: vi.fn(),
+    listProviders: vi.fn(),
+    requestSecretAccess: vi.fn(),
+  },
+  workspace: {
+    getCurrent: vi.fn(),
+    open: vi.fn(),
+    close: vi.fn(),
+  },
+  fs: {
+    readDirectory: vi.fn(),
+    writeFile: vi.fn(),
+    createFile: vi.fn(),
+    createDirectory: vi.fn(),
+    rename: vi.fn(),
+    delete: vi.fn(),
   },
 };
 
@@ -73,6 +90,17 @@ describe('SecondarySidebar', () => {
       },
     });
     mockApi.connections.list.mockResolvedValue({ connections: [] });
+    mockApi.connections.listProviders.mockResolvedValue({ providers: [] });
+    mockApi.connections.requestSecretAccess.mockResolvedValue({ granted: true });
+    mockApi.workspace.getCurrent.mockResolvedValue(null);
+    mockApi.workspace.open.mockResolvedValue(null);
+    mockApi.workspace.close.mockResolvedValue(undefined);
+    mockApi.fs.readDirectory.mockResolvedValue({ entries: [] });
+    mockApi.fs.writeFile.mockResolvedValue(undefined);
+    mockApi.fs.createFile.mockResolvedValue(undefined);
+    mockApi.fs.createDirectory.mockResolvedValue(undefined);
+    mockApi.fs.rename.mockResolvedValue(undefined);
+    mockApi.fs.delete.mockResolvedValue(undefined);
     mockApi.getSettings.mockResolvedValue({
       appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
       editor: {
@@ -92,12 +120,16 @@ describe('SecondarySidebar', () => {
 
   it('renders the agents header and empty state', async () => {
     render(
-      <SecondarySidebar
-        width={300}
-        collapsed={false}
-        onResize={() => undefined}
-        onToggleCollapse={() => undefined}
-      />
+      <ConnectionsProvider>
+        <FileTreeContextProvider>
+          <SecondarySidebar
+            width={300}
+            collapsed={false}
+            onResize={() => undefined}
+            onToggleCollapse={() => undefined}
+          />
+        </FileTreeContextProvider>
+      </ConnectionsProvider>
     );
 
     expect(screen.getByText('Agents')).toBeInTheDocument();

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AgentEvent, AgentRunMetadata } from 'packages-api-contracts';
+import { useConnectionsContext } from '../contexts/ConnectionsContext';
+import { describeMissingConnection, resolveAgentConnection } from '../utils/agentConnections';
 
 const sortRunsByUpdatedAt = (runs: AgentRunMetadata[]) =>
   [...runs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -33,11 +35,28 @@ type UseAgentRunsResult = {
 };
 
 export function useAgentRuns(): UseAgentRunsResult {
+  const { requestSecretAccess } = useConnectionsContext();
   const [runs, setRuns] = useState<AgentRunMetadata[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [isBusy, setIsBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const resolveRunConnection = useCallback(
+    async (explicitConnectionId?: string) => {
+      const [connectionsResponse, settings] = await Promise.all([
+        window.api.connections.list(),
+        window.api.getSettings(),
+      ]);
+      const resolution = resolveAgentConnection({
+        connections: connectionsResponse.connections,
+        settings,
+        explicitConnectionId,
+      });
+      return { ...resolution, connections: connectionsResponse.connections, settings };
+    },
+    []
+  );
 
   const sortedRuns = useMemo(() => sortRunsByUpdatedAt(runs), [runs]);
   const activeRunId = chooseRunId(sortedRuns, selectedRunId);
@@ -97,6 +116,29 @@ export function useAgentRuns(): UseAgentRunsResult {
       }
       setIsBusy(true);
       try {
+        const { connectionId: resolvedConnectionId, connections, settings } =
+          await resolveRunConnection(connectionId);
+        if (!resolvedConnectionId) {
+          setErrorMessage(
+            describeMissingConnection({
+              connections,
+              settings,
+              explicitConnectionId: connectionId ?? null,
+            })
+          );
+          return;
+        }
+
+        const access = await requestSecretAccess({
+          connectionId: resolvedConnectionId,
+          requesterId: 'agent-host',
+          reason: 'agent.run',
+        });
+        if (!access.granted) {
+          setErrorMessage('Secret access denied for this connection.');
+          return;
+        }
+
         const request = {
           goal: trimmedGoal,
           ...(connectionId ? { connectionId } : {}),
@@ -104,13 +146,15 @@ export function useAgentRuns(): UseAgentRunsResult {
         const response = await window.api.agents.startRun(request);
         setErrorMessage(null);
         await refreshRuns(response.run.id);
-      } catch {
-        setErrorMessage('Failed to start agent run.');
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to start agent run.';
+        setErrorMessage(message);
       } finally {
         setIsBusy(false);
       }
     },
-    [refreshRuns]
+    [refreshRuns, requestSecretAccess, resolveRunConnection]
   );
 
   const cancelRun = useCallback(async () => {

@@ -17,7 +17,7 @@ export function AgentsConversationList({
 }: AgentsConversationListProps) {
   return (
     <div className="border-b border-border-subtle">
-      <div className="flex items-center justify-between px-4 py-2.5">
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="text-[11px] uppercase tracking-wide text-secondary">
           Conversations
         </div>
@@ -45,7 +45,7 @@ export function AgentsConversationList({
       ) : conversations.length === 0 ? (
         <div className="px-4 pb-3 text-[13px] text-secondary">No conversations yet.</div>
       ) : (
-        <div className="max-h-36 overflow-y-auto">
+        <div className="max-h-36 overflow-y-auto space-y-1">
           {conversations.map((conversation) => {
             const isActive = conversation.id === selectedConversationId;
             return (
@@ -54,12 +54,12 @@ export function AgentsConversationList({
                 type="button"
                 onClick={() => onSelect(conversation.id)}
                 className={`
-                  w-full flex items-center justify-between px-4 py-2 text-left text-[13px]
+                  w-full flex items-center justify-between px-4 py-2.5 text-left text-[13px]
                   transition-colors duration-150
                   ${isActive ? 'bg-surface-hover text-primary' : 'text-secondary hover:text-primary hover:bg-surface'}
                 `}
               >
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-1">
                   <span className="font-medium text-[12px]">{conversation.title}</span>
                   <span className="text-[10px] uppercase tracking-wide text-secondary">
                     Updated {new Date(conversation.updatedAt).toLocaleTimeString()}

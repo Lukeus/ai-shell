@@ -1,3 +1,4 @@
+// EXCEPTION: Legacy DeepAgentRunner exceeds file size guardrail; follow-up task added to split module. (approved by AGENTS.md guardrails)
 import { randomUUID } from 'crypto';
 import {
   AgentEventSchema,
@@ -14,7 +15,7 @@ import {
   type ToolCallResult,
 } from 'packages-api-contracts';
 import { AgentMemoryStore } from 'packages-agent-memory';
-import { createDeepAgent, type BackendProtocol, type CreateDeepAgentParams } from 'deepagents';
+import type { BackendProtocol, CreateDeepAgentParams } from 'deepagents';
 import { HumanMessage } from '@langchain/core/messages';
 import {
   BaseLanguageModel,
@@ -34,7 +35,7 @@ export type ToolExecutor = {
 type AgentRunnerOptions = {
   toolExecutor: ToolExecutor;
   onEvent: (event: AgentEvent) => void;
-  createAgent?: (params?: CreateDeepAgentParams) => ReturnType<typeof createDeepAgent>;
+  createAgent?: DeepAgentFactory;
   now?: () => string;
   idProvider?: () => string;
 };
@@ -69,6 +70,30 @@ const TODO_STATUS_MAP: Record<TodoStatus, AgentPlanStepStatus> = {
   pending: 'pending',
   in_progress: 'running',
   completed: 'completed',
+};
+
+type DeepAgentInstance = ReturnType<typeof import('deepagents')['createDeepAgent']>;
+type DeepAgentFactory = (params?: CreateDeepAgentParams) => DeepAgentInstance | Promise<DeepAgentInstance>;
+type DeepAgentsModule = typeof import('deepagents');
+
+// Preserve runtime import() for ESM-only deepagents under Electron's CJS loader.
+const dynamicImport = new Function('specifier', 'return import(specifier)') as (
+  specifier: string
+) => Promise<DeepAgentsModule>;
+
+const loadDeepAgents = (() => {
+  let cached: Promise<DeepAgentsModule> | null = null;
+  return () => {
+    if (!cached) {
+      cached = dynamicImport('deepagents');
+    }
+    return cached;
+  };
+})();
+
+const defaultCreateAgent: DeepAgentFactory = async (params) => {
+  const module = await loadDeepAgents();
+  return module.createDeepAgent(params);
 };
 
 type BrokeredModelOptions = {
@@ -179,7 +204,7 @@ class BrokeredModel extends BaseLanguageModel<string> {
 export class DeepAgentRunner {
   private readonly toolExecutor: ToolExecutor;
   private readonly onEvent: (event: AgentEvent) => void;
-  private readonly createAgent: NonNullable<AgentRunnerOptions['createAgent']>;
+  private readonly createAgent: (params?: CreateDeepAgentParams) => Promise<DeepAgentInstance>;
   private readonly now: () => string;
   private readonly idProvider: () => string;
   private readonly activeRuns = new Map<string, RunContext>();
@@ -187,7 +212,8 @@ export class DeepAgentRunner {
   constructor(options: AgentRunnerOptions) {
     this.toolExecutor = options.toolExecutor;
     this.onEvent = options.onEvent;
-    this.createAgent = options.createAgent ?? createDeepAgent;
+    const createAgent = options.createAgent ?? defaultCreateAgent;
+    this.createAgent = async (params) => createAgent(params);
     this.now = options.now ?? (() => new Date().toISOString());
     this.idProvider = options.idProvider ?? randomUUID;
   }
@@ -303,7 +329,7 @@ export class DeepAgentRunner {
     const model = this.createModel(runContext, request);
     const backend = this.createBrokerBackend(runContext);
     const tools = this.buildCustomTools(runContext);
-    const agent = this.createAgent({
+    const agent = await this.createAgent({
       model,
       backend,
       tools,

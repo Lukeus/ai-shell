@@ -15,6 +15,12 @@ Constitution alignment: yes. Aligned with memory/constitution.md (P1, P2, P5, P6
 - Persist conversation history with attachments and proposals.
 - Keep agent runs policy-governed and consistent with SDD and IPC contracts.
 
+## Decisions
+- Send starts a chat/agent run (not a note-only append).
+- Consent is requested on first use per run via a global prompt.
+- Conversations can store optional connection/model overrides; default is the fallback.
+- Deleting a connection purges its associated secret.
+
 ## Non-goals
 - No inline ghost text or code completion in the editor.
 - No automatic writes to the workspace without explicit user action.
@@ -43,6 +49,8 @@ Constitution alignment: yes. Aligned with memory/constitution.md (P1, P2, P5, P6
 - Agent host returns an edit proposal (patch or writes) plus a summary message.
 - Renderer can request an edit, preview the proposal, and apply it via main.
 - Conversation storage persists messages, attachments, and proposal metadata.
+- Chat send starts a run and renders agent responses into the thread.
+- Conversation metadata supports optional connectionId/modelRef overrides.
 - Applying edits uses main-process PatchApplyService and workspace path validation.
 - All IPC payloads use contracts-first schemas and Result envelopes.
 
@@ -51,6 +59,7 @@ Constitution alignment: yes. Aligned with memory/constitution.md (P1, P2, P5, P6
 - Redact or avoid storing sensitive values in conversation entries and proposals.
 - Never log secrets from agent inputs/outputs.
 - Apply operations validate workspace boundaries and reject path traversal.
+- Connection deletion removes associated secrets from secure storage.
 
 ## Performance requirements
 - Limit attached context size (per file and per request).
@@ -62,6 +71,9 @@ Constitution alignment: yes. Aligned with memory/constitution.md (P1, P2, P5, P6
 - Proposed edits show a diff preview with Apply/Discard actions.
 - Applied edits modify workspace files via main process only.
 - Conversation history persists messages, attachments, and proposals.
+- Clicking Send starts a run and yields agent responses or a visible error.
+- Consent prompts appear on first run when secrets are required.
+- Conversations can store per-thread connection/model overrides (default fallback).
 - IPC contracts updated and validated; renderer uses window.api only.
 - Screenshot added for the updated Agents panel.
 

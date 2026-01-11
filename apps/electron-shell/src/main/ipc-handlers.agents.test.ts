@@ -11,6 +11,9 @@ vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn(),
   },
+  app: {
+    getPath: vi.fn(() => 'C:\\mock\\userdata'),
+  },
 }));
 
 vi.mock('./services/AgentRunStore', () => ({
