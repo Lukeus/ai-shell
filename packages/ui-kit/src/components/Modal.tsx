@@ -55,9 +55,9 @@ export function Modal({
             className="ui-modal-panel w-full rounded-sm border shadow-lg"
             style={{
               width,
-              backgroundColor: 'var(--vscode-editorWidget-background, var(--panel-bg))',
-              borderColor: 'var(--vscode-editorWidget-border)',
-              boxShadow: 'var(--vscode-widget-shadow)',
+              backgroundColor: 'var(--color-surface-elevated)',
+              borderColor: 'var(--color-border)',
+              boxShadow: '0 6px 24px var(--color-shadow-medium)',
               padding: 'var(--vscode-space-4)',
             }}
           >

@@ -116,8 +116,8 @@ export function TabBar({
         className={`flex items-center min-w-0 overflow-x-auto overflow-y-hidden hide-scrollbar ${className}`}
         style={{
           height: tabHeight,
-          backgroundColor: 'var(--vscode-tab-border)',
-          borderBottom: '1px solid var(--vscode-tab-border)',
+          backgroundColor: 'var(--color-tab-border)',
+          borderBottom: '1px solid var(--color-tab-border)',
         }}
       >
         {tabs.map((tab) => {
@@ -171,9 +171,9 @@ export function TabBar({
               maxWidth: 'var(--vscode-tab-maxWidth)',
               marginBottom: isActive ? '-1px' : '0',
               backgroundColor: isActive
-                ? 'var(--vscode-tab-activeBackground)'
-                : 'var(--vscode-tab-inactiveBackground)',
-              borderRightColor: 'var(--vscode-tab-border)',
+                ? 'var(--color-tab-active)'
+                : 'var(--color-tab-inactive)',
+              borderRightColor: 'var(--color-tab-border)',
             }}
             data-active={isActive ? 'true' : 'false'}
           >

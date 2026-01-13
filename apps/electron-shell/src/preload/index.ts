@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import {
   IPC_CHANNELS,
-  PreloadAPI,
   WindowStateSchema,
   type DiagGetLogPathResponse,
   type DiagSetSafeModeResponse,
@@ -9,6 +8,7 @@ import {
   type ErrorReport,
   type JsonValue,
   type PermissionCheckResult,
+  type PreloadAPI,
   type SddStatus,
   type TestForceCrashRendererResponse,
 } from 'packages-api-contracts';
@@ -19,6 +19,31 @@ import { invokeSafe } from './invokeSafe';
  * P2 (Security defaults): Uses contextBridge to avoid exposing raw Electron APIs.
  * P6 (Contracts-first): Implements PreloadAPI interface from api-contracts.
  */
+
+const menuIpcHandlers = new Map<string, Map<() => void, (...args: unknown[]) => void>>();
+
+const subscribeMenuEvent = (channel: string, handler: () => void): (() => void) => {
+  const channelHandlers = menuIpcHandlers.get(channel) ?? new Map();
+  const existing = channelHandlers.get(handler);
+  if (existing) {
+    ipcRenderer.removeListener(channel, existing);
+  }
+  const wrapped = (_event: IpcRendererEvent) => handler();
+  channelHandlers.set(handler, wrapped);
+  menuIpcHandlers.set(channel, channelHandlers);
+  ipcRenderer.on(channel, wrapped);
+  return () => {
+    const currentHandlers = menuIpcHandlers.get(channel);
+    const current = currentHandlers?.get(handler);
+    if (current) {
+      ipcRenderer.removeListener(channel, current);
+      currentHandlers?.delete(handler);
+      if (currentHandlers?.size === 0) {
+        menuIpcHandlers.delete(channel);
+      }
+    }
+  };
+};
 
 // Create API object implementing PreloadAPI interface
 const api: PreloadAPI = {
@@ -312,6 +337,14 @@ const api: PreloadAPI = {
     },
   },
 
+  menuEvents: {
+    onWorkspaceOpen: (handler) => subscribeMenuEvent(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handler),
+    onWorkspaceClose: (handler) => subscribeMenuEvent(IPC_CHANNELS.MENU_WORKSPACE_CLOSE, handler),
+    onRefreshExplorer: (handler) => subscribeMenuEvent(IPC_CHANNELS.MENU_REFRESH_EXPLORER, handler),
+    onToggleSecondarySidebar: (handler) =>
+      subscribeMenuEvent(IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR, handler),
+  },
+
   windowControls: {
     minimize: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_MINIMIZE),
     toggleMaximize: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_TOGGLE_MAXIMIZE),
@@ -392,67 +425,3 @@ if (!preloadGlobal[preloadErrorFlag]) {
   });
 }
 
-const menuIpcHandlers = new Map<
-  string,
-  Map<(...args: unknown[]) => void, (...args: unknown[]) => void>
->();
-
-// Expose limited ipcRenderer for menu events (main -> renderer communication)
-// P2: Only expose specific methods needed for menu event handling
-contextBridge.exposeInMainWorld('electron', {
-  ipcRenderer: {
-    on: (channel: string, func: (...args: unknown[]) => void) => {
-      // Whitelist allowed channels for menu events
-      const validChannels = new Set<string>([
-        IPC_CHANNELS.MENU_WORKSPACE_OPEN,
-        IPC_CHANNELS.MENU_WORKSPACE_CLOSE,
-        IPC_CHANNELS.MENU_REFRESH_EXPLORER,
-        IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
-      ]);
-      if (validChannels.has(channel)) {
-        const channelHandlers = menuIpcHandlers.get(channel) ?? new Map();
-        const existing = channelHandlers.get(func);
-        if (existing) {
-          ipcRenderer.removeListener(channel, existing);
-        }
-        const wrapped = (_event: IpcRendererEvent, ...args: unknown[]) => func(...args);
-        channelHandlers.set(func, wrapped);
-        menuIpcHandlers.set(channel, channelHandlers);
-        ipcRenderer.on(channel, wrapped);
-        return () => {
-          const currentHandlers = menuIpcHandlers.get(channel);
-          const current = currentHandlers?.get(func);
-          if (current) {
-            ipcRenderer.removeListener(channel, current);
-            currentHandlers?.delete(func);
-            if (currentHandlers?.size === 0) {
-              menuIpcHandlers.delete(channel);
-            }
-          }
-        };
-      }
-      return () => {};
-    },
-    removeListener: (channel: string, func: (...args: unknown[]) => void) => {
-      const validChannels = new Set<string>([
-        IPC_CHANNELS.MENU_WORKSPACE_OPEN,
-        IPC_CHANNELS.MENU_WORKSPACE_CLOSE,
-        IPC_CHANNELS.MENU_REFRESH_EXPLORER,
-        IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
-      ]);
-      if (validChannels.has(channel)) {
-        const channelHandlers = menuIpcHandlers.get(channel);
-        const wrapped = channelHandlers?.get(func);
-        if (wrapped) {
-          ipcRenderer.removeListener(channel, wrapped);
-          channelHandlers?.delete(func);
-          if (channelHandlers?.size === 0) {
-            menuIpcHandlers.delete(channel);
-          }
-          return;
-        }
-        ipcRenderer.removeListener(channel, func);
-      }
-    },
-  },
-});

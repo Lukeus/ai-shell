@@ -204,24 +204,46 @@ describe('TerminalService', () => {
     });
 
     it('should sanitize environment variables', () => {
+      const originalPath = process.env.PATH;
+      const originalSecret = process.env.SECRET_TOKEN;
+      process.env.PATH = 'system-path';
+      process.env.SECRET_TOKEN = 'super-secret';
+
       // Arrange
       const request: CreateTerminalRequest = {
         cwd: mockCwd,
         env: {
+          PATH: 'custom-path',
           CUSTOM_VAR: 'value',
+          SECRET_TOKEN: 'override',
         },
         cols: 80,
         rows: 24,
       };
 
       // Act
-      terminalService.createSession(request, mockWorkspaceRoot);
+      try {
+        terminalService.createSession(request, mockWorkspaceRoot);
+      } finally {
+        if (originalPath === undefined) {
+          delete process.env.PATH;
+        } else {
+          process.env.PATH = originalPath;
+        }
+        if (originalSecret === undefined) {
+          delete process.env.SECRET_TOKEN;
+        } else {
+          process.env.SECRET_TOKEN = originalSecret;
+        }
+      }
 
       // Assert
       const spawnCall = mockSpawn.mock.calls[0] as any;
       const options = spawnCall[2];
       expect(options.env).toBeDefined();
-      expect(options.env?.CUSTOM_VAR).toBe('value');
+      expect(options.env?.PATH).toBe('custom-path');
+      expect(options.env?.CUSTOM_VAR).toBeUndefined();
+      expect(options.env?.SECRET_TOKEN).toBeUndefined();
     });
 
     it('should wire up PTY data events', () => {

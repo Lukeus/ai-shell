@@ -16,21 +16,16 @@ vi.mock('electron', () => ({
   ipcRenderer: ipcRendererMock,
 }));
 
-const loadPreload = async () => {
-  await import('./index');
-  const electronCall = exposeInMainWorldMock.mock.calls.find((call) => call[0] === 'electron');
-  return electronCall?.[1] as {
-    ipcRenderer: {
-      on: (channel: string, handler: (...args: unknown[]) => void) => (() => void);
-      removeListener: (channel: string, handler: (...args: unknown[]) => void) => void;
-    };
-  };
-};
-
 const loadApi = async () => {
   await import('./index');
   const apiCall = exposeInMainWorldMock.mock.calls.find((call) => call[0] === 'api');
   return apiCall?.[1] as {
+    menuEvents: {
+      onWorkspaceOpen: (handler: () => void) => () => void;
+      onWorkspaceClose: (handler: () => void) => () => void;
+      onRefreshExplorer: (handler: () => void) => () => void;
+      onToggleSecondarySidebar: (handler: () => void) => () => void;
+    };
     sdd: {
       onChange: (handler: (...args: unknown[]) => void) => () => void;
     };
@@ -51,10 +46,10 @@ describe('preload menu IPC listeners', () => {
   });
 
   it('returns unsubscribe that removes wrapper listener', async () => {
-    const electronApi = await loadPreload();
+    const api = await loadApi();
     const handler = vi.fn();
 
-    const unsubscribe = electronApi.ipcRenderer.on(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handler);
+    const unsubscribe = api.menuEvents.onWorkspaceOpen(handler);
     const wrapped = ipcRendererMock.on.mock.calls[0]?.[1] as (...args: unknown[]) => void;
 
     expect(wrapped).toBeDefined();
@@ -69,13 +64,13 @@ describe('preload menu IPC listeners', () => {
   });
 
   it('replaces existing handler wrapper for the same callback', async () => {
-    const electronApi = await loadPreload();
+    const api = await loadApi();
     const handler = vi.fn();
 
-    electronApi.ipcRenderer.on(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handler);
+    api.menuEvents.onWorkspaceOpen(handler);
     const firstWrapped = ipcRendererMock.on.mock.calls[0]?.[1] as (...args: unknown[]) => void;
 
-    electronApi.ipcRenderer.on(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handler);
+    api.menuEvents.onWorkspaceOpen(handler);
     const secondWrapped = ipcRendererMock.on.mock.calls[1]?.[1] as (...args: unknown[]) => void;
 
     expect(firstWrapped).not.toBe(secondWrapped);

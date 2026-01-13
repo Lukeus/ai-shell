@@ -48,7 +48,7 @@ export function ToggleSwitch({ checked, onChange, label, disabled = false }: Tog
     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
   `;
   const thumbClassName = `
-    inline-block h-4 w-4 transform rounded-full bg-[var(--vscode-button-foreground)]
+    inline-block h-4 w-4 transform rounded-full bg-control-foreground
     transition-transform duration-200 ease-in-out
     ${checked ? 'translate-x-6' : 'translate-x-1'}
   `;

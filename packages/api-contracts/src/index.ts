@@ -42,4 +42,4 @@ export * from './types/test-only';
 export * from './types/window-state';
 export * from './types/workspace';
 export * from './ipc-channels';
-export * from './preload-api';
+export type { MenuEventHandler, MenuEventsAPI, PreloadAPI } from './preload-api';

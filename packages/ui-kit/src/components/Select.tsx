@@ -100,7 +100,7 @@ export function Select({
             "
             style={{
               zIndex: 'var(--vscode-z-dropdown)',
-              boxShadow: 'var(--vscode-widget-shadow)',
+              boxShadow: '0 6px 24px var(--color-shadow-medium)',
             }}
           >
             {options.map((option) => (

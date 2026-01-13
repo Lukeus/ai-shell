@@ -1,3 +1,4 @@
+// EXCEPTION: contract schemas/types; splitting reduces correctness (approved by AGENTS.md guardrails)
 import type { AppInfo } from './types/app-info';
 import type { Settings, PartialSettings } from './types/settings';
 import type { Workspace } from './types/workspace';
@@ -154,6 +155,22 @@ import type {
 } from './types/extension-permissions';
 import type { JsonValue } from './types/agent-tools';
 import type { WindowState } from './types/window-state';
+
+export type MenuEventHandler = () => void;
+
+export interface MenuEventsAPI {
+  /** Menu: open workspace */
+  onWorkspaceOpen(handler: MenuEventHandler): () => void;
+
+  /** Menu: close workspace */
+  onWorkspaceClose(handler: MenuEventHandler): () => void;
+
+  /** Menu: refresh explorer */
+  onRefreshExplorer(handler: MenuEventHandler): () => void;
+
+  /** Menu: toggle secondary sidebar */
+  onToggleSecondarySidebar(handler: MenuEventHandler): () => void;
+}
 
 /**
  * Preload API surface exposed to the renderer process via contextBridge.
@@ -952,6 +969,11 @@ export interface PreloadAPI {
      */
     onStateChange(callback: (event: ExtensionStateChangeEvent) => void): () => void;
   };
+
+  /**
+   * Menu event subscriptions (main -> renderer).
+   */
+  menuEvents: MenuEventsAPI;
 
   /**
    * Window control APIs (main process only).

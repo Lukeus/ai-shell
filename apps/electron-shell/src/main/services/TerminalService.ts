@@ -10,6 +10,7 @@ import {
 } from 'packages-api-contracts';
 import { settingsService } from './SettingsService';
 import { isPathWithinRoot } from './workspace-paths';
+import { buildChildProcessEnv } from './child-env';
 
 /**
  * TerminalService - Singleton service for managing PTY sessions.
@@ -19,7 +20,7 @@ import { isPathWithinRoot } from './workspace-paths';
  * 
  * Security constraints (P2: Security Defaults, P3: Secrets):
  * - cwd restricted to workspace directory (validated on creation)
- * - Environment variables sanitized (no PATH manipulation)
+ * - Environment variables sanitized (allowlist only)
  * - Session IDs are UUIDs to prevent enumeration
  * - Max 10 concurrent sessions per app instance
  * - Terminal I/O is NEVER logged (may contain passwords, API keys, secrets)
@@ -315,22 +316,17 @@ export class TerminalService extends EventEmitter {
   /**
    * Sanitize environment variables.
    * 
-   * Merges user-provided env with process.env, excluding sensitive variables.
-   * This prevents secrets from being leaked via terminal.
+   * Filters environment variables to the child-process allowlist, and only
+   * accepts user overrides for allowlisted keys to avoid leaking secrets.
    * 
    * @param userEnv - User-provided environment variables
    * @returns Sanitized environment object
    */
   private sanitizeEnv(userEnv?: Record<string, string>): Record<string, string | undefined> {
-    // Start with process.env
-    const sanitized = { ...process.env };
-
-    // Merge user env (if provided)
-    if (userEnv) {
-      Object.assign(sanitized, userEnv);
-    }
-
-    return sanitized;
+    return buildChildProcessEnv({
+      userEnv,
+      includeElectronRunAsNode: false,
+    });
   }
 
   /**

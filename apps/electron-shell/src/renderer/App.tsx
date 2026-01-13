@@ -1,7 +1,7 @@
+// EXCEPTION: App.tsx exceeds component size budget; split required (approved by AGENTS.md guardrails)
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ShellLayout, ResizablePanel, ActivityBar, StatusBar, PanelHeader } from 'packages-ui-kit';
 import {
-  IPC_CHANNELS,
   SETTINGS_DEFAULTS,
   type DiagFatalEvent,
   type ErrorReport,
@@ -199,25 +199,16 @@ function AppContent() {
     };
     
     // Subscribe to menu events from main process
-    const unsubscribeHandlers: Array<() => void> = [];
-    const addListener = (channel: string, handler: (...args: unknown[]) => void) => {
-      const unsubscribe = window.electron?.ipcRenderer?.on?.(channel, handler);
-      if (typeof unsubscribe === 'function') {
-        unsubscribeHandlers.push(unsubscribe);
-      } else {
-        unsubscribeHandlers.push(() => {
-          window.electron?.ipcRenderer?.removeListener?.(channel, handler);
-        });
-      }
-    };
-
-    addListener(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handleMenuWorkspaceOpen);
-    addListener(IPC_CHANNELS.MENU_WORKSPACE_CLOSE, handleMenuWorkspaceClose);
-    addListener(IPC_CHANNELS.MENU_REFRESH_EXPLORER, handleMenuRefreshExplorer);
-    addListener(
-      IPC_CHANNELS.MENU_TOGGLE_SECONDARY_SIDEBAR,
-      handleMenuToggleSecondarySidebar
-    );
+    const menuEvents = window.api?.menuEvents;
+    if (!menuEvents) {
+      return;
+    }
+    const unsubscribeHandlers = [
+      menuEvents.onWorkspaceOpen(handleMenuWorkspaceOpen),
+      menuEvents.onWorkspaceClose(handleMenuWorkspaceClose),
+      menuEvents.onRefreshExplorer(handleMenuRefreshExplorer),
+      menuEvents.onToggleSecondarySidebar(handleMenuToggleSecondarySidebar),
+    ];
     
     // Cleanup listeners on unmount
     return () => {

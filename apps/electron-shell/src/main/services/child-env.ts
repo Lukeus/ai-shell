@@ -1,6 +1,8 @@
 type ChildEnvOptions = {
   allowlist?: string[];
+  userEnv?: Record<string, string | undefined>;
   extra?: Record<string, string | undefined>;
+  includeElectronRunAsNode?: boolean;
 };
 
 const DEFAULT_ALLOWLIST = [
@@ -41,17 +43,29 @@ const buildAllowlist = (allowlist?: string[]): Set<string> => {
   return new Set(entries.map(normalizeKey));
 };
 
-export const buildChildProcessEnv = (options: ChildEnvOptions = {}): Record<string, string> => {
-  const allowlist = buildAllowlist(options.allowlist);
-  const env: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(process.env)) {
+const applyAllowlistedEnv = (
+  target: Record<string, string>,
+  source: Record<string, string | undefined>,
+  allowlist: Set<string>
+): void => {
+  for (const [key, value] of Object.entries(source)) {
     if (value === undefined) {
       continue;
     }
     if (allowlist.has(normalizeKey(key))) {
-      env[key] = value;
+      target[key] = value;
     }
+  }
+};
+
+export const buildChildProcessEnv = (options: ChildEnvOptions = {}): Record<string, string> => {
+  const allowlist = buildAllowlist(options.allowlist);
+  const env: Record<string, string> = {};
+
+  applyAllowlistedEnv(env, process.env, allowlist);
+
+  if (options.userEnv) {
+    applyAllowlistedEnv(env, options.userEnv, allowlist);
   }
 
   if (options.extra) {
@@ -62,7 +76,7 @@ export const buildChildProcessEnv = (options: ChildEnvOptions = {}): Record<stri
     }
   }
 
-  if (!env.ELECTRON_RUN_AS_NODE) {
+  if (options.includeElectronRunAsNode !== false && !env.ELECTRON_RUN_AS_NODE) {
     env.ELECTRON_RUN_AS_NODE = '1';
   }
 

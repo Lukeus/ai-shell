@@ -2,6 +2,7 @@
 
 /* VS Code Dark+ Design Tokens - Single source of truth */
 @import "./vscode-tokens.css";
+@source "../../../../../packages/ui-kit/src/**/*.{ts,tsx}";
 
 /* Base styles for body and html */
 * {
@@ -78,10 +79,14 @@ body,
   --color-text-secondary: var(--vscode-foreground-secondary);
   --color-text-tertiary: var(--vscode-foreground-muted);
   --color-text-link: var(--vscode-accent);
+  --color-primary: var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-tertiary: var(--color-text-tertiary);
   
   /* Accent colors - mapped from VS Code accent */
   --color-accent: var(--vscode-accent);
   --color-accent-hover: var(--vscode-focus-border);
+  --color-control-foreground: var(--vscode-button-foreground);
   
   /* Selection colors - mapped from VS Code selection */
   --color-selection: var(--vscode-selection-background);

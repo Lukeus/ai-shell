@@ -56,14 +56,14 @@ export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
             px-1
             text-[var(--vscode-font-size-small)]
             ${item.active
-              ? 'text-[var(--vscode-statusBar-foreground)] font-semibold'
-              : 'text-[color-mix(in srgb,var(--vscode-statusBar-foreground)_90%,var(--vscode-statusBar-background))]'
+              ? 'text-status-bar-foreground font-semibold'
+              : 'text-[color-mix(in srgb,var(--color-status-bar-foreground)_90%,var(--color-status-bar))]'
             }
             ${index === 0
               ? 'border-l-0'
-              : 'border-l border-l-[color-mix(in srgb,var(--vscode-statusBar-foreground)_20%,transparent)]'
+              : 'border-l border-l-[color-mix(in srgb,var(--color-status-bar-foreground)_20%,transparent)]'
             }
-            hover:bg-[var(--vscode-statusBar-hoverBackground)] hover:text-[var(--vscode-statusBar-foreground)] hover:opacity-100
+            hover:bg-status-bar-hover hover:text-status-bar-foreground hover:opacity-100
             focus:outline-none focus:ring-1 focus:ring-accent
           `}
         >
@@ -79,13 +79,9 @@ export function StatusBar({ leftItems = [], rightItems = [] }: StatusBarProps) {
       className="
         flex items-center justify-between border-t border-border
         h-full
-        bg-[var(--vscode-statusBar-background)]
-        text-[var(--vscode-statusBar-foreground)]
+        bg-status-bar
+        text-status-bar-foreground
       "
-      style={{
-        backgroundColor: 'var(--vscode-statusBar-background)',
-        color: 'var(--vscode-statusBar-foreground)',
-      }}
     >
       <div className="flex items-center h-full">
         {renderItems(leftItems)}

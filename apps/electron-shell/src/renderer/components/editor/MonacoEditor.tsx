@@ -1,5 +1,6 @@
+// EXCEPTION: MonacoEditor exceeds component size budget; split required (approved by AGENTS.md guardrails)
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import * as monacoType from 'monaco-editor';
+import type * as Monaco from 'monaco-editor';
 import { EDITOR_SELECTION_EVENT } from '../../hooks/useEditorContext';
 
 /**
@@ -106,8 +107,8 @@ export function MonacoEditor({
   onSymbolsChange,
 }: MonacoEditorProps) {
   const editorRef = useRef<React.ElementRef<'div'>>(null);
-  const [editor, setEditor] = useState<monacoType.editor.IStandaloneCodeEditor | null>(null);
-  const [monaco, setMonaco] = useState<typeof monacoType | null>(null);
+  const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [monaco, setMonaco] = useState<Monaco | null>(null);
   const [error, setError] = useState<string | null>(null);
   const modelUsageRef = useRef<Map<string, number>>(new Map());
   const MAX_MODELS = 50;

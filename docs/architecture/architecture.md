@@ -374,6 +374,10 @@ following variables are forwarded by default:
 Explicit entries added by the main process:
 - NODE_ENV
 - EXTENSIONS_DIR (extension host only)
+- ELECTRON_RUN_AS_NODE (for forked Node child processes)
+
+Terminal sessions use the same allowlist. TerminalService filters user-provided
+env to allowlisted keys only, and does not inject NODE_ENV or EXTENSIONS_DIR.
 
 **Example** (future implementation):
 

@@ -67,15 +67,12 @@ export function Menu({
       <MenuItems
         className={`
           absolute ${alignmentClass} mt-1 min-w-[180px] rounded-sm border
-          bg-[var(--vscode-menu-background)] text-[var(--vscode-menu-foreground)] shadow-lg focus:outline-none
+          border-border bg-surface-elevated text-primary shadow-lg focus:outline-none
           ${menuClassName}
         `}
         style={{
           zIndex: 'var(--vscode-z-dropdown)',
-          borderColor: 'var(--vscode-menu-border)',
-          boxShadow: 'var(--vscode-widget-shadow)',
-          backgroundColor: 'var(--vscode-menu-background)',
-          color: 'var(--vscode-menu-foreground)',
+          boxShadow: '0 6px 24px var(--color-shadow-medium)',
         }}
       >
         <div className="py-1">
@@ -99,7 +96,7 @@ export function Menu({
                 className={({ active, disabled }) => `
                   flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left
                   ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                  ${active ? 'bg-[var(--vscode-list-activeSelectionBackground)] text-[var(--vscode-menu-selectionForeground)]' : 'text-[var(--vscode-menu-foreground)]'}
+                  ${active ? 'bg-selection text-selection-text' : 'text-primary'}
                 `}
               >
                 {item.icon && <span className="text-secondary">{item.icon}</span>}

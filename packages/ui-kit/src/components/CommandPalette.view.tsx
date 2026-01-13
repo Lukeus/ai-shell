@@ -66,10 +66,10 @@ export function CommandPaletteView<T>(props: CommandPaletteViewProps<T>) {
             className="mx-auto transform divide-y overflow-hidden rounded-sm border shadow-lg"
             style={{
               width: 'min(680px, 92vw)',
-              backgroundColor: 'var(--vscode-menu-background)',
-              color: 'var(--vscode-menu-foreground)',
-              borderColor: 'var(--vscode-editorWidget-border)',
-              boxShadow: 'var(--vscode-widget-shadow)',
+              backgroundColor: 'var(--color-surface-elevated)',
+              color: 'var(--color-text-primary)',
+              borderColor: 'var(--color-border)',
+              boxShadow: '0 6px 24px var(--color-shadow-medium)',
               marginTop: 'var(--vscode-space-4)',
             }}
           >
@@ -108,7 +108,7 @@ function CommandPaletteInput({ inputRef, query, updateQuery, placeholder }: {
 }) {
   return (
     <div className="px-6 pt-4">
-      <div className="grid grid-cols-1 rounded-sm border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] focus-within:border-[var(--vscode-focus-border)]">
+      <div className="grid grid-cols-1 rounded-sm border border-border bg-surface focus-within:border-border-focus">
         <ComboboxInput
           ref={inputRef}
           autoFocus
@@ -276,7 +276,7 @@ function CommandPaletteOption<T>({
         flex w-full min-h-[32px] items-center gap-3 px-7 py-2 text-[13px]
         border-b border-border-subtle last:border-b-0
         ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        ${active ? 'bg-[var(--vscode-list-activeSelectionBackground)] text-[var(--vscode-menu-selectionForeground)]' : 'text-primary'}
+        ${active ? 'bg-selection text-selection-text' : 'text-primary'}
       `}
     >
       {(optionProps) => {
