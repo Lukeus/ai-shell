@@ -124,4 +124,30 @@ describe('ConnectionsPanel', () => {
       });
     });
   });
+
+  it('validates required fields before allowing create', async () => {
+    mockListProviders.mockResolvedValue({ providers: sampleProviders });
+    mockList.mockResolvedValue({ connections: [] });
+
+    render(<ConnectionsPanel />);
+
+    await screen.findByText('Connections');
+
+    fireEvent.click(screen.getByRole('button', { name: 'New' }));
+
+    const createButton = screen.getByRole('button', { name: 'Create connection' });
+    expect(createButton).toBeDisabled();
+    expect(screen.getByText('Required fields: Endpoint')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('https://api.openai.com'), {
+      target: { value: 'https://api.openai.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('sk-***'), {
+      target: { value: 'new-secret' },
+    });
+
+    await waitFor(() => {
+      expect(createButton).not.toBeDisabled();
+    });
+  });
 });

@@ -1,5 +1,7 @@
 import {
   ConnectionProviderSchema,
+  type ConnectionConfig,
+  type ConnectionField,
   type ConnectionProvider,
 } from 'packages-api-contracts';
 
@@ -126,9 +128,47 @@ export class ConnectionProviderRegistry {
     return nextProviders.map((provider) => this.register(provider));
   }
 
+  public get(providerId: string): ConnectionProvider | null {
+    return this.providers.get(providerId) ?? null;
+  }
+
   public list(): ConnectionProvider[] {
     return Array.from(this.providers.values());
   }
 }
 
 export const connectionProviderRegistry = new ConnectionProviderRegistry();
+
+const hasRequiredValue = (
+  field: ConnectionField,
+  value: ConnectionConfig[string] | undefined
+): boolean => {
+  if (field.type === 'boolean') {
+    return typeof value === 'boolean';
+  }
+
+  if (field.type === 'number') {
+    return typeof value === 'number' && Number.isFinite(value);
+  }
+
+  return typeof value === 'string' && value.trim().length > 0;
+};
+
+export const validateConnectionConfig = (
+  provider: ConnectionProvider,
+  config: ConnectionConfig
+): void => {
+  const missing = provider.fields.filter(
+    (field) =>
+      field.required &&
+      field.type !== 'secret' &&
+      !hasRequiredValue(field, config[field.id])
+  );
+
+  if (missing.length === 0) {
+    return;
+  }
+
+  const labels = missing.map((field) => field.label || field.id);
+  throw new Error(`Missing required fields: ${labels.join(', ')}`);
+};

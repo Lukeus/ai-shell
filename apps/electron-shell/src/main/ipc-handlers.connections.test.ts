@@ -69,7 +69,9 @@ vi.mock('./services/ConnectionsService', () => ({
 vi.mock('./services/ConnectionProviderRegistry', () => ({
   connectionProviderRegistry: {
     list: vi.fn(),
+    get: vi.fn(),
   },
+  validateConnectionConfig: vi.fn(),
 }));
 
 vi.mock('./services/SecretsService', () => ({
@@ -215,6 +217,11 @@ describe('IPC Handlers - Connections', () => {
         },
         config: { host: 'localhost' },
       };
+      vi.mocked(connectionProviderRegistry.get).mockReturnValue({
+        id: 'mcp',
+        name: 'MCP',
+        fields: [],
+      });
       vi.mocked(connectionsService.createConnection).mockReturnValue(mockConnection);
 
       const handler = getHandler(IPC_CHANNELS.CONNECTIONS_CREATE);
@@ -241,6 +248,12 @@ describe('IPC Handlers - Connections', () => {
         },
         config: { host: '127.0.0.1' },
       };
+      vi.mocked(connectionsService.listConnections).mockReturnValue([mockConnection]);
+      vi.mocked(connectionProviderRegistry.get).mockReturnValue({
+        id: 'mcp',
+        name: 'MCP',
+        fields: [],
+      });
       vi.mocked(connectionsService.updateConnection).mockReturnValue(mockConnection);
 
       const handler = getHandler(IPC_CHANNELS.CONNECTIONS_UPDATE);

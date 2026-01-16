@@ -91,16 +91,10 @@ export function ConnectionsPanel() {
           scope: normalizeScope(values.scope),
           displayName: values.displayName,
           config: values.config,
+          secretValue: values.secretValue,
         });
 
         const connectionId = response.connection.metadata.id;
-
-        if (values.secretValue) {
-          await window.api.connections.setSecret({
-            connectionId,
-            secretValue: values.secretValue,
-          });
-        }
 
         setMode('view');
         await refreshConnections(connectionId);
