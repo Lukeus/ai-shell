@@ -30,6 +30,7 @@ export * from './types/extension-permissions';
 export * from './types/extension-registry';
 export * from './types/fs-broker';
 export * from './types/layout-state';
+export * from './types/mcp';
 export * from './types/model-tools';
 export * from './types/output';
 export * from './types/scm';

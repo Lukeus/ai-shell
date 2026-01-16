@@ -38,6 +38,10 @@ vi.mock('./ipc/extensions', () => ({
   registerExtensionHandlers: vi.fn(),
 }));
 
+vi.mock('./ipc/mcp', () => ({
+  registerMcpHandlers: vi.fn(),
+}));
+
 vi.mock('./ipc/testOnly', () => ({
   registerTestOnlyHandlers: vi.fn(),
 }));

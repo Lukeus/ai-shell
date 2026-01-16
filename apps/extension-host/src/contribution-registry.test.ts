@@ -36,6 +36,15 @@ describe('ContributionRegistry', () => {
             ],
           },
         ],
+        mcpServers: [
+          {
+            id: 'sample.mcp',
+            name: 'Sample MCP',
+            transport: 'stdio',
+            command: 'node',
+            args: ['server.js'],
+          },
+        ],
       },
     };
 
@@ -46,6 +55,7 @@ describe('ContributionRegistry', () => {
     expect(registry.getTool('echo')).toBeDefined();
     expect(registry.getSetting('sample.setting')).toBeDefined();
     expect(registry.getConnectionProvider('sample.provider')).toBeDefined();
+    expect(registry.getMcpServer('acme.sample-extension', 'sample.mcp')).toBeDefined();
   });
 
   it('unregisters contributions for an extension', () => {
@@ -59,6 +69,14 @@ describe('ContributionRegistry', () => {
       permissions: ['ui'],
       contributes: {
         commands: [{ id: 'sample.hello', title: 'Hello' }],
+        mcpServers: [
+          {
+            id: 'sample.mcp',
+            name: 'Sample MCP',
+            transport: 'stdio',
+            command: 'node',
+          },
+        ],
       },
     };
 
@@ -66,5 +84,6 @@ describe('ContributionRegistry', () => {
     registry.unregisterContributions('acme.sample-extension');
 
     expect(registry.getCommand('sample.hello')).toBeUndefined();
+    expect(registry.getMcpServer('acme.sample-extension', 'sample.mcp')).toBeUndefined();
   });
 });

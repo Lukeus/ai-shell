@@ -119,6 +119,28 @@ export const ExtensionSettingsSchema = z.object({
 export type ExtensionSettings = z.infer<typeof ExtensionSettingsSchema>;
 
 /**
+ * MCP server settings.
+ *
+ * Stores enablement and connection selection per MCP server.
+ */
+export const McpServerSettingsSchema = z.object({
+  /** Whether the MCP server is enabled (default: false) */
+  enabled: z.boolean().default(false),
+
+  /** Selected connection ID for the server (default: null) */
+  connectionId: z.string().uuid().nullable().default(null),
+});
+
+export type McpServerSettings = z.infer<typeof McpServerSettingsSchema>;
+
+export const McpSettingsSchema = z.object({
+  /** Per-server settings keyed by extensionId:serverId */
+  servers: z.record(z.string(), McpServerSettingsSchema).default({}),
+});
+
+export type McpSettings = z.infer<typeof McpSettingsSchema>;
+
+/**
  * Agent settings.
  *
  * Controls default connection selection for agent runs.
@@ -211,6 +233,9 @@ export const SettingsSchema = z.object({
   /** Extension management settings */
   extensions: ExtensionSettingsSchema,
 
+  /** MCP server settings */
+  mcp: McpSettingsSchema.default({}),
+
   /** Agent settings */
   agents: AgentSettingsSchema,
 
@@ -243,6 +268,7 @@ export const SETTINGS_DEFAULTS: Settings = SettingsSchema.parse({
   editor: {},
   terminal: {},
   extensions: {},
+  mcp: {},
   agents: {},
   sdd: {},
 });

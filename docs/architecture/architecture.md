@@ -97,6 +97,21 @@ Initial built-in tools registered via `packages/agent-tools`:
 - `workspace.write`
 - `workspace.update`
 
+### MCP Server Lifecycle
+
+MCP servers are extension contributions managed by the main process only.
+
+Flow:
+- Extensions declare `contributes.mcpServers` in their manifest.
+- Extension Host validates contributions and exposes metadata to main.
+- Main resolves settings + connections, then spawns stdio MCP servers with allowlisted env.
+- MCP tools are discovered in main and registered with broker-main under extension-scoped IDs.
+- Renderer lists and controls servers via `window.api.mcp` (no direct OS access).
+
+Secrets:
+- Env values come from ConnectionsService and safeStorage in main.
+- No plaintext secrets are stored in manifests or returned to the renderer.
+
 ## Search + Source Control
 
 Search and SCM features are implemented as main-process services with contracts-first IPC.

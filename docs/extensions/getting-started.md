@@ -25,6 +25,30 @@ Create a folder under your extensions directory:
 }
 ```
 
+## 2b) Optional: add an MCP server contribution
+
+To register an MCP server, add `contributes.mcpServers`:
+
+```json
+{
+  "contributes": {
+    "mcpServers": [
+      {
+        "id": "hello-mcp",
+        "name": "Hello MCP",
+        "transport": "stdio",
+        "command": "node",
+        "args": ["./mcp-server.js"]
+      }
+    ]
+  }
+}
+```
+
+MCP servers are started by the main process and surfaced in the Extensions panel for
+enable/disable. To use connections or secrets, define a connection provider and map
+env keys via `env` (see the API reference).
+
 ## 3) Create index.js
 
 ```js

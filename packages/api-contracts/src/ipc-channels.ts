@@ -336,6 +336,22 @@ export const IPC_CHANNELS = {
   /** Revoke a permission for an extension */
   EXTENSIONS_REVOKE_PERMISSION: 'extensions:revoke-permission',
 
+  // MCP servers (renderer/main)
+  /** List MCP servers */
+  MCP_SERVERS_LIST: 'mcp:servers:list',
+
+  /** Get MCP server status */
+  MCP_SERVER_STATUS: 'mcp:server:status',
+
+  /** Start MCP server */
+  MCP_SERVER_START: 'mcp:server:start',
+
+  /** Stop MCP server */
+  MCP_SERVER_STOP: 'mcp:server:stop',
+
+  /** Refresh MCP tools for a server */
+  MCP_TOOLS_REFRESH: 'mcp:tools:refresh',
+
   // Test-only channels (guarded by NODE_ENV === 'test')
   /** Forcefully crash the renderer for E2E tests */
   TEST_FORCE_CRASH_RENDERER: 'test:force-crash-renderer',

@@ -5,7 +5,7 @@
  * This registry aggregates all contributions for lookup and execution.
  */
 
-import type { ConnectionProvider, ExtensionManifest } from 'packages-api-contracts';
+import { McpServerContributionSchema, type ConnectionProvider, type ExtensionManifest, type McpServerContribution } from 'packages-api-contracts';
 
 /**
  * Command contribution from an extension.
@@ -61,6 +61,16 @@ export type ConnectionProviderContribution = ConnectionProvider & {
 };
 
 /**
+ * MCP server contribution from an extension.
+ */
+export type McpServerContributionEntry = McpServerContribution & {
+  extensionId: string;
+};
+
+const buildMcpServerKey = (extensionId: string, serverId: string): string =>
+  `${extensionId}:${serverId}`;
+
+/**
  * ContributionRegistry tracks all contributions from extensions.
  */
 export class ContributionRegistry {
@@ -69,6 +79,7 @@ export class ContributionRegistry {
   private tools = new Map<string, ToolContribution>();
   private settings = new Map<string, SettingContribution>();
   private connectionProviders = new Map<string, ConnectionProviderContribution>();
+  private mcpServers = new Map<string, McpServerContributionEntry>();
 
   /**
    * Register contributions from an extension manifest.
@@ -136,6 +147,30 @@ export class ContributionRegistry {
       }
       console.log(`[ContributionRegistry] Registered ${manifest.contributes.connectionProviders.length} connection providers from ${extensionId}`);
     }
+
+    // Register MCP servers
+    if (manifest.contributes.mcpServers) {
+      let registeredCount = 0;
+      for (const server of manifest.contributes.mcpServers) {
+        const parsed = McpServerContributionSchema.safeParse(server);
+        if (!parsed.success) {
+          console.warn(
+            `[ContributionRegistry] Invalid MCP server contribution from ${extensionId}:`,
+            parsed.error.flatten()
+          );
+          continue;
+        }
+        const key = buildMcpServerKey(extensionId, parsed.data.id);
+        this.mcpServers.set(key, {
+          ...parsed.data,
+          extensionId,
+        });
+        registeredCount += 1;
+      }
+      if (registeredCount > 0) {
+        console.log(`[ContributionRegistry] Registered ${registeredCount} MCP servers from ${extensionId}`);
+      }
+    }
   }
 
   /**
@@ -176,6 +211,13 @@ export class ContributionRegistry {
     for (const [id, provider] of this.connectionProviders.entries()) {
       if (provider.extensionId === extensionId) {
         this.connectionProviders.delete(id);
+      }
+    }
+
+    // Remove MCP servers
+    for (const [id, server] of this.mcpServers.entries()) {
+      if (server.extensionId === extensionId) {
+        this.mcpServers.delete(id);
       }
     }
 
@@ -250,5 +292,19 @@ export class ContributionRegistry {
    */
   getConnectionProvider(providerId: string): ConnectionProviderContribution | undefined {
     return this.connectionProviders.get(providerId);
+  }
+
+  /**
+   * Get all registered MCP servers.
+   */
+  getAllMcpServers(): McpServerContributionEntry[] {
+    return Array.from(this.mcpServers.values());
+  }
+
+  /**
+   * Get MCP server by ID.
+   */
+  getMcpServer(extensionId: string, serverId: string): McpServerContributionEntry | undefined {
+    return this.mcpServers.get(buildMcpServerKey(extensionId, serverId));
   }
 }

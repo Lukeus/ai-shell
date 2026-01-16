@@ -337,6 +337,15 @@ const api: PreloadAPI = {
     },
   },
 
+  // MCP server management methods
+  mcp: {
+    listServers: () => ipcRenderer.invoke(IPC_CHANNELS.MCP_SERVERS_LIST),
+    getStatus: (request) => ipcRenderer.invoke(IPC_CHANNELS.MCP_SERVER_STATUS, request),
+    startServer: (request) => ipcRenderer.invoke(IPC_CHANNELS.MCP_SERVER_START, request),
+    stopServer: (request) => ipcRenderer.invoke(IPC_CHANNELS.MCP_SERVER_STOP, request),
+    refreshTools: (request) => ipcRenderer.invoke(IPC_CHANNELS.MCP_TOOLS_REFRESH, request),
+  },
+
   menuEvents: {
     onWorkspaceOpen: (handler) => subscribeMenuEvent(IPC_CHANNELS.MENU_WORKSPACE_OPEN, handler),
     onWorkspaceClose: (handler) => subscribeMenuEvent(IPC_CHANNELS.MENU_WORKSPACE_CLOSE, handler),

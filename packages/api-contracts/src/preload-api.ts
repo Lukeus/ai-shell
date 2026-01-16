@@ -153,6 +153,13 @@ import type {
   PermissionCheckResult,
   PermissionGrant,
 } from './types/extension-permissions';
+import type {
+  McpListServersResponse,
+  McpServerControlRequest,
+  McpServerStatus,
+  McpServerStatusRequest,
+  McpToolListResponse,
+} from './types/mcp';
 import type { JsonValue } from './types/agent-tools';
 import type { WindowState } from './types/window-state';
 
@@ -968,6 +975,39 @@ export interface PreloadAPI {
      * @returns Unsubscribe function (call to remove listener)
      */
     onStateChange(callback: (event: ExtensionStateChangeEvent) => void): () => void;
+  };
+
+  /**
+   * MCP server management APIs.
+   *
+   * Security: renderer never starts MCP processes directly; all operations
+   * go through main process IPC with validated contracts.
+   */
+  mcp: {
+    /**
+     * List all known MCP servers with status.
+     */
+    listServers(): Promise<McpListServersResponse>;
+
+    /**
+     * Get status for a single MCP server.
+     */
+    getStatus(request: McpServerStatusRequest): Promise<McpServerStatus>;
+
+    /**
+     * Start an MCP server.
+     */
+    startServer(request: McpServerControlRequest): Promise<McpServerStatus>;
+
+    /**
+     * Stop an MCP server.
+     */
+    stopServer(request: McpServerControlRequest): Promise<McpServerStatus>;
+
+    /**
+     * Refresh tool list for an MCP server.
+     */
+    refreshTools(request: McpServerControlRequest): Promise<McpToolListResponse>;
   };
 
   /**
