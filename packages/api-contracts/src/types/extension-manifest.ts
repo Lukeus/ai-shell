@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ConnectionProviderSchema } from './connections';
+import { McpServerContributionSchema } from './mcp';
 
 /**
  * Extension manifest schema.
@@ -66,6 +67,8 @@ export const ExtensionManifestSchema = z.object({
       inputSchema: z.record(z.unknown()),
       outputSchema: z.record(z.unknown()).optional(),
     })).optional(),
+
+    mcpServers: z.array(McpServerContributionSchema).optional(),
   }).optional(),
 });
 

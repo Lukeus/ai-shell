@@ -19,7 +19,7 @@ Optional fields:
 
 - `displayName`: Human-readable display name
 - `description`: Short description
-- `contributes`: Contribution points (commands, views, tools, settings, connectionProviders)
+- `contributes`: Contribution points (commands, views, tools, settings, connectionProviders, mcpServers)
 
 ### Contributions
 
@@ -66,6 +66,22 @@ Connection providers:
   - `required`: optional boolean
   - `defaultValue`: optional default value
   - `options`: optional list of `{ value, label }` for `select`
+
+MCP servers:
+
+- `id`: server ID (unique within extension)
+- `name`: server label
+- `transport`: `stdio` (v1 supports stdio only)
+- `command`: executable path
+- `args`: optional array of arguments
+- `env`: optional mapping of env var names to connection sources
+  - `source`: `config` | `secret`
+  - `key`: optional config/secret key (defaults to env var name)
+- `connectionProviderId`: optional connection provider to resolve env sources
+
+Notes:
+- MCP servers run in the main process and never in the renderer or extension host.
+- Secrets are resolved from Connections + safeStorage, never from plaintext in the manifest.
 
 ## Activation events
 

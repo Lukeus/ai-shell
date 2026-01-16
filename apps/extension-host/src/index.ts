@@ -134,6 +134,12 @@ async function main() {
     return { tools };
   });
 
+  // Get all MCP servers
+  rpcClient.onRequest('contributions.getMcpServers', () => {
+    const servers = contributionRegistry.getAllMcpServers();
+    return { servers };
+  });
+
   // Execute command
   rpcClient.onRequest('command.execute', async (params: unknown) => {
     const { commandId, args } = params as { commandId: string; args: unknown[] };

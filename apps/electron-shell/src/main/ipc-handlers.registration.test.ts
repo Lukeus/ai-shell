@@ -218,7 +218,7 @@ describe('IPC Handlers - Registration', () => {
   });
 
   describe('All handlers registered', () => {
-    it('should register all 78 expected IPC handlers', () => {
+    it('should register all 90 expected IPC handlers', () => {
       // Existing handlers (4)
       expect(handlers.has(IPC_CHANNELS.GET_VERSION)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.GET_SETTINGS)).toBe(true);
@@ -323,6 +323,13 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.EXTENSIONS_LIST_VIEWS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.EXTENSIONS_RENDER_VIEW)).toBe(true);
 
+      // MCP handlers (5)
+      expect(handlers.has(IPC_CHANNELS.MCP_SERVERS_LIST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.MCP_SERVER_STATUS)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.MCP_SERVER_START)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.MCP_SERVER_STOP)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.MCP_TOOLS_REFRESH)).toBe(true);
+
       // Test-only handlers (1)
       expect(handlers.has(IPC_CHANNELS.TEST_FORCE_CRASH_RENDERER)).toBe(true);
 
@@ -332,8 +339,8 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.OUTPUT_LIST_CHANNELS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.OUTPUT_READ)).toBe(true);
 
-      // Total: 85 handlers
-      expect(handlers.size).toBe(85);
+      // Total: 90 handlers
+      expect(handlers.size).toBe(90);
     });
   });
 });

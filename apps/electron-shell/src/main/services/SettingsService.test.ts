@@ -155,6 +155,7 @@ describe('SettingsService', () => {
       expect(result.editor).toEqual(SETTINGS_DEFAULTS.editor);
       expect(result.terminal).toEqual(SETTINGS_DEFAULTS.terminal);
       expect(result.extensions).toEqual(SETTINGS_DEFAULTS.extensions);
+      expect(result.mcp).toEqual(SETTINGS_DEFAULTS.mcp);
       expect(result.agents).toEqual(SETTINGS_DEFAULTS.agents);
       expect(result.sdd).toEqual(SETTINGS_DEFAULTS.sdd);
 
@@ -349,7 +350,7 @@ describe('SettingsService', () => {
       expect(settings).not.toHaveProperty('secret');
       
       // All fields should be UI preferences only
-      const keys = ['appearance', 'editor', 'terminal', 'extensions', 'agents', 'sdd'];
+      const keys = ['appearance', 'editor', 'terminal', 'extensions', 'mcp', 'agents', 'sdd'];
       expect(Object.keys(settings).sort()).toEqual(keys.sort());
     });
   });

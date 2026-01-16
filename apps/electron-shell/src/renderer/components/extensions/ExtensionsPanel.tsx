@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ExtensionRegistryItem, PermissionGrant } from 'packages-api-contracts';
+import type { ExtensionRegistryItem, McpServerListItem, PermissionGrant } from 'packages-api-contracts';
 import { SearchBar } from '../settings/SearchBar';
 import { ExtensionCard } from './ExtensionCard';
 import { ConfirmUninstallModal } from './ConfirmUninstallModal';
 import { PermissionDialog } from '../permissions/PermissionDialog';
+import { useMcpServers } from '../../hooks/useMcpServers';
+import { McpServersSection } from './McpServersSection';
 
 export function ExtensionsPanel() {
   const [extensions, setExtensions] = useState<ExtensionRegistryItem[]>([]);
@@ -15,6 +17,16 @@ export function ExtensionsPanel() {
   const [permissionGrants, setPermissionGrants] = useState<PermissionGrant[]>([]);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [permissionLoading, setPermissionLoading] = useState(false);
+  const {
+    servers: mcpServers,
+    isLoading: isMcpLoading,
+    isRefreshing: isMcpRefreshing,
+    error: mcpError,
+    refresh: refreshMcpServers,
+    startServer: startMcpServer,
+    stopServer: stopMcpServer,
+    isServerBusy: isMcpServerBusy,
+  } = useMcpServers();
 
   const refreshExtensions = useCallback(async () => {
     try {
@@ -56,6 +68,24 @@ export function ExtensionsPanel() {
       );
     });
   }, [extensions, searchQuery]);
+
+  const filteredMcpServers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const sorted = [...mcpServers].sort((a, b) => a.name.localeCompare(b.name));
+
+    if (!query) {
+      return sorted;
+    }
+
+    return sorted.filter((server) => {
+      return (
+        server.name.toLowerCase().includes(query) ||
+        server.serverId.toLowerCase().includes(query) ||
+        server.extensionId.toLowerCase().includes(query) ||
+        (server.connectionProviderId?.toLowerCase().includes(query) ?? false)
+      );
+    });
+  }, [mcpServers, searchQuery]);
 
   const handleToggleEnabled = useCallback(
     async (extension: ExtensionRegistryItem) => {
@@ -143,6 +173,23 @@ export function ExtensionsPanel() {
     }
   }, [permissionTarget]);
 
+  const handleToggleMcpServer = useCallback(
+    async (server: McpServerListItem, enabled: boolean) => {
+      if (enabled) {
+        const confirmed = window.confirm(
+          `Enable MCP server "${server.name}" from ${server.extensionId}?`
+        );
+        if (!confirmed) {
+          return;
+        }
+        await startMcpServer(server);
+        return;
+      }
+      await stopMcpServer(server);
+    },
+    [startMcpServer, stopMcpServer]
+  );
+
   return (
     <div className="flex flex-col h-full w-full min-h-0 bg-surface">
       <div
@@ -157,7 +204,7 @@ export function ExtensionsPanel() {
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search extensions..."
+          placeholder="Search extensions and MCP servers..."
         />
       </div>
 
@@ -168,36 +215,48 @@ export function ExtensionsPanel() {
       )}
 
       <div className="flex-1 min-h-0 overflow-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full text-secondary text-sm">
-            Loading extensions...
-          </div>
-        ) : filteredExtensions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-secondary">
-            <span className="codicon codicon-extensions text-3xl opacity-40" aria-hidden="true" />
-            <p className="mt-3 text-sm">No extensions found.</p>
-          </div>
-        ) : (
-          <div
-            className="flex flex-col gap-3"
-            style={{
-              paddingLeft: 'var(--vscode-space-3)',
-              paddingRight: 'var(--vscode-space-3)',
-              paddingTop: 'var(--vscode-space-3)',
-              paddingBottom: 'var(--vscode-space-4)',
-            }}
-          >
-            {filteredExtensions.map((extension) => (
-              <ExtensionCard
-                key={extension.manifest.id}
-                extension={extension}
-                onToggleEnabled={handleToggleEnabled}
-                onShowPermissions={handleShowPermissions}
-                onUninstall={handleUninstall}
-              />
-            ))}
-          </div>
-        )}
+        <div
+          className="flex flex-col gap-6"
+          style={{
+            paddingLeft: 'var(--vscode-space-3)',
+            paddingRight: 'var(--vscode-space-3)',
+            paddingTop: 'var(--vscode-space-3)',
+            paddingBottom: 'var(--vscode-space-4)',
+          }}
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10 text-secondary text-sm">
+              Loading extensions...
+            </div>
+          ) : filteredExtensions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-secondary">
+              <span className="codicon codicon-extensions text-3xl opacity-40" aria-hidden="true" />
+              <p className="mt-3 text-sm">No extensions found.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {filteredExtensions.map((extension) => (
+                <ExtensionCard
+                  key={extension.manifest.id}
+                  extension={extension}
+                  onToggleEnabled={handleToggleEnabled}
+                  onShowPermissions={handleShowPermissions}
+                  onUninstall={handleUninstall}
+                />
+              ))}
+            </div>
+          )}
+
+          <McpServersSection
+            servers={filteredMcpServers}
+            isLoading={isMcpLoading}
+            isRefreshing={isMcpRefreshing}
+            error={mcpError}
+            onRefresh={refreshMcpServers}
+            onToggle={handleToggleMcpServer}
+            isServerBusy={isMcpServerBusy}
+          />
+        </div>
       </div>
 
       {pendingUninstall && (
