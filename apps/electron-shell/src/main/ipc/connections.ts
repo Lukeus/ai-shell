@@ -18,7 +18,10 @@ import {
   ListAuditEventsResponse,
 } from 'packages-api-contracts';
 import { connectionsService } from '../services/ConnectionsService';
-import { connectionProviderRegistry } from '../services/ConnectionProviderRegistry';
+import {
+  connectionProviderRegistry,
+  validateConnectionConfig,
+} from '../services/ConnectionProviderRegistry';
 import { secretsService } from '../services/SecretsService';
 import { consentService } from '../services/ConsentService';
 import { auditService } from '../services/AuditService';
@@ -43,8 +46,40 @@ export const registerConnectionsHandlers = (): void => {
     IPC_CHANNELS.CONNECTIONS_CREATE,
     async (_event, request: unknown): Promise<CreateConnectionResponse> => {
       const validated = CreateConnectionRequestSchema.parse(request);
+      const provider = connectionProviderRegistry.get(validated.providerId);
+      if (!provider) {
+        throw new Error(`Unknown connection provider: ${validated.providerId}`);
+      }
+
+      validateConnectionConfig(provider, validated.config);
+
+      const requiresSecret = provider.fields.some(
+        (field) => field.type === 'secret' && field.required
+      );
+      if (requiresSecret && !validated.secretValue) {
+        throw new Error('Secret is required for this connection.');
+      }
+
       const connection = connectionsService.createConnection(validated);
-      return { connection };
+      let updatedConnection = connection;
+
+      if (validated.secretValue) {
+        try {
+          const secretRef = secretsService.setSecret(
+            connection.metadata.id,
+            validated.secretValue
+          );
+          updatedConnection = connectionsService.setSecretRef(
+            connection.metadata.id,
+            secretRef
+          );
+        } catch (error) {
+          connectionsService.deleteConnection(connection.metadata.id);
+          throw error;
+        }
+      }
+
+      return { connection: updatedConnection };
     }
   );
 
@@ -52,6 +87,18 @@ export const registerConnectionsHandlers = (): void => {
     IPC_CHANNELS.CONNECTIONS_UPDATE,
     async (_event, request: unknown): Promise<UpdateConnectionResponse> => {
       const validated = UpdateConnectionRequestSchema.parse(request);
+      const existing = connectionsService
+        .listConnections()
+        .find((item) => item.metadata.id === validated.id);
+      if (!existing) {
+        throw new Error(`Connection not found: ${validated.id}`);
+      }
+      const provider = connectionProviderRegistry.get(existing.metadata.providerId);
+      if (!provider) {
+        throw new Error(`Unknown connection provider: ${existing.metadata.providerId}`);
+      }
+      const config = validated.config ?? existing.config;
+      validateConnectionConfig(provider, config);
       const connection = connectionsService.updateConnection(validated);
       return { connection };
     }

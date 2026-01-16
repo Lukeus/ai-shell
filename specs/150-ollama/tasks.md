@@ -149,3 +149,52 @@
 - Invariants:
   - UI uses token-based styling (P4)
   - Monaco remains lazy-loaded (P5)
+
+## Task 8 - Connection create validation + secret enforcement
+- Files:
+  - `packages/api-contracts/src/types/connections.ts`
+  - `packages/api-contracts/src/preload-api.ts`
+  - `apps/electron-shell/src/main/services/ConnectionProviderRegistry.ts`
+  - `apps/electron-shell/src/main/ipc/connections.ts`
+  - `apps/electron-shell/src/renderer/components/settings/connections/ConnectionsPanel.tsx`
+  - `apps/electron-shell/src/main/ipc-handlers.connections.test.ts`
+- Work:
+  - Allow `connections.create` to accept an optional `secretValue` for providers that require secrets.
+  - Validate required non-secret fields in main before persisting connections.
+  - Enforce required secrets during create for secret-backed providers.
+  - Keep secrets in main only (safeStorage) and avoid logging secret payloads.
+- Verify: `pnpm --filter apps/electron-shell test`
+- Invariants:
+  - Contracts-first (P6)
+  - Secrets only in main (P3)
+
+## Task 9 - UI validation + SDD consent preflight + visual proof
+- Files:
+  - `apps/electron-shell/src/renderer/components/settings/connections/ConnectionDetail.tsx`
+  - `apps/electron-shell/src/renderer/components/sdd/SddPanel.tsx`
+  - `apps/electron-shell/src/renderer/components/sdd/SddPanel.test.tsx`
+  - `apps/electron-shell/src/renderer/components/settings/connections/ConnectionsPanel.test.tsx`
+  - `specs/150-ollama/screenshots/`
+- Work:
+  - Add required-field/secret validation in the connection form (disable save until valid).
+  - Request consent before starting SDD workflow runs using the resolved connection.
+  - Add/adjust tests to cover consent preflight and validation behavior.
+  - Capture a screenshot showing connection validation feedback.
+- Verify: `pnpm --filter apps/electron-shell test`
+- Invariants:
+  - Renderer uses preload API only (P1)
+  - UI uses token-based styling (P4)
+  - Screenshot requirement satisfied
+
+## Task 10 - Split oversized Connections/SDD components (guardrail follow-up)
+- Files:
+  - `apps/electron-shell/src/renderer/components/settings/connections/ConnectionDetail.tsx`
+  - `apps/electron-shell/src/renderer/components/sdd/SddPanel.tsx`
+- Work:
+  - Split into container + view + hooks per guardrails.
+  - Keep UI behavior identical; no new features.
+  - Remove the temporary EXCEPTION comments after split.
+- Verify: `pnpm --filter apps/electron-shell test`
+- Invariants:
+  - Guardrail budgets for component size
+  - UI uses token-based styling (P4)

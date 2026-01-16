@@ -99,6 +99,46 @@ describe('ModelGatewayService', () => {
     ).rejects.toThrow('Consent required for OpenAI connection.');
   });
 
+  it('rejects Azure OpenAI requests without consent', async () => {
+    const service = new ModelGatewayService({
+      getSettings: () => ({
+        appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
+        editor: { fontSize: 14, wordWrap: false, lineNumbers: true, minimap: true, breadcrumbsEnabled: true, tabSize: 2 },
+        terminal: { defaultShell: 'default' },
+        extensions: { autoUpdate: true, enableTelemetry: false },
+        agents: { defaultConnectionId: null },
+        sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+      }),
+      listConnections: () => [
+        {
+          ...baseConnection,
+          metadata: {
+            ...baseConnection.metadata,
+            id: '77777777-7777-7777-7777-777777777777',
+            providerId: 'azure-openai',
+            secretRef: 'secret-ref',
+          },
+          config: {
+            endpoint: 'https://example.openai.azure.com',
+            deployment: 'gpt-4o-mini',
+            apiVersion: '2024-02-15-preview',
+          },
+        },
+      ],
+      evaluateAccess: () => false,
+      logSecretAccess: vi.fn(),
+      logModelCall: vi.fn(),
+      fetchFn: vi.fn(),
+    });
+
+    await expect(
+      service.generate(
+        { prompt: 'Hello', connectionId: '77777777-7777-7777-7777-777777777777' },
+        { runId: '88888888-8888-8888-8888-888888888888', requesterId: 'agent-host' }
+      )
+    ).rejects.toThrow('Consent required for Azure OpenAI connection.');
+  });
+
   it('sends Azure OpenAI requests with deployment and api-version', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

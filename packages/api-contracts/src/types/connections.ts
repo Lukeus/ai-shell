@@ -79,6 +79,7 @@ export const CreateConnectionRequestSchema = z.object({
   scope: ConnectionScopeSchema,
   displayName: z.string(),
   config: ConnectionConfigSchema,
+  secretValue: z.string().min(1).optional(),
 });
 
 export type CreateConnectionRequest = z.infer<typeof CreateConnectionRequestSchema>;
