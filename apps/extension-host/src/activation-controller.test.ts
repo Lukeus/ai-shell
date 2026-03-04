@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ActivationController } from './activation-controller';
 import { ExtensionLoader } from './extension-loader';
-import { ExtensionManifest, ExtensionContext } from 'packages-api-contracts';
+import type { ExtensionAPI, ExtensionContext, ExtensionManifest } from 'packages-api-contracts';
+import type { ExtensionActivationContext } from './extension-loader';
 
 describe('ActivationController', () => {
   let loader: ExtensionLoader;
   let controller: ActivationController;
   let mockManifest: ExtensionManifest;
   let mockContext: ExtensionContext;
+  let mockApi: ExtensionAPI;
+  let mockActivationContext: ExtensionActivationContext;
 
   beforeEach(() => {
     loader = new ExtensionLoader();
@@ -27,6 +30,19 @@ describe('ActivationController', () => {
       extensionId: 'test.extension',
       extensionPath: '/path/to/extension',
       globalStoragePath: '/path/to/storage',
+    };
+
+    mockApi = {
+      context: mockContext,
+      log: vi.fn(),
+      commands: { registerCommand: vi.fn() },
+      views: { registerView: vi.fn() },
+      tools: { registerTool: vi.fn() },
+    };
+
+    mockActivationContext = {
+      ...mockContext,
+      api: mockApi,
     };
   });
 
@@ -109,7 +125,7 @@ describe('ActivationController', () => {
   describe('activateExtension', () => {
     it('should throw error for unregistered extension', async () => {
       await expect(
-        controller.activateExtension('unknown.extension', mockContext)
+        controller.activateExtension('unknown.extension', mockActivationContext)
       ).rejects.toThrow('not registered');
     });
 
@@ -120,7 +136,7 @@ describe('ActivationController', () => {
       vi.spyOn(loader, 'loadExtension').mockRejectedValue(new Error('Load failed'));
       
       await expect(
-        controller.activateExtension('test.extension', mockContext)
+        controller.activateExtension('test.extension', mockActivationContext)
       ).rejects.toThrow();
       
       const state = controller.getExtensionState('test.extension');

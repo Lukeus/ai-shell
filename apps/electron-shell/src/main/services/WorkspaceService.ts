@@ -128,6 +128,13 @@ export class WorkspaceService {
   }
 
   /**
+   * Check whether a workspace is currently open.
+   */
+  public hasWorkspace(): boolean {
+    return this.getWorkspace() !== null;
+  }
+
+  /**
    * Set the workspace to the specified folder path.
    * 
    * Validates that the path exists and is a directory, creates a Workspace object,

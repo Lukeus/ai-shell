@@ -1,75 +1,67 @@
 /**
  * Theme System - CSS Variables
- * 
- * Defines 14 CSS variables that serve as the foundation for all theming in the application.
- * Each theme overrides these variables to create distinct visual experiences.
- * 
+ *
+ * Semantic --color-* tokens are the canonical theme source.
+ * A shared bridge maps semantic tokens to --vscode-* variables for legacy styles.
+ *
  * Themes:
- * - dark (default): Dark theme for low-light environments
- * - light: Light theme for daytime use
- * - high-contrast-dark: High contrast dark for accessibility
- * - high-contrast-light: High contrast light for accessibility
- * - system: Follows OS preference (dark/light mode)
- * 
- * P4 (UI design system): All theme colors via CSS variables (Tailwind 4 token contract)
- * P1 (Process isolation): CSS variables are renderer-only (no main process involvement)
+ * - dark (default)
+ * - light
+ * - high-contrast-dark
+ * - high-contrast-light
+ * - system (follows prefers-color-scheme)
  */
 
 /* ===================================================================
    DEFAULT THEME (Dark)
-   Applied to :root, serves as the fallback for all themes
    =================================================================== */
 :root {
-  /* Surface colors - backgrounds for different UI elements */
-  --color-surface-default: var(--vscode-editor-background);      /* Editor background */
-  --color-surface-secondary: var(--vscode-sidebar-background);    /* Sidebars, panels */
-  --color-surface-elevated: var(--vscode-activityBar-background); /* Activity bar, raised surfaces */
-  --color-surface-hover: var(--vscode-hover-background);          /* Hover state for surfaces */
-  
+  /* Surface colors */
+  --color-surface-default: #1e1e1e;
+  --color-surface-secondary: #252526;
+  --color-surface-elevated: #333333;
+  --color-surface-hover: #2a2d2e;
+
   /* Border colors */
-  --color-border-default: var(--vscode-border);       /* Default border color */
-  --color-border-subtle: var(--vscode-border-subtle); /* Subtle borders */
-  --color-border-focus: var(--vscode-focus-border);   /* Focus borders */
-  
+  --color-border-default: #252526;
+  --color-border-subtle: #333333;
+  --color-border-focus: #007acc;
+
   /* Text colors */
-  --color-text-primary: var(--vscode-foreground);             /* Primary text */
-  --color-text-secondary: var(--vscode-foreground-secondary); /* Muted/secondary text */
-  --color-text-tertiary: var(--vscode-foreground-muted);      /* Tertiary text */
-  --color-text-link: var(--vscode-accent);                    /* Links */
-  
-  /* Accent colors - interactive elements */
-  --color-accent-primary: var(--vscode-accent);      /* Primary accent */
-  --color-accent-secondary: var(--vscode-accent);    /* Secondary accent */
-  --color-accent-hover: var(--vscode-focus-border);  /* Accent hover state */
-  --color-accent-gradient-from: var(--vscode-accent);
-  --color-accent-gradient-to: var(--vscode-accent);
-  
-  /* Status colors - feedback and notifications */
-  --color-status-info: var(--vscode-statusBar-background); /* Info messages */
-  --color-status-success: #4ec9b0;       /* Success messages */
-  --color-status-warning: #d7ba7d;       /* Warning messages */
-  --color-status-error: #f48771;         /* Error messages */
-  
-  /* Shadow colors for depth */
+  --color-text-primary: #cccccc;
+  --color-text-secondary: #969696;
+  --color-text-tertiary: #6a6a6a;
+  --color-text-link: #007acc;
+
+  /* Accent and controls */
+  --color-accent-primary: #007acc;
+  --color-accent-secondary: #007acc;
+  --color-accent-hover: #1f8ad6;
+  --color-accent-gradient-from: #007acc;
+  --color-accent-gradient-to: #007acc;
+  --color-control-foreground: #ffffff;
+
+  /* Status colors */
+  --color-status-info: #007acc;
+  --color-status-success: #4ec9b0;
+  --color-status-warning: #d7ba7d;
+  --color-status-error: #f48771;
+
+  /* Status bar chrome */
+  --color-status-bar-border: rgba(255, 255, 255, 0.16);
+  --color-status-bar-separator: rgba(255, 255, 255, 0.18);
+  --color-status-bar-focus-ring: rgba(255, 255, 255, 0.56);
+
+  /* Shadows and overlays */
   --color-shadow-small: rgba(0, 0, 0, 0.2);
   --color-shadow-medium: rgba(0, 0, 0, 0.3);
   --color-shadow-large: rgba(0, 0, 0, 0.4);
-  
-  /* Overlay/backdrop colors */
   --color-overlay: rgba(0, 0, 0, 0.6);
   --color-backdrop-blur: rgba(30, 30, 30, 0.6);
-  
-  /* Selection colors */
-  --color-selection-bg: var(--vscode-selection-background);
-  --color-selection-text: var(--vscode-foreground);
 
-  /* Tailwind token aliases (used by @theme) */
-  --color-surface: var(--color-surface-default);
-  --color-border: var(--color-border-default);
-  --color-accent: var(--color-accent-primary);
-  --color-selection: var(--color-selection-bg);
-  
-  /* Glow effects */
+  /* Selection and glow */
+  --color-selection-bg: #264f78;
+  --color-selection-text: #cccccc;
   --color-glow-accent: rgba(0, 122, 204, 0.35);
   --color-glow-success: rgba(78, 201, 176, 0.25);
   --color-glow-error: rgba(244, 135, 113, 0.25);
@@ -77,64 +69,265 @@
 
 /* ===================================================================
    LIGHT THEME
-   Light color scheme for daytime use
    =================================================================== */
 [data-theme="light"] {
-  /* Surface colors - inverted from dark */
-  --color-surface-default: #ffffff;      /* White background */
-  --color-surface-secondary: #f6f8fa;    /* Light gray */
-  --color-surface-elevated: #ffffff;     /* Elevated (white with shadow) */
-  --color-surface-hover: #f3f4f6;        /* Hover state */
-  
-  /* Border colors */
-  --color-border-default: #d0d7de;       /* Default border */
-  --color-border-subtle: #e5e7eb;        /* Subtle borders */
-  --color-border-focus: #0969da;         /* Focus borders */
-  
-  /* Text colors */
-  --color-text-primary: #1f2937;         /* Dark gray text */
-  --color-text-secondary: #57606a;       /* Medium gray text */
-  --color-text-tertiary: #6b7280;        /* Tertiary text */
-  --color-text-link: #0969da;            /* Links */
-  
-  /* Accent colors with gradients */
-  --color-accent-primary: #2563eb;       /* Blue-600 */
-  --color-accent-secondary: #1d4ed8;     /* Blue-700 */
-  --color-accent-hover: #1e40af;         /* Blue-800 */
-  --color-accent-gradient-from: #2563eb; /* Gradient start */
-  --color-accent-gradient-to: #7c3aed;   /* Gradient end (purple-600) */
-  
-  /* Status colors */
-  --color-status-info: #0969da;          /* Info messages */
-  --color-status-success: #1a7f37;       /* Success messages */
-  --color-status-warning: #bf8700;       /* Warning messages */
-  --color-status-error: #cf222e;         /* Error messages */
-  
-  /* Shadow colors for depth */
+  --color-surface-default: #ffffff;
+  --color-surface-secondary: #f6f8fa;
+  --color-surface-elevated: #ffffff;
+  --color-surface-hover: #f3f4f6;
+
+  --color-border-default: #d0d7de;
+  --color-border-subtle: #e5e7eb;
+  --color-border-focus: #0969da;
+
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #57606a;
+  --color-text-tertiary: #6b7280;
+  --color-text-link: #0969da;
+
+  --color-accent-primary: #2563eb;
+  --color-accent-secondary: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-accent-gradient-from: #2563eb;
+  --color-accent-gradient-to: #7c3aed;
+  --color-control-foreground: #ffffff;
+
+  --color-status-info: #0969da;
+  --color-status-success: #1a7f37;
+  --color-status-warning: #bf8700;
+  --color-status-error: #cf222e;
+
+  --color-status-bar-border: rgba(255, 255, 255, 0.34);
+  --color-status-bar-separator: rgba(255, 255, 255, 0.3);
+  --color-status-bar-focus-ring: rgba(255, 255, 255, 0.64);
+
   --color-shadow-small: rgba(31, 41, 55, 0.1);
   --color-shadow-medium: rgba(31, 41, 55, 0.15);
   --color-shadow-large: rgba(31, 41, 55, 0.2);
-  
-  /* Overlay/backdrop colors */
   --color-overlay: rgba(255, 255, 255, 0.8);
   --color-backdrop-blur: rgba(255, 255, 255, 0.6);
-  
-  /* Selection colors */
+
   --color-selection-bg: rgba(37, 99, 235, 0.2);
   --color-selection-text: #1f2937;
-  
-  /* Glow effects */
   --color-glow-accent: rgba(37, 99, 235, 0.3);
   --color-glow-success: rgba(26, 127, 55, 0.2);
   --color-glow-error: rgba(207, 34, 46, 0.2);
+}
 
-  /* VS Code token overrides for light theme */
+/* ===================================================================
+   HIGH CONTRAST DARK THEME
+   =================================================================== */
+[data-theme="high-contrast-dark"] {
+  --color-surface-default: #000000;
+  --color-surface-secondary: #000000;
+  --color-surface-elevated: #1a1a1a;
+  --color-surface-hover: #0a0a0a;
+
+  --color-border-default: #ffffff;
+  --color-border-subtle: #cccccc;
+  --color-border-focus: #00ffff;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #ffffff;
+  --color-text-tertiary: #ffffff;
+  --color-text-link: #00ffff;
+
+  --color-accent-primary: #00ffff;
+  --color-accent-secondary: #00cccc;
+  --color-accent-hover: #00e5e5;
+  --color-accent-gradient-from: #00ffff;
+  --color-accent-gradient-to: #00ffff;
+  --color-control-foreground: #000000;
+
+  --color-status-info: #00ffff;
+  --color-status-success: #00ff00;
+  --color-status-warning: #ffff00;
+  --color-status-error: #ff0000;
+
+  --color-status-bar-border: #ffffff;
+  --color-status-bar-separator: #ffffff;
+  --color-status-bar-focus-ring: #ffffff;
+
+  --color-shadow-small: rgba(255, 255, 255, 0.2);
+  --color-shadow-medium: rgba(255, 255, 255, 0.3);
+  --color-shadow-large: rgba(255, 255, 255, 0.4);
+  --color-overlay: rgba(0, 0, 0, 0.9);
+  --color-backdrop-blur: rgba(0, 0, 0, 0.8);
+
+  --color-selection-bg: rgba(0, 255, 255, 0.5);
+  --color-selection-text: #000000;
+  --color-glow-accent: rgba(0, 255, 255, 0.6);
+  --color-glow-success: rgba(0, 255, 0, 0.5);
+  --color-glow-error: rgba(255, 0, 0, 0.5);
+}
+
+/* ===================================================================
+   HIGH CONTRAST LIGHT THEME
+   =================================================================== */
+[data-theme="high-contrast-light"] {
+  --color-surface-default: #ffffff;
+  --color-surface-secondary: #ffffff;
+  --color-surface-elevated: #f0f0f0;
+  --color-surface-hover: #f5f5f5;
+
+  --color-border-default: #000000;
+  --color-border-subtle: #333333;
+  --color-border-focus: #0000ff;
+
+  --color-text-primary: #000000;
+  --color-text-secondary: #000000;
+  --color-text-tertiary: #000000;
+  --color-text-link: #0000ff;
+
+  --color-accent-primary: #0000ff;
+  --color-accent-secondary: #0000cc;
+  --color-accent-hover: #0000aa;
+  --color-accent-gradient-from: #0000ff;
+  --color-accent-gradient-to: #0000ff;
+  --color-control-foreground: #ffffff;
+
+  --color-status-info: #0000ff;
+  --color-status-success: #008000;
+  --color-status-warning: #ff8800;
+  --color-status-error: #cc0000;
+
+  --color-status-bar-border: #ffffff;
+  --color-status-bar-separator: #ffffff;
+  --color-status-bar-focus-ring: #ffffff;
+
+  --color-shadow-small: rgba(0, 0, 0, 0.3);
+  --color-shadow-medium: rgba(0, 0, 0, 0.4);
+  --color-shadow-large: rgba(0, 0, 0, 0.5);
+  --color-overlay: rgba(255, 255, 255, 0.9);
+  --color-backdrop-blur: rgba(255, 255, 255, 0.8);
+
+  --color-selection-bg: rgba(0, 0, 255, 0.4);
+  --color-selection-text: #ffffff;
+  --color-glow-accent: rgba(0, 0, 255, 0.5);
+  --color-glow-success: rgba(0, 128, 0, 0.4);
+  --color-glow-error: rgba(204, 0, 0, 0.4);
+}
+
+/* ===================================================================
+   SYSTEM THEME
+   =================================================================== */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    --color-surface-default: #0d1117;
+    --color-surface-secondary: #161b22;
+    --color-surface-elevated: #1f2937;
+    --color-surface-hover: #21262d;
+
+    --color-border-default: #30363d;
+    --color-border-subtle: #21262d;
+    --color-border-focus: #58a6ff;
+
+    --color-text-primary: #e6edf3;
+    --color-text-secondary: #7d8590;
+    --color-text-tertiary: #6e7681;
+    --color-text-link: #58a6ff;
+
+    --color-accent-primary: #3b82f6;
+    --color-accent-secondary: #1d4ed8;
+    --color-accent-hover: #2563eb;
+    --color-accent-gradient-from: #3b82f6;
+    --color-accent-gradient-to: #8b5cf6;
+    --color-control-foreground: #ffffff;
+
+    --color-status-info: #58a6ff;
+    --color-status-success: #3fb950;
+    --color-status-warning: #d29922;
+    --color-status-error: #f85149;
+
+    --color-status-bar-border: rgba(255, 255, 255, 0.16);
+    --color-status-bar-separator: rgba(255, 255, 255, 0.18);
+    --color-status-bar-focus-ring: rgba(255, 255, 255, 0.56);
+
+    --color-shadow-small: rgba(0, 0, 0, 0.2);
+    --color-shadow-medium: rgba(0, 0, 0, 0.3);
+    --color-shadow-large: rgba(0, 0, 0, 0.4);
+    --color-overlay: rgba(13, 17, 23, 0.8);
+    --color-backdrop-blur: rgba(13, 17, 23, 0.6);
+
+    --color-selection-bg: rgba(58, 130, 246, 0.3);
+    --color-selection-text: #e6edf3;
+    --color-glow-accent: rgba(58, 130, 246, 0.4);
+    --color-glow-success: rgba(63, 185, 80, 0.3);
+    --color-glow-error: rgba(248, 81, 73, 0.3);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    --color-surface-default: #ffffff;
+    --color-surface-secondary: #f6f8fa;
+    --color-surface-elevated: #ffffff;
+    --color-surface-hover: #f3f4f6;
+
+    --color-border-default: #d0d7de;
+    --color-border-subtle: #e5e7eb;
+    --color-border-focus: #0969da;
+
+    --color-text-primary: #1f2937;
+    --color-text-secondary: #57606a;
+    --color-text-tertiary: #6b7280;
+    --color-text-link: #0969da;
+
+    --color-accent-primary: #2563eb;
+    --color-accent-secondary: #1d4ed8;
+    --color-accent-hover: #1e40af;
+    --color-accent-gradient-from: #2563eb;
+    --color-accent-gradient-to: #7c3aed;
+    --color-control-foreground: #ffffff;
+
+    --color-status-info: #0969da;
+    --color-status-success: #1a7f37;
+    --color-status-warning: #bf8700;
+    --color-status-error: #cf222e;
+
+    --color-status-bar-border: rgba(255, 255, 255, 0.34);
+    --color-status-bar-separator: rgba(255, 255, 255, 0.3);
+    --color-status-bar-focus-ring: rgba(255, 255, 255, 0.64);
+
+    --color-shadow-small: rgba(31, 41, 55, 0.1);
+    --color-shadow-medium: rgba(31, 41, 55, 0.15);
+    --color-shadow-large: rgba(31, 41, 55, 0.2);
+    --color-overlay: rgba(255, 255, 255, 0.8);
+    --color-backdrop-blur: rgba(255, 255, 255, 0.6);
+
+    --color-selection-bg: rgba(37, 99, 235, 0.2);
+    --color-selection-text: #1f2937;
+    --color-glow-accent: rgba(37, 99, 235, 0.3);
+    --color-glow-success: rgba(26, 127, 55, 0.2);
+    --color-glow-error: rgba(207, 34, 46, 0.2);
+  }
+}
+
+/* ===================================================================
+   SHARED TOKEN BRIDGE
+   =================================================================== */
+:root,
+[data-theme="light"],
+[data-theme="high-contrast-dark"],
+[data-theme="high-contrast-light"],
+[data-theme="system"] {
+  /* Tailwind-friendly semantic aliases */
+  --color-surface: var(--color-surface-default);
+  --color-border: var(--color-border-default);
+  --color-accent: var(--color-accent-primary);
+  --color-selection: var(--color-selection-bg);
+  --color-primary: var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-tertiary: var(--color-text-tertiary);
+
+  /* VS Code compatibility bridge for existing components/styles */
   --vscode-editor-background: var(--color-surface-default);
   --vscode-sidebar-background: var(--color-surface-secondary);
   --vscode-activityBar-background: var(--color-surface-elevated);
   --vscode-statusBar-background: var(--color-accent-primary);
-  --vscode-statusBar-foreground: #ffffff;
+  --vscode-statusBar-foreground: var(--color-control-foreground);
   --vscode-statusBar-hoverBackground: var(--color-accent-hover);
+  --vscode-statusBar-border: var(--color-status-bar-border);
   --vscode-titleBar-activeBackground: var(--color-surface-elevated);
   --vscode-titleBar-activeForeground: var(--color-text-primary);
   --vscode-titleBar-inactiveForeground: var(--color-text-secondary);
@@ -175,7 +368,7 @@
   --vscode-menu-border: var(--color-border-default);
 
   --vscode-button-background: var(--color-accent-primary);
-  --vscode-button-foreground: #ffffff;
+  --vscode-button-foreground: var(--color-control-foreground);
   --vscode-button-hoverBackground: var(--color-accent-hover);
   --vscode-button-secondaryBackground: var(--color-surface-secondary);
   --vscode-button-secondaryForeground: var(--color-text-primary);
@@ -184,280 +377,4 @@
   --vscode-editorWidget-background: var(--color-surface-elevated);
   --vscode-editorWidget-border: var(--color-border-default);
   --vscode-widget-shadow: 0 6px 24px var(--color-shadow-medium);
-}
-
-/* ===================================================================
-   HIGH CONTRAST DARK THEME
-   High contrast dark theme for accessibility
-   =================================================================== */
-[data-theme="high-contrast-dark"] {
-  /* Surface colors - pure black for maximum contrast */
-  --color-surface-default: #000000;      /* Pure black */
-  --color-surface-secondary: #000000;    /* Pure black (no variation) */
-  --color-surface-elevated: #1a1a1a;     /* Slight elevation */
-  --color-surface-hover: #0a0a0a;        /* Hover state */
-  
-  /* Border colors */
-  --color-border-default: #ffffff;       /* White borders */
-  --color-border-subtle: #cccccc;        /* Subtle borders */
-  --color-border-focus: #00ffff;         /* Focus borders */
-  
-  /* Text colors */
-  --color-text-primary: #ffffff;         /* Pure white */
-  --color-text-secondary: #ffffff;       /* Pure white (no muted text) */
-  --color-text-tertiary: #ffffff;        /* Pure white */
-  --color-text-link: #00ffff;            /* Cyan links */
-  
-  /* Accent colors */
-  --color-accent-primary: #00ffff;       /* Cyan (high visibility) */
-  --color-accent-secondary: #00cccc;     /* Darker cyan */
-  --color-accent-hover: #00e5e5;         /* Hover cyan */
-  --color-accent-gradient-from: #00ffff; /* Gradient start */
-  --color-accent-gradient-to: #00ffff;   /* Gradient end (same for HC) */
-  
-  /* Status colors */
-  --color-status-info: #00ffff;          /* Cyan */
-  --color-status-success: #00ff00;       /* Bright green */
-  --color-status-warning: #ffff00;       /* Yellow */
-  --color-status-error: #ff0000;         /* Bright red */
-  
-  /* Shadow colors */
-  --color-shadow-small: rgba(255, 255, 255, 0.2);
-  --color-shadow-medium: rgba(255, 255, 255, 0.3);
-  --color-shadow-large: rgba(255, 255, 255, 0.4);
-  
-  /* Overlay/backdrop colors */
-  --color-overlay: rgba(0, 0, 0, 0.9);
-  --color-backdrop-blur: rgba(0, 0, 0, 0.8);
-  
-  /* Selection colors */
-  --color-selection-bg: rgba(0, 255, 255, 0.5);
-  --color-selection-text: #000000;
-  
-  /* Glow effects */
-  --color-glow-accent: rgba(0, 255, 255, 0.6);
-  --color-glow-success: rgba(0, 255, 0, 0.5);
-  --color-glow-error: rgba(255, 0, 0, 0.5);
-}
-
-/* ===================================================================
-   HIGH CONTRAST LIGHT THEME
-   High contrast light theme for accessibility
-   =================================================================== */
-[data-theme="high-contrast-light"] {
-  /* Surface colors - pure white for maximum contrast */
-  --color-surface-default: #ffffff;      /* Pure white */
-  --color-surface-secondary: #ffffff;    /* Pure white (no variation) */
-  --color-surface-elevated: #f0f0f0;     /* Slight elevation */
-  --color-surface-hover: #f5f5f5;        /* Hover state */
-  
-  /* Border colors */
-  --color-border-default: #000000;       /* Black borders */
-  --color-border-subtle: #333333;        /* Subtle borders */
-  --color-border-focus: #0000ff;         /* Focus borders */
-  
-  /* Text colors */
-  --color-text-primary: #000000;         /* Pure black */
-  --color-text-secondary: #000000;       /* Pure black (no muted text) */
-  --color-text-tertiary: #000000;        /* Pure black */
-  --color-text-link: #0000ff;            /* Blue links */
-  
-  /* Accent colors */
-  --color-accent-primary: #0000ff;       /* Pure blue */
-  --color-accent-secondary: #0000cc;     /* Darker blue */
-  --color-accent-hover: #0000aa;         /* Hover blue */
-  --color-accent-gradient-from: #0000ff; /* Gradient start */
-  --color-accent-gradient-to: #0000ff;   /* Gradient end (same for HC) */
-  
-  /* Status colors */
-  --color-status-info: #0000ff;          /* Pure blue */
-  --color-status-success: #008000;       /* Dark green */
-  --color-status-warning: #ff8800;       /* Orange */
-  --color-status-error: #cc0000;         /* Dark red */
-  
-  /* Shadow colors */
-  --color-shadow-small: rgba(0, 0, 0, 0.3);
-  --color-shadow-medium: rgba(0, 0, 0, 0.4);
-  --color-shadow-large: rgba(0, 0, 0, 0.5);
-  
-  /* Overlay/backdrop colors */
-  --color-overlay: rgba(255, 255, 255, 0.9);
-  --color-backdrop-blur: rgba(255, 255, 255, 0.8);
-  
-  /* Selection colors */
-  --color-selection-bg: rgba(0, 0, 255, 0.4);
-  --color-selection-text: #ffffff;
-  
-  /* Glow effects */
-  --color-glow-accent: rgba(0, 0, 255, 0.5);
-  --color-glow-success: rgba(0, 128, 0, 0.4);
-  --color-glow-error: rgba(204, 0, 0, 0.4);
-}
-
-/* ===================================================================
-   SYSTEM THEME
-   Follows OS preference using prefers-color-scheme media query
-   =================================================================== */
-
-/* System theme in dark mode - use dark theme variables */
-@media (prefers-color-scheme: dark) {
-  [data-theme="system"] {
-    /* Surface colors - dark theme */
-    --color-surface-default: #0d1117;
-    --color-surface-secondary: #161b22;
-    --color-surface-elevated: #1f2937;
-    --color-surface-hover: #21262d;
-    
-    /* Border colors */
-    --color-border-default: #30363d;
-    --color-border-subtle: #21262d;
-    --color-border-focus: #58a6ff;
-    
-    /* Text colors */
-    --color-text-primary: #e6edf3;
-    --color-text-secondary: #7d8590;
-    --color-text-tertiary: #6e7681;
-    --color-text-link: #58a6ff;
-    
-    /* Accent colors */
-    --color-accent-primary: #3b82f6;
-    --color-accent-secondary: #1d4ed8;
-    --color-accent-hover: #2563eb;
-    --color-accent-gradient-from: #3b82f6;
-    --color-accent-gradient-to: #8b5cf6;
-    
-    /* Status colors */
-    --color-status-info: #58a6ff;
-    --color-status-success: #3fb950;
-    --color-status-warning: #d29922;
-    --color-status-error: #f85149;
-    
-    /* Shadow colors */
-    --color-shadow-small: rgba(0, 0, 0, 0.2);
-    --color-shadow-medium: rgba(0, 0, 0, 0.3);
-    --color-shadow-large: rgba(0, 0, 0, 0.4);
-    
-    /* Overlay/backdrop colors */
-    --color-overlay: rgba(13, 17, 23, 0.8);
-    --color-backdrop-blur: rgba(13, 17, 23, 0.6);
-    
-    /* Selection colors */
-    --color-selection-bg: rgba(58, 130, 246, 0.3);
-    --color-selection-text: #e6edf3;
-    
-    /* Glow effects */
-    --color-glow-accent: rgba(58, 130, 246, 0.4);
-    --color-glow-success: rgba(63, 185, 80, 0.3);
-    --color-glow-error: rgba(248, 81, 73, 0.3);
-  }
-}
-
-/* System theme in light mode - use light theme variables */
-@media (prefers-color-scheme: light) {
-  [data-theme="system"] {
-    /* Surface colors - light theme */
-    --color-surface-default: #ffffff;
-    --color-surface-secondary: #f6f8fa;
-    --color-surface-elevated: #ffffff;
-    --color-surface-hover: #f3f4f6;
-    
-    /* Border colors */
-    --color-border-default: #d0d7de;
-    --color-border-subtle: #e5e7eb;
-    --color-border-focus: #0969da;
-    
-    /* Text colors */
-    --color-text-primary: #1f2937;
-    --color-text-secondary: #57606a;
-    --color-text-tertiary: #6b7280;
-    --color-text-link: #0969da;
-    
-    /* Accent colors */
-    --color-accent-primary: #2563eb;
-    --color-accent-secondary: #1d4ed8;
-    --color-accent-hover: #1e40af;
-    --color-accent-gradient-from: #2563eb;
-    --color-accent-gradient-to: #7c3aed;
-    
-    /* Status colors */
-    --color-status-info: #0969da;
-    --color-status-success: #1a7f37;
-    --color-status-warning: #bf8700;
-    --color-status-error: #cf222e;
-    
-    /* Shadow colors */
-    --color-shadow-small: rgba(31, 41, 55, 0.1);
-    --color-shadow-medium: rgba(31, 41, 55, 0.15);
-    --color-shadow-large: rgba(31, 41, 55, 0.2);
-    
-    /* Overlay/backdrop colors */
-    --color-overlay: rgba(255, 255, 255, 0.8);
-    --color-backdrop-blur: rgba(255, 255, 255, 0.6);
-    
-    /* Selection colors */
-    --color-selection-bg: rgba(37, 99, 235, 0.2);
-    --color-selection-text: #1f2937;
-    
-    /* Glow effects */
-    --color-glow-accent: rgba(37, 99, 235, 0.3);
-    --color-glow-success: rgba(26, 127, 55, 0.2);
-    --color-glow-error: rgba(207, 34, 46, 0.2);
-
-    /* VS Code token overrides for system light */
-    --vscode-editor-background: var(--color-surface-default);
-    --vscode-sidebar-background: var(--color-surface-secondary);
-    --vscode-activityBar-background: var(--color-surface-elevated);
-    --vscode-statusBar-background: var(--color-accent-primary);
-    --vscode-statusBar-foreground: #ffffff;
-    --vscode-statusBar-hoverBackground: var(--color-accent-hover);
-    --vscode-titleBar-activeBackground: var(--color-surface-elevated);
-    --vscode-titleBar-activeForeground: var(--color-text-primary);
-    --vscode-titleBar-inactiveForeground: var(--color-text-secondary);
-
-    --vscode-tab-activeBackground: var(--color-surface-default);
-    --vscode-tab-inactiveBackground: var(--color-surface-secondary);
-    --vscode-tab-border: var(--color-border-subtle);
-    --vscode-tab-activeBorderTop: var(--color-accent-primary);
-
-    --vscode-border: var(--color-border-default);
-    --vscode-border-subtle: var(--color-border-subtle);
-    --vscode-panel-border: var(--color-border-default);
-
-    --vscode-foreground: var(--color-text-primary);
-    --vscode-foreground-secondary: var(--color-text-secondary);
-    --vscode-foreground-muted: var(--color-text-tertiary);
-
-    --vscode-hover-background: var(--color-surface-hover);
-    --vscode-selection-background: var(--color-selection-bg);
-    --vscode-focus-border: var(--color-border-focus);
-    --vscode-accent: var(--color-accent-primary);
-
-    --vscode-list-hoverBackground: var(--color-surface-hover);
-    --vscode-list-activeSelectionBackground: var(--color-selection-bg);
-    --vscode-list-inactiveSelectionBackground: var(--color-surface-hover);
-    --vscode-list-focusOutline: var(--color-border-focus);
-
-    --vscode-input-background: var(--color-surface-default);
-    --vscode-input-border: var(--color-border-default);
-
-    --vscode-menubar-selectionBackground: var(--color-surface-hover);
-    --vscode-menubar-selectionForeground: var(--color-text-primary);
-    --vscode-menubar-selectionBorder: var(--color-border-focus);
-    --vscode-menu-background: var(--color-surface-elevated);
-    --vscode-menu-foreground: var(--color-text-primary);
-    --vscode-menu-selectionBackground: var(--color-selection-bg);
-    --vscode-menu-selectionForeground: var(--color-text-primary);
-    --vscode-menu-border: var(--color-border-default);
-
-    --vscode-button-background: var(--color-accent-primary);
-    --vscode-button-foreground: #ffffff;
-    --vscode-button-hoverBackground: var(--color-accent-hover);
-    --vscode-button-secondaryBackground: var(--color-surface-secondary);
-    --vscode-button-secondaryForeground: var(--color-text-primary);
-    --vscode-button-secondaryHoverBackground: var(--color-surface-hover);
-
-    --vscode-editorWidget-background: var(--color-surface-elevated);
-    --vscode-editorWidget-border: var(--color-border-default);
-    --vscode-widget-shadow: 0 6px 24px var(--color-shadow-medium);
-  }
 }

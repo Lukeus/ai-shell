@@ -13,7 +13,7 @@ describe('ExtensionToolService', () => {
     } as unknown as ExtensionHostManager;
 
     activateExtension = vi.fn().mockResolvedValue(undefined);
-    toolService = new ExtensionToolService(mockExtensionHostManager, activateExtension);
+    toolService = new ExtensionToolService(mockExtensionHostManager, activateExtension as unknown as (extensionId: string, event?: string) => Promise<void>);
   });
 
   it('registers and lists tools', () => {

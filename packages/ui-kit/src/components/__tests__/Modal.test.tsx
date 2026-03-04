@@ -45,7 +45,7 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('calls onClose when clicking the backdrop', () => {
+  it('calls onClose when clicking outside the dialog panel', async () => {
     const onClose = vi.fn();
     render(
       <Modal open onClose={onClose} title="Backdrop test">
@@ -53,11 +53,16 @@ describe('Modal', () => {
       </Modal>
     );
 
+    // Headless UI Dialog detects outside clicks via pointer events on the document
     const backdrop = document.querySelector('.ui-modal-backdrop');
     expect(backdrop).toBeInTheDocument();
+    fireEvent.pointerDown(backdrop as HTMLElement, { button: 0 });
+    fireEvent.pointerUp(backdrop as HTMLElement, { button: 0 });
     fireEvent.click(backdrop as HTMLElement);
 
-    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 
   it('focuses the initialFocus element', async () => {

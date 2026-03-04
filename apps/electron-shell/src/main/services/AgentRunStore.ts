@@ -116,6 +116,48 @@ export class AgentRunStore {
     return updated;
   }
 
+  public updateRunSkill(
+    runId: string,
+    skill: AgentRunMetadata['skill']
+  ): AgentRunMetadata {
+    const store = this.loadStore();
+    const existing = store.runs[runId];
+    if (!existing) {
+      throw new Error(`Agent run not found: ${runId}`);
+    }
+
+    const updated = AgentRunMetadataSchema.parse({
+      ...existing,
+      skill,
+      updatedAt: new Date().toISOString(),
+    });
+
+    store.runs[runId] = updated;
+    this.saveStore(store);
+    return updated;
+  }
+
+  public updateRunDelegation(
+    runId: string,
+    delegation: AgentRunMetadata['delegation']
+  ): AgentRunMetadata {
+    const store = this.loadStore();
+    const existing = store.runs[runId];
+    if (!existing) {
+      throw new Error(`Agent run not found: ${runId}`);
+    }
+
+    const updated = AgentRunMetadataSchema.parse({
+      ...existing,
+      delegation,
+      updatedAt: new Date().toISOString(),
+    });
+
+    store.runs[runId] = updated;
+    this.saveStore(store);
+    return updated;
+  }
+
   public appendEvent(event: AgentEvent): void {
     // Redact sensitive fields before persisting (P2: Security defaults)
     const redacted = this.redactEvent(event);

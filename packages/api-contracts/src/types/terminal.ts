@@ -42,7 +42,7 @@ export const CreateTerminalRequestSchema = z.object({
   cwd: z.string(),
   
   /** Optional custom environment variables (merged with process.env) */
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   
   /** Optional custom shell path (defaults to user's default shell) */
   shell: z.string().optional(),

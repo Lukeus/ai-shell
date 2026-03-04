@@ -13,7 +13,7 @@ describe('ExtensionViewService', () => {
     } as unknown as ExtensionHostManager;
 
     activateExtension = vi.fn().mockResolvedValue(undefined);
-    viewService = new ExtensionViewService(mockExtensionHostManager, activateExtension);
+    viewService = new ExtensionViewService(mockExtensionHostManager, activateExtension as unknown as (extensionId: string, event?: string) => Promise<void>);
   });
 
   it('registers and lists views', () => {

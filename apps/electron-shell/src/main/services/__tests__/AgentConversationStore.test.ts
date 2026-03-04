@@ -117,7 +117,7 @@ describe('AgentConversationStore entries', () => {
     const conversation = store.getConversation(conversationId);
     expect(conversation.entries).toHaveLength(1);
     expect(conversation.entries[0].type).toBe('message');
-    expect(conversation.entries[0].content).toBe('Legacy message');
+    expect((conversation.entries[0] as { content: string }).content).toBe('Legacy message');
   });
 
   it('stores proposal entries without adding messages', () => {

@@ -3,74 +3,61 @@ import { render, screen } from '@testing-library/react';
 import { StatusBar } from '../StatusBar';
 
 describe('StatusBar', () => {
-  it('renders left content in correct section', () => {
+  it('renders left items in correct section', () => {
     render(
       <StatusBar
-        leftContent={<span data-testid="left-content">No Folder Open</span>}
-        rightContent={<span>Right Content</span>}
+        leftItems={[{ id: 'folder', label: 'No Folder Open' }]}
       />
     );
-    
-    expect(screen.getByTestId('left-content')).toBeInTheDocument();
+
     expect(screen.getByText('No Folder Open')).toBeInTheDocument();
   });
 
-  it('renders right content in correct section', () => {
+  it('renders right items in correct section', () => {
     render(
       <StatusBar
-        leftContent={<span>Left Content</span>}
-        rightContent={<span data-testid="right-content">UTF-8 | TypeScript</span>}
+        rightItems={[{ id: 'encoding', label: 'UTF-8' }]}
       />
     );
-    
-    expect(screen.getByTestId('right-content')).toBeInTheDocument();
-    expect(screen.getByText('UTF-8 | TypeScript')).toBeInTheDocument();
+
+    expect(screen.getByText('UTF-8')).toBeInTheDocument();
   });
 
-  it('renders both left and right content simultaneously', () => {
+  it('renders both left and right items simultaneously', () => {
     render(
       <StatusBar
-        leftContent={<span>Workspace: ai-shell</span>}
-        rightContent={<span>Ln 42, Col 12</span>}
+        leftItems={[{ id: 'workspace', label: 'ai-shell' }]}
+        rightItems={[{ id: 'position', label: 'Ln 42, Col 12' }]}
       />
     );
-    
-    expect(screen.getByText('Workspace: ai-shell')).toBeInTheDocument();
+
+    expect(screen.getByText('ai-shell')).toBeInTheDocument();
     expect(screen.getByText('Ln 42, Col 12')).toBeInTheDocument();
   });
 
-  it('handles complex React nodes as content', () => {
+  it('renders multiple items per side', () => {
     render(
       <StatusBar
-        leftContent={
-          <div>
-            <span>Folder:</span>
-            <strong>ai-shell</strong>
-          </div>
-        }
-        rightContent={
-          <div>
-            <span>Errors: 0</span>
-            <span>Warnings: 3</span>
-          </div>
-        }
+        leftItems={[
+          { id: 'folder', label: 'Folder' },
+          { id: 'workspace', label: 'ai-shell' },
+        ]}
+        rightItems={[
+          { id: 'errors', label: 'Errors: 0' },
+          { id: 'warnings', label: 'Warnings: 3' },
+        ]}
       />
     );
-    
-    expect(screen.getByText('Folder:')).toBeInTheDocument();
+
+    expect(screen.getByText('Folder')).toBeInTheDocument();
     expect(screen.getByText('ai-shell')).toBeInTheDocument();
     expect(screen.getByText('Errors: 0')).toBeInTheDocument();
     expect(screen.getByText('Warnings: 3')).toBeInTheDocument();
   });
 
   it('renders empty content without errors', () => {
-    const { container } = render(
-      <StatusBar
-        leftContent={null}
-        rightContent={null}
-      />
-    );
-    
+    const { container } = render(<StatusBar />);
+
     expect(container.querySelector('div')).toBeInTheDocument();
   });
 });

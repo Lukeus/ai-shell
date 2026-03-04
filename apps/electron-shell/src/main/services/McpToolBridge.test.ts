@@ -36,10 +36,11 @@ describe('McpToolBridge', () => {
     close: ReturnType<typeof vi.fn>;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const createBridge = () => new McpToolBridge({
-    brokerMain: broker,
-    serverManager,
-    clientFactory: () => client,
+    brokerMain: broker as any,
+    serverManager: serverManager as any,
+    clientFactory: () => client as any,
   });
 
   beforeEach(() => {

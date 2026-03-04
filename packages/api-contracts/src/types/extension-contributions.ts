@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentSkillDefinitionSchema } from './agent-skills';
 
 /**
  * Command contribution schema.
@@ -61,10 +62,10 @@ export const ToolContributionSchema = z.object({
   description: z.string(),
   
   /** JSON Schema for tool input parameters */
-  inputSchema: z.record(z.unknown()),
+  inputSchema: z.record(z.string(), z.unknown()),
 
   /** Optional JSON Schema for tool output */
-  outputSchema: z.record(z.unknown()).optional(),
+  outputSchema: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -97,3 +98,14 @@ export const SettingContributionSchema = z.object({
  * TypeScript type for setting contribution.
  */
 export type SettingContribution = z.infer<typeof SettingContributionSchema>;
+
+/**
+ * Agent skill contribution schema.
+ * Defines a skill contributed by an extension.
+ */
+export const AgentSkillContributionSchema = AgentSkillDefinitionSchema;
+
+/**
+ * TypeScript type for agent skill contribution.
+ */
+export type AgentSkillContribution = z.infer<typeof AgentSkillContributionSchema>;

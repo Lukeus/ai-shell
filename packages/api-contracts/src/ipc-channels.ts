@@ -261,6 +261,31 @@ export const IPC_CHANNELS = {
   /** Apply an edit proposal */
   AGENT_EDITS_APPLY_PROPOSAL: 'agent:edits:apply-proposal',
 
+  // Skills management
+  /** List skills */
+  SKILLS_LIST: 'skills:list',
+
+  /** Get a skill by id */
+  SKILLS_GET: 'skills:get',
+
+  /** Create a skill */
+  SKILLS_CREATE: 'skills:create',
+
+  /** Update a skill */
+  SKILLS_UPDATE: 'skills:update',
+
+  /** Delete a skill */
+  SKILLS_DELETE: 'skills:delete',
+
+  /** Enable or disable a skill */
+  SKILLS_SET_ENABLED: 'skills:set-enabled',
+
+  /** Set default skill */
+  SKILLS_SET_DEFAULT: 'skills:set-default',
+
+  /** Set last used skill */
+  SKILLS_SET_LAST_USED: 'skills:set-last-used',
+
   // Connections + Secrets
   /** List connections */
   CONNECTIONS_LIST: 'connections:list',

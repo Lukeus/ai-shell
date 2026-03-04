@@ -31,7 +31,9 @@ describe('Breadcrumbs', () => {
       />
     );
 
-    expect(screen.getByText('App.tsx')).toHaveAttribute('aria-current', 'page');
+    // aria-current is on the outer span, not the inner text span
+    const currentItem = screen.getByText('App.tsx').closest('[aria-current]');
+    expect(currentItem).toHaveAttribute('aria-current', 'page');
   });
 
   it('handles click callbacks', () => {

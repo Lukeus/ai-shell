@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ipcMain } from 'electron';
 import { IPC_CHANNELS, SETTINGS_DEFAULTS } from 'packages-api-contracts';
-import { registerAgentHandlers } from './ipc/agents';
+import { registerAgentHandlers, _resetAgentHostBindings } from './ipc/agents';
 import { agentRunStore } from './services/AgentRunStore';
 import { connectionsService } from './services/ConnectionsService';
+import { skillsService } from './services/SkillsService';
 import { settingsService } from './services/SettingsService';
 import { getAgentHostManager } from './index';
 
@@ -23,6 +24,7 @@ vi.mock('./services/AgentRunStore', () => ({
     createRun: vi.fn(),
     updateRunStatus: vi.fn(),
     updateRunRouting: vi.fn(),
+    updateRunSkill: vi.fn(),
     appendEvent: vi.fn(),
     resetRunEvents: vi.fn(),
     listEvents: vi.fn(),
@@ -32,6 +34,14 @@ vi.mock('./services/AgentRunStore', () => ({
 vi.mock('./services/ConnectionsService', () => ({
   connectionsService: {
     listConnections: vi.fn(),
+  },
+}));
+
+vi.mock('./services/SkillsService', () => ({
+  skillsService: {
+    getActiveScope: vi.fn(),
+    resolveSkillForRun: vi.fn(),
+    setLastUsedSkill: vi.fn(),
   },
 }));
 
@@ -51,8 +61,15 @@ describe('IPC Handlers - Agents', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     handlers.clear();
+    _resetAgentHostBindings();
 
+    vi.mocked(getAgentHostManager).mockReturnValue(null);
     vi.mocked(settingsService.getSettings).mockReturnValue(SETTINGS_DEFAULTS);
+    vi.mocked(skillsService.getActiveScope).mockReturnValue('global');
+    vi.mocked(skillsService.resolveSkillForRun).mockReturnValue(null);
+    vi.mocked(skillsService.setLastUsedSkill).mockReturnValue({
+      preferences: { defaultSkillId: null, lastUsedSkillId: null },
+    });
 
     vi.mocked(ipcMain.handle).mockImplementation((channel: string, handler: (...args: any[]) => Promise<any>) => {
       handlers.set(channel, handler);
@@ -171,6 +188,157 @@ describe('IPC Handlers - Agents', () => {
           type: 'status',
           runId: run.id,
           status: 'queued',
+        })
+      );
+      expect(result).toEqual({ run: failedRun });
+    });
+
+    it('resolves skill config, persists run skill metadata, and updates last used on success', async () => {
+      const connectionId = '123e4567-e89b-12d3-a456-426614174211';
+      const connection = {
+        metadata: {
+          id: connectionId,
+          providerId: 'ollama',
+          scope: 'user' as const,
+          displayName: 'Local Ollama',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        config: {
+          model: 'llama3',
+        },
+      };
+
+      const run = {
+        id: '123e4567-e89b-12d3-a456-426614174210',
+        status: 'queued' as const,
+        source: 'user' as const,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+      const runWithSkill = {
+        ...run,
+        skill: {
+          skillId: 'analysis-skill',
+          source: 'user' as const,
+          scope: 'global' as const,
+          version: 3,
+        },
+      };
+      const routedRun = {
+        ...runWithSkill,
+        routing: {
+          connectionId,
+          providerId: 'ollama',
+          modelRef: 'llama3',
+        },
+      };
+
+      const agentHostManager = {
+        startRun: vi.fn().mockResolvedValue(undefined),
+        onEvent: vi.fn(() => () => undefined),
+        onRunError: vi.fn(() => () => undefined),
+      };
+
+      vi.mocked(getAgentHostManager)
+        .mockImplementationOnce(() => null)
+        .mockImplementation(
+          () => agentHostManager as unknown as ReturnType<typeof getAgentHostManager>
+        );
+      vi.mocked(agentRunStore.createRun).mockReturnValue(run);
+      vi.mocked(agentRunStore.updateRunSkill).mockReturnValue(runWithSkill);
+      vi.mocked(agentRunStore.updateRunRouting).mockReturnValue(routedRun);
+      vi.mocked(connectionsService.listConnections).mockReturnValue([connection]);
+      vi.mocked(skillsService.getActiveScope).mockReturnValue('global');
+      vi.mocked(skillsService.resolveSkillForRun).mockReturnValue({
+        skill: {
+          definition: {
+            id: 'analysis-skill',
+            name: 'Analysis Skill',
+            promptTemplate: 'Analyze carefully before taking action.',
+            toolAllowlist: ['workspace.read', 'repo.search'],
+            toolDenylist: ['repo.search'],
+          },
+          source: 'user',
+          scope: 'global',
+          enabled: true,
+          version: 3,
+        },
+        resolvedBy: 'explicit',
+        scope: 'global',
+      });
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_START);
+      const result = await handler(null, {
+        goal: 'Do the thing',
+        connectionId,
+        skillId: 'analysis-skill',
+        toolAllowlist: ['workspace.read'],
+        config: {
+          policy: {
+            allowlist: ['workspace.read', 'repo.search'],
+          },
+        },
+      });
+
+      expect(agentRunStore.updateRunSkill).toHaveBeenCalledWith(run.id, {
+        skillId: 'analysis-skill',
+        source: 'user',
+        scope: 'global',
+        version: 3,
+      });
+
+      expect(agentHostManager.startRun).toHaveBeenCalledWith(
+        run.id,
+        expect.objectContaining({
+          goal: expect.stringContaining('Analyze carefully before taking action.'),
+          connectionId,
+          toolAllowlist: ['workspace.read'],
+          config: expect.objectContaining({
+            policy: {
+              allowlist: ['workspace.read'],
+              denylist: ['repo.search'],
+            },
+          }),
+        })
+      );
+
+      const hostRequest = vi.mocked(agentHostManager.startRun).mock.calls[0]?.[1];
+      expect(hostRequest?.skillId).toBeUndefined();
+      expect(skillsService.setLastUsedSkill).toHaveBeenCalledWith({
+        scope: 'global',
+        skillId: 'analysis-skill',
+      });
+      expect(result).toEqual({ run: routedRun });
+    });
+
+    it('fails run with actionable error when skill resolution fails', async () => {
+      const run = {
+        id: '123e4567-e89b-12d3-a456-426614174333',
+        status: 'queued' as const,
+        source: 'user' as const,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+      const failedRun = { ...run, status: 'failed' as const };
+
+      vi.mocked(agentRunStore.createRun).mockReturnValue(run);
+      vi.mocked(agentRunStore.updateRunStatus).mockReturnValue(failedRun);
+      vi.mocked(skillsService.resolveSkillForRun).mockImplementation(() => {
+        throw new Error(
+          'Skill is disabled: analysis-skill. Enable the skill or choose a different one.'
+        );
+      });
+
+      const handler = getHandler(IPC_CHANNELS.AGENT_RUNS_START);
+      const result = await handler(null, { goal: 'Do the thing', skillId: 'analysis-skill' });
+
+      expect(agentRunStore.updateRunStatus).toHaveBeenCalledWith(run.id, 'failed');
+      expect(agentRunStore.appendEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'error',
+          runId: run.id,
+          message: expect.stringContaining('Skill is disabled: analysis-skill'),
         })
       );
       expect(result).toEqual({ run: failedRun });

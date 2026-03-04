@@ -23,6 +23,9 @@ export default defineConfig({
     format: 'es',
   },
   build: {
+    // Keep renderer output in app-root .vite so packaged main can load
+    // `app.asar/.vite/renderer/main_window/index.html`.
+    outDir: path.resolve(__dirname, '.vite/renderer/main_window'),
     rollupOptions: {
       output: {
         // P5 (Performance budgets): Manual chunks to ensure Monaco is code-split

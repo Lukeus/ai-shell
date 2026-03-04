@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { EditorLoader } from './EditorLoader';
 
@@ -20,7 +20,13 @@ describe('EditorLoader', () => {
     filePath: '/test/file.ts',
     content: 'const x = 42;',
     language: 'typescript',
-  };
+  } as any; // eslint-disable-line @typescript-eslint/no-explicit-any -- mock accepts extra props
+
+  // Warm up the dynamic import cache so tests don't pay the first-import penalty
+  beforeAll(async () => {
+    await import('../../monaco/monacoWorkers');
+    await import('./MonacoEditor');
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,7 +55,7 @@ describe('EditorLoader', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
   });
 
   it('should pass correct props to MonacoEditor', async () => {
@@ -59,7 +65,7 @@ describe('EditorLoader', () => {
       expect(screen.getByText('File: /test/file.ts')).toBeInTheDocument();
       expect(screen.getByText('Content: const x = 42;')).toBeInTheDocument();
       expect(screen.getByText('Language: typescript')).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
   });
 
   it('should handle different file paths', async () => {

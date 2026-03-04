@@ -21,11 +21,11 @@ describe('Badge', () => {
 
   it('applies variant styles', () => {
     render(<Badge label="Success" variant="success" />);
-    const badge = screen.getByText('Success');
+    const badge = screen.getByTitle('Success');
 
-    expect(badge).toHaveStyle({
-      color: 'var(--color-status-success)',
-      borderColor: 'var(--color-status-success)',
-    });
+    expect(badge).toHaveStyle({ color: 'var(--color-status-success)' });
+    // borderColor is set via the same style object but jsdom normalizes it
+    // into individual border-*-color properties; verify via the style property
+    expect(badge.style.borderColor).toBe('var(--color-status-success)');
   });
 });

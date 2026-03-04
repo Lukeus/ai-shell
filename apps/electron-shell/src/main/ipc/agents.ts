@@ -1,3 +1,4 @@
+// EXCEPTION: agents IPC handler exceeds guardrail size; follow-up split is tracked in specs/165-multi-agent-skill-delegation/tasks.md (approved by AGENTS.md guardrails)
 import { ipcMain, type WebContents } from 'electron';
 import { randomUUID } from 'crypto';
 import {
@@ -22,6 +23,7 @@ import {
   SaveAgentDraftResponseSchema,
   ListAgentTraceRequestSchema,
   type AgentEvent,
+  type AgentRunMetadata,
   type AgentRunControlResponse,
   type AgentRunStartRequest,
   type AgentRunStartResponse,
@@ -36,7 +38,13 @@ import { agentDraftService } from '../services/AgentDraftService';
 import { agentEditService } from '../services/AgentEditService';
 import { connectionsService } from '../services/ConnectionsService';
 import { getConnectionModelRef } from '../services/connection-model-ref';
+import { skillsService } from '../services/SkillsService';
 import { settingsService } from '../services/SettingsService';
+import {
+  applySkillToRunRequest,
+  toRunDelegationMetadata,
+  toRunSkillMetadata,
+} from '../services/agent-skill-run';
 import { getAgentHostManager } from '../index';
 import {
   persistMessageEvent,
@@ -55,6 +63,28 @@ type AgentSubscriber = {
 const agentSubscribers = new Map<number, AgentSubscriber>();
 const cachedRunRequests = new Map<string, AgentRunStartRequest>();
 let agentHostBindingsReady = false;
+
+/** @internal Reset module state between tests. */
+export const _resetAgentHostBindings = (): void => {
+  agentHostBindingsReady = false;
+  agentSubscribers.clear();
+  cachedRunRequests.clear();
+};
+
+const updateRunDelegationMetadata = (
+  runId: string,
+  delegation: NonNullable<AgentRunMetadata['delegation']>
+): AgentRunMetadata | null => {
+  const updateRunDelegation = (
+    agentRunStore as {
+      updateRunDelegation?: (
+        runId: string,
+        delegation: NonNullable<AgentRunMetadata['delegation']>
+      ) => AgentRunMetadata;
+    }
+  ).updateRunDelegation;
+  return updateRunDelegation ? updateRunDelegation(runId, delegation) : null;
+};
 
 const registerAgentSubscriber = (sender: WebContents, runId?: string): void => {
   const existing = agentSubscribers.get(sender.id);
@@ -190,14 +220,46 @@ export const registerAgentHandlers = (): void => {
     IPC_CHANNELS.AGENT_RUNS_START,
     async (_event, request: unknown): Promise<AgentRunStartResponse> => {
       const validated = AgentRunStartRequestSchema.parse(request);
+      const skillScope = skillsService.getActiveScope();
       let run = agentRunStore.createRun('user');
       appendAndPublish(buildStatusEvent(run.id, run.status));
+      let requestWithSkill: AgentRunStartRequest = validated;
+      let resolvedSkillId: string | null = null;
 
       const failRun = (message: string): AgentRunStartResponse => {
         const failedRun = agentRunStore.updateRunStatus(run.id, 'failed');
         appendRunError(run.id, message);
         return { run: failedRun };
       };
+
+      try {
+        const resolvedSkill = skillsService.resolveSkillForRun(validated.skillId);
+        if (resolvedSkill) {
+          requestWithSkill = applySkillToRunRequest(
+            validated,
+            resolvedSkill.skill,
+            resolvedSkill.delegation
+          );
+          run = agentRunStore.updateRunSkill(
+            run.id,
+            toRunSkillMetadata(resolvedSkill.skill)
+          );
+          if (resolvedSkill.delegation) {
+            const runWithDelegation = updateRunDelegationMetadata(
+              run.id,
+              toRunDelegationMetadata(resolvedSkill.delegation)
+            );
+            if (runWithDelegation) {
+              run = runWithDelegation;
+            }
+          }
+          resolvedSkillId = resolvedSkill.skill.definition.id;
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to resolve skill.';
+        return failRun(message);
+      }
 
       const conversationId = resolveConversationId(validated);
       const overrides = resolveConversationOverrides(conversationId);
@@ -231,12 +293,13 @@ export const registerAgentHandlers = (): void => {
 
       const connectionModel = getConnectionModelRef(connection);
       const overrideModelRef =
-        !validated.config?.modelRef &&
+        !requestWithSkill.config?.modelRef &&
         overrides.modelRef &&
         (!overrides.connectionId || overrides.connectionId === resolvedConnectionId)
           ? overrides.modelRef
           : undefined;
-      const effectiveModelRef = validated.config?.modelRef ?? overrideModelRef ?? connectionModel;
+      const effectiveModelRef =
+        requestWithSkill.config?.modelRef ?? overrideModelRef ?? connectionModel;
 
       run = agentRunStore.updateRunRouting(run.id, {
         connectionId: resolvedConnectionId,
@@ -251,11 +314,13 @@ export const registerAgentHandlers = (): void => {
       }
 
       const requestConfig = overrideModelRef
-        ? { ...validated.config, modelRef: overrideModelRef }
-        : validated.config;
+        ? { ...requestWithSkill.config, modelRef: overrideModelRef }
+        : requestWithSkill.config;
+
+      const { skillId: _resolvedSkillId, ...requestWithoutSkill } = requestWithSkill;
 
       const requestForHost: AgentRunStartRequest = {
-        ...validated,
+        ...requestWithoutSkill,
         connectionId: resolvedConnectionId,
         config: requestConfig,
       };
@@ -263,6 +328,18 @@ export const registerAgentHandlers = (): void => {
 
       try {
         await agentHostManager.startRun(run.id, requestForHost);
+        if (resolvedSkillId) {
+          try {
+            skillsService.setLastUsedSkill({
+              scope: skillScope,
+              skillId: resolvedSkillId,
+            });
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Unknown error';
+            console.warn('[Agent IPC] Failed to update last used skill.', message);
+          }
+        }
         return { run };
       } catch (error) {
         const message =

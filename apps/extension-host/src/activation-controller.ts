@@ -5,8 +5,12 @@
  * State transitions: inactive → activating → active/failed
  */
 
-import { ExtensionManifest, ExtensionContext, ExtensionState } from 'packages-api-contracts';
-import { ExtensionLoader, LoadedExtension } from './extension-loader';
+import { ExtensionManifest, ExtensionState } from 'packages-api-contracts';
+import {
+  ExtensionLoader,
+  type ExtensionActivationContext,
+  type LoadedExtension,
+} from './extension-loader';
 
 /**
  * Activation timeout in milliseconds (30 seconds).
@@ -63,7 +67,7 @@ export class ActivationController {
    * @param extensionId - Extension ID to activate
    * @param context - Extension context to pass to activate()
    */
-  async activateExtension(extensionId: string, context: ExtensionContext): Promise<void> {
+  async activateExtension(extensionId: string, context: ExtensionActivationContext): Promise<void> {
     const ext = this.activeExtensions.get(extensionId);
     if (!ext) {
       throw new Error(`Extension ${extensionId} not registered`);
@@ -105,7 +109,10 @@ export class ActivationController {
   /**
    * Perform the actual activation with timeout handling.
    */
-  private async performActivation(ext: ActiveExtension, context: ExtensionContext): Promise<void> {
+  private async performActivation(
+    ext: ActiveExtension,
+    context: ExtensionActivationContext
+  ): Promise<void> {
     const extensionId = ext.manifest.id;
 
     try {
@@ -136,7 +143,10 @@ export class ActivationController {
   /**
    * Call extension's activate() function with timeout.
    */
-  private async activateWithTimeout(loaded: LoadedExtension, context: ExtensionContext): Promise<void> {
+  private async activateWithTimeout(
+    loaded: LoadedExtension,
+    context: ExtensionActivationContext
+  ): Promise<void> {
     return Promise.race([
       // Call activate()
       Promise.resolve(loaded.module.activate(context)),

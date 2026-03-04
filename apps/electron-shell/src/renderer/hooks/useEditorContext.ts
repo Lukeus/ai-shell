@@ -95,7 +95,7 @@ export function useEditorContext(): UseEditorContextResult {
     const snippet = content ? truncateSnippet(content, MAX_ATTACHMENT_CHARS) : undefined;
 
     return {
-      kind: 'file',
+      kind: 'file' as const,
       filePath: activeFilePath,
       snippet,
     };
@@ -107,7 +107,7 @@ export function useEditorContext(): UseEditorContextResult {
     }
     const snippet = truncateSnippet(selection.snippet, MAX_ATTACHMENT_CHARS);
     return {
-      kind: 'selection',
+      kind: 'selection' as const,
       filePath: selection.filePath,
       range: selection.range,
       snippet,

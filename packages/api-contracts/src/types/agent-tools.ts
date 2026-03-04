@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentSkillIdSchema } from './agent-skills';
 
 export type JsonValue =
   | string
@@ -11,8 +12,19 @@ export type JsonValue =
 const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
 export const JsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
-  z.union([JsonPrimitiveSchema, z.array(JsonValueSchema), z.record(JsonValueSchema)])
+  z.union([JsonPrimitiveSchema, z.array(JsonValueSchema), z.record(z.string(), JsonValueSchema)])
 );
+
+export const ToolCallDelegationContextSchema = z.object({
+  agentRole: z.enum(['supervisor', 'subagent']),
+  delegationId: z.string().min(1).optional(),
+  supervisorSkillId: AgentSkillIdSchema.optional(),
+  subagentName: z.string().min(1).optional(),
+  subagentSkillId: AgentSkillIdSchema.optional(),
+  depth: z.number().int().min(0).optional(),
+});
+
+export type ToolCallDelegationContext = z.infer<typeof ToolCallDelegationContextSchema>;
 
 /**
  * Tool call envelope for agent tool execution.
@@ -27,6 +39,7 @@ export const ToolCallEnvelopeSchema = z.object({
   runId: z.string().uuid(),
   input: JsonValueSchema,
   reason: z.string().optional(),
+  delegation: ToolCallDelegationContextSchema.optional(),
   policyOverride: z
     .object({
       allowlist: z.array(z.string()).optional(),

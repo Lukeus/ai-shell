@@ -19,7 +19,7 @@ Optional fields:
 
 - `displayName`: Human-readable display name
 - `description`: Short description
-- `contributes`: Contribution points (commands, views, tools, settings, connectionProviders, mcpServers)
+- `contributes`: Contribution points (commands, views, tools, agentSkills, settings, connectionProviders, mcpServers)
 
 ### Contributions
 
@@ -44,6 +44,21 @@ Tools:
 - `description`: tool description
 - `inputSchema`: JSON schema for parameters
 - `outputSchema`: optional JSON schema for results
+
+Agent skills:
+
+- `id`: skill ID (e.g. `skill.reviewer`)
+- `name`: skill name shown in the UI
+- `description`: optional skill description
+- `promptTemplate`: optional instruction prefix merged into the run goal
+- `toolAllowlist`: optional array of allowed tool IDs
+- `toolDenylist`: optional array of blocked tool IDs (wins on conflict)
+- `inputSchema`: optional JSON schema for skill-specific inputs
+- `tags`: optional array of tags for filtering
+
+Notes:
+- Skills must not include secrets.
+- Skills do not set `modelRef`; runs inherit connection defaults.
 
 Settings:
 

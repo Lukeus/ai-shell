@@ -12,7 +12,7 @@ vi.mock('electron', () => ({
 
 const baseConnection = {
   metadata: {
-    id: '11111111-1111-1111-1111-111111111111',
+    id: '11111111-1111-4111-8111-111111111111',
     providerId: 'ollama',
     scope: 'user' as const,
     displayName: 'Local Ollama',
@@ -40,6 +40,7 @@ describe('ModelGatewayService', () => {
         extensions: { autoUpdate: true, enableTelemetry: false },
         agents: { defaultConnectionId: baseConnection.metadata.id },
         sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+        mcp: { servers: {} },
       }),
       listConnections: () => [baseConnection],
       evaluateAccess: () => true,
@@ -50,7 +51,7 @@ describe('ModelGatewayService', () => {
 
     const result = await service.generate(
       { prompt: 'Hello' },
-      { runId: '22222222-2222-2222-2222-222222222222', requesterId: 'agent-host' }
+      { runId: '22222222-2222-4222-8222-222222222222', requesterId: 'agent-host' }
     );
 
     expect(result.text).toBe('hello');
@@ -69,13 +70,14 @@ describe('ModelGatewayService', () => {
         extensions: { autoUpdate: true, enableTelemetry: false },
         agents: { defaultConnectionId: null },
         sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+        mcp: { servers: {} },
       }),
       listConnections: () => [
         {
           ...baseConnection,
           metadata: {
             ...baseConnection.metadata,
-            id: '33333333-3333-3333-3333-333333333333',
+            id: '33333333-3333-4333-8333-333333333333',
             providerId: 'openai',
             secretRef: 'secret-ref',
           },
@@ -93,8 +95,8 @@ describe('ModelGatewayService', () => {
 
     await expect(
       service.generate(
-        { prompt: 'Hello', connectionId: '33333333-3333-3333-3333-333333333333' },
-        { runId: '44444444-4444-4444-4444-444444444444', requesterId: 'agent-host' }
+        { prompt: 'Hello', connectionId: '33333333-3333-4333-8333-333333333333' },
+        { runId: '44444444-4444-4444-8444-444444444444', requesterId: 'agent-host' }
       )
     ).rejects.toThrow('Consent required for OpenAI connection.');
   });
@@ -108,13 +110,14 @@ describe('ModelGatewayService', () => {
         extensions: { autoUpdate: true, enableTelemetry: false },
         agents: { defaultConnectionId: null },
         sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+        mcp: { servers: {} },
       }),
       listConnections: () => [
         {
           ...baseConnection,
           metadata: {
             ...baseConnection.metadata,
-            id: '77777777-7777-7777-7777-777777777777',
+            id: '77777777-7777-4777-8777-777777777777',
             providerId: 'azure-openai',
             secretRef: 'secret-ref',
           },
@@ -133,8 +136,8 @@ describe('ModelGatewayService', () => {
 
     await expect(
       service.generate(
-        { prompt: 'Hello', connectionId: '77777777-7777-7777-7777-777777777777' },
-        { runId: '88888888-8888-8888-8888-888888888888', requesterId: 'agent-host' }
+        { prompt: 'Hello', connectionId: '77777777-7777-4777-8777-777777777777' },
+        { runId: '88888888-8888-4888-8888-888888888888', requesterId: 'agent-host' }
       )
     ).rejects.toThrow('Consent required for Azure OpenAI connection.');
   });
@@ -155,13 +158,14 @@ describe('ModelGatewayService', () => {
         extensions: { autoUpdate: true, enableTelemetry: false },
         agents: { defaultConnectionId: null },
         sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+        mcp: { servers: {} },
       }),
       listConnections: () => [
         {
           ...baseConnection,
           metadata: {
             ...baseConnection.metadata,
-            id: '55555555-5555-5555-5555-555555555555',
+            id: '55555555-5555-4555-8555-555555555555',
             providerId: 'azure-openai',
             secretRef: 'secret-ref',
           },
@@ -180,8 +184,8 @@ describe('ModelGatewayService', () => {
     });
 
     const result = await service.generate(
-      { prompt: 'Hello', connectionId: '55555555-5555-5555-5555-555555555555' },
-      { runId: '66666666-6666-6666-6666-666666666666', requesterId: 'agent-host' }
+      { prompt: 'Hello', connectionId: '55555555-5555-4555-8555-555555555555' },
+      { runId: '66666666-6666-4666-8666-666666666666', requesterId: 'agent-host' }
     );
 
     expect(result.text).toBe('hello');

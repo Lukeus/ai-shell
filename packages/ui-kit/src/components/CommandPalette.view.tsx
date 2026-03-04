@@ -17,7 +17,7 @@ interface CommandPaletteViewProps<T> extends CommandPaletteProps<T> {
   handleSelect: (item: T | null) => void;
   filteredItems: T[];
   groupedItems: [string, T[]][] | null;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   normalizedQuery: string;
   resolveLabel: (item: T) => string;
   resolveDisabled: (item: T) => boolean;
@@ -101,7 +101,7 @@ export function CommandPaletteView<T>(props: CommandPaletteViewProps<T>) {
 }
 
 function CommandPaletteInput({ inputRef, query, updateQuery, placeholder }: {
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   query: string;
   updateQuery: (v: string) => void;
   placeholder: string;

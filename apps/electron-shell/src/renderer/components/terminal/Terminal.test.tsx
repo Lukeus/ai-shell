@@ -42,11 +42,11 @@ const mockFitAddon = {
 };
 
 vi.mock('xterm', () => ({
-  Terminal: vi.fn(() => mockTerminal),
+  Terminal: vi.fn(function () { return mockTerminal; }),
 }));
 
 vi.mock('xterm-addon-fit', () => ({
-  FitAddon: vi.fn(() => mockFitAddon),
+  FitAddon: vi.fn(function () { return mockFitAddon; }),
 }));
 
 // Mock window.api.terminal

@@ -43,11 +43,13 @@ export const createAgentHostRunOrchestrator = (
   ): void => {
     const validatedRequest = AgentRunStartRequestSchema.parse(request);
     brokerMain.setRunPolicy(runId, validatedRequest.config?.policy);
+    // Agent host receives resolved config only; skill selection is main-process metadata.
+    const { skillId: _skillId, ...requestForHost } = validatedRequest;
     const validatedToolCalls = ToolCallEnvelopeSchema.array().parse(toolCalls);
     const message: StartRunMessage = {
       type: 'agent-host:start-run',
       runId,
-      request: validatedRequest,
+      request: requestForHost,
       toolCalls: validatedToolCalls,
     };
 

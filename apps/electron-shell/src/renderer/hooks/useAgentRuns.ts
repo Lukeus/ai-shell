@@ -28,7 +28,7 @@ type UseAgentRunsResult = {
   errorMessage: string | null;
   refreshRuns: (preferredId?: string | null) => Promise<void>;
   setSelectedRunId: (runId: string | null) => void;
-  startRun: (goal: string, connectionId?: string) => Promise<void>;
+  startRun: (goal: string, connectionId?: string, skillId?: string) => Promise<void>;
   cancelRun: () => Promise<void>;
   retryRun: () => Promise<void>;
   handleAgentEvent: (event: AgentEvent) => void;
@@ -78,7 +78,11 @@ export function useAgentRuns(): UseAgentRunsResult {
   );
 
   useEffect(() => {
-    void refreshRuns(null);
+    let isActive = true;
+    if (isActive) {
+      void refreshRuns(null);
+    }
+    return () => { isActive = false; };
   }, [refreshRuns]);
 
   useEffect(() => {
@@ -108,7 +112,7 @@ export function useAgentRuns(): UseAgentRunsResult {
   }, [activeRunId]);
 
   const startRun = useCallback(
-    async (goal: string, connectionId?: string) => {
+    async (goal: string, connectionId?: string, skillId?: string) => {
       const trimmedGoal = goal.trim();
       if (!trimmedGoal) {
         setErrorMessage('Enter a goal to start a run.');
@@ -142,6 +146,7 @@ export function useAgentRuns(): UseAgentRunsResult {
         const request = {
           goal: trimmedGoal,
           ...(connectionId ? { connectionId } : {}),
+          ...(skillId ? { skillId } : {}),
         };
         const response = await window.api.agents.startRun(request);
         setErrorMessage(null);

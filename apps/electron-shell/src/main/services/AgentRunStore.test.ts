@@ -114,6 +114,52 @@ describe('AgentRunStore', () => {
     expect(updated.routing?.connectionId).toBe('123e4567-e89b-12d3-a456-426614174000');
   });
 
+  it('updates skill metadata for a run', () => {
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const run = store.createRun('user');
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+
+    const updated = store.updateRunSkill(run.id, {
+      skillId: 'code-review',
+      source: 'user',
+      scope: 'global',
+      version: 2,
+    });
+
+    expect(updated.skill?.skillId).toBe('code-review');
+    expect(updated.skill?.source).toBe('user');
+    expect(updated.skill?.scope).toBe('global');
+    expect(updated.skill?.version).toBe(2);
+  });
+
+  it('updates delegation metadata for a run', () => {
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const run = store.createRun('user');
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+
+    const updated = store.updateRunDelegation(run.id, {
+      enabled: true,
+      maxDepth: 2,
+      maxDelegations: 8,
+      subagentSkillIds: ['skill.reviewer', 'skill.implementer'],
+    });
+
+    expect(updated.delegation).toEqual({
+      enabled: true,
+      maxDepth: 2,
+      maxDelegations: 8,
+      subagentSkillIds: ['skill.reviewer', 'skill.implementer'],
+    });
+  });
+
   it('caps events per run', () => {
     vi.mocked(fs.readFileSync).mockImplementation(() => {
       throw new Error('ENOENT');

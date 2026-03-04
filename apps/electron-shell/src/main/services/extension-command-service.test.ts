@@ -14,7 +14,7 @@ describe('ExtensionCommandService', () => {
     } as unknown as ExtensionHostManager;
 
     activateExtension = vi.fn().mockResolvedValue(undefined);
-    commandService = new ExtensionCommandService(mockExtensionHostManager, activateExtension);
+    commandService = new ExtensionCommandService(mockExtensionHostManager, activateExtension as unknown as (extensionId: string, event?: string) => Promise<void>);
   });
 
   describe('registerCommand', () => {

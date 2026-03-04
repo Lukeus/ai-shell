@@ -253,7 +253,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
     });
 
   const handleAgentEvent = useCallback(
-    (event) => {
+    (event: AgentEvent) => {
       draftState.handleAgentEvent(event);
       editState.handleAgentEvent(event);
       handleChatEvent(event);

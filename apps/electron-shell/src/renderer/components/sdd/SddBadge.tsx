@@ -16,13 +16,13 @@ const STATUS_CONFIG: Record<
 > = {
   tracked: {
     label: 'Tracked',
-    variant: 'muted',
-    className: 'text-status-success border-border-subtle bg-surface-elevated normal-case tracking-normal text-[10px] rounded-sm px-1.5 py-0',
+    variant: 'success',
+    className: 'bg-surface-elevated',
   },
   untracked: {
     label: 'Untracked',
-    variant: 'muted',
-    className: 'text-status-warning border-border-subtle bg-surface-elevated normal-case tracking-normal text-[10px] rounded-sm px-1.5 py-0',
+    variant: 'warning',
+    className: 'bg-surface-elevated',
   },
 };
 

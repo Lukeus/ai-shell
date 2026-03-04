@@ -2,14 +2,23 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import {
   IPC_CHANNELS,
   WindowStateSchema,
+  type AgentEvent,
   type DiagGetLogPathResponse,
   type DiagSetSafeModeResponse,
   type DiagFatalEvent,
+  type DiagnosticsUpdateEvent,
+  type DiagnosticsSummaryEvent,
   type ErrorReport,
+  type ExtensionStateChangeEvent,
   type JsonValue,
+  type OutputAppendEvent,
+  type OutputClearEvent,
   type PermissionCheckResult,
   type PreloadAPI,
+  type SddRunEvent,
   type SddStatus,
+  type TerminalDataEvent,
+  type TerminalExitEvent,
   type TestForceCrashRendererResponse,
 } from 'packages-api-contracts';
 import { invokeSafe } from './invokeSafe';
@@ -84,24 +93,20 @@ const api: PreloadAPI = {
     
     // P2 (Security defaults): Event subscriptions with proper cleanup
     onData: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: TerminalDataEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.TERMINAL_DATA, listener);
-      // Return unsubscribe function
       return () => {
         ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_DATA, listener);
       };
     },
-    
+
     onExit: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: TerminalExitEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.TERMINAL_EXIT, listener);
-      // Return unsubscribe function
       return () => {
         ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_EXIT, listener);
       };
@@ -117,24 +122,20 @@ const api: PreloadAPI = {
     
     // P2 (Security defaults): Event subscriptions with proper cleanup
     onAppend: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: OutputAppendEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.OUTPUT_ON_APPEND, listener);
-      // Return unsubscribe function
       return () => {
         ipcRenderer.removeListener(IPC_CHANNELS.OUTPUT_ON_APPEND, listener);
       };
     },
-    
+
     onClear: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: OutputClearEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.OUTPUT_ON_CLEAR, listener);
-      // Return unsubscribe function
       return () => {
         ipcRenderer.removeListener(IPC_CHANNELS.OUTPUT_ON_CLEAR, listener);
       };
@@ -149,24 +150,20 @@ const api: PreloadAPI = {
     
     // P2 (Security defaults): Event subscriptions with proper cleanup
     onUpdate: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: DiagnosticsUpdateEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.DIAGNOSTICS_ON_UPDATE, listener);
-      // Return unsubscribe function
       return () => {
         ipcRenderer.removeListener(IPC_CHANNELS.DIAGNOSTICS_ON_UPDATE, listener);
       };
     },
-    
+
     onSummary: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: DiagnosticsSummaryEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.DIAGNOSTICS_ON_SUMMARY, listener);
-      // Return unsubscribe function
       return () => {
         ipcRenderer.removeListener(IPC_CHANNELS.DIAGNOSTICS_ON_SUMMARY, listener);
       };
@@ -233,8 +230,7 @@ const api: PreloadAPI = {
     applyProposal: (request) => ipcRenderer.invoke(IPC_CHANNELS.SDD_PROPOSAL_APPLY, request),
     runTests: (request) => ipcRenderer.invoke(IPC_CHANNELS.SDD_TESTS_RUN, request),
     onEvent: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: SddRunEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.SDD_RUNS_EVENT, listener);
@@ -256,8 +252,7 @@ const api: PreloadAPI = {
     unsubscribeEvents: (request) =>
       ipcRenderer.invoke(IPC_CHANNELS.AGENT_EVENTS_UNSUBSCRIBE, request),
     onEvent: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: AgentEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.AGENT_EVENTS_ON_EVENT, listener);
@@ -279,6 +274,20 @@ const api: PreloadAPI = {
       invokeSafe(IPC_CHANNELS.AGENT_EDITS_REQUEST, request),
     applyProposal: (request) =>
       invokeSafe(IPC_CHANNELS.AGENT_EDITS_APPLY_PROPOSAL, request),
+  },
+
+  skills: {
+    list: (request) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_LIST, request),
+    get: (request) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_GET, request),
+    create: (request) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_CREATE, request),
+    update: (request) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_UPDATE, request),
+    delete: (request) => ipcRenderer.invoke(IPC_CHANNELS.SKILLS_DELETE, request),
+    setEnabled: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SKILLS_SET_ENABLED, request),
+    setDefault: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SKILLS_SET_DEFAULT, request),
+    setLastUsed: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.SKILLS_SET_LAST_USED, request),
   },
 
   // Connections + secrets methods (metadata only)
@@ -325,12 +334,10 @@ const api: PreloadAPI = {
 
     // P2 (Security defaults): Event subscription with proper cleanup
     onStateChange: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: ExtensionStateChangeEvent) => {
         callback(data);
       };
       ipcRenderer.on(IPC_CHANNELS.EXTENSIONS_ON_STATE_CHANGE, listener);
-      // Return unsubscribe function
       return () => {
         ipcRenderer.removeListener(IPC_CHANNELS.EXTENSIONS_ON_STATE_CHANGE, listener);
       };
@@ -363,8 +370,7 @@ const api: PreloadAPI = {
       return WindowStateSchema.parse(state);
     },
     onStateChange: (callback) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener = (_event: IpcRendererEvent, data: any) => {
+      const listener = (_event: IpcRendererEvent, data: unknown) => {
         const state = WindowStateSchema.parse(data);
         callback(state);
       };

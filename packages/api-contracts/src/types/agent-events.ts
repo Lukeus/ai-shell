@@ -3,6 +3,7 @@ import { AgentRunStatusSchema } from './agent-runs';
 import { AgentDraftSchema } from './agent-drafts';
 import { AgentEditProposalSchema } from './agent-edits';
 import { ToolCallEnvelopeSchema, ToolCallResultSchema } from './agent-tools';
+import { AgentSkillIdSchema } from './agent-skills';
 import {
   AgentMessageFormatSchema,
   AgentMessageRoleSchema,
@@ -108,6 +109,33 @@ export const AgentStatusUpdateEventSchema = AgentEventBaseSchema.extend({
   conversationId: z.string().uuid().optional(),
 });
 
+export const AgentDelegationStartedEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('delegation-started'),
+  delegationId: z.string().min(1),
+  subagentName: z.string().min(1),
+  subagentSkillId: AgentSkillIdSchema,
+  depth: z.number().int().min(0),
+});
+
+export const AgentDelegationCompletedEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('delegation-completed'),
+  delegationId: z.string().min(1),
+  subagentName: z.string().min(1),
+  subagentSkillId: AgentSkillIdSchema,
+  depth: z.number().int().min(0),
+  durationMs: z.number().int().min(0).optional(),
+});
+
+export const AgentDelegationFailedEventSchema = AgentEventBaseSchema.extend({
+  type: z.literal('delegation-failed'),
+  delegationId: z.string().min(1),
+  subagentName: z.string().min(1),
+  subagentSkillId: AgentSkillIdSchema,
+  depth: z.number().int().min(0),
+  message: z.string().min(1),
+  code: z.string().optional(),
+});
+
 export const AgentErrorEventSchema = AgentEventBaseSchema.extend({
   type: z.literal('error'),
   message: z.string(),
@@ -137,6 +165,9 @@ export const AgentEventSchema = z.discriminatedUnion('type', [
   AgentMessageDeltaEventSchema,
   AgentMessageCompleteEventSchema,
   AgentStatusUpdateEventSchema,
+  AgentDelegationStartedEventSchema,
+  AgentDelegationCompletedEventSchema,
+  AgentDelegationFailedEventSchema,
   AgentErrorEventSchema,
   AgentDraftEventSchema,
   AgentEditProposalEventSchema,

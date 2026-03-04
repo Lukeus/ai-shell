@@ -137,7 +137,7 @@ export class McpServerManager {
     this.deps.updateSettings({
       mcp: {
         servers: {
-          [key]: updates,
+          [key]: updates as McpServerSettings,
         },
       },
     });

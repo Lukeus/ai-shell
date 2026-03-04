@@ -1,6 +1,7 @@
 import React from 'react';
 import type { McpServerListItem, McpServerState } from 'packages-api-contracts';
 import { Badge, type BadgeVariant, ToggleSwitch } from 'packages-ui-kit';
+import { neutralActionButtonClassName } from '../shared/controlClassNames';
 
 type McpServersSectionProps = {
   servers: McpServerListItem[];
@@ -24,9 +25,6 @@ const STATUS_CONFIG: Record<McpServerState, StatusConfig> = {
   stopped: { label: 'Stopped', variant: 'muted' },
   failed: { label: 'Failed', variant: 'danger' },
 };
-
-const BADGE_CLASSNAME =
-  'text-[10px] rounded-sm px-2 py-0.5 normal-case tracking-normal';
 
 const buildServerKey = (server: McpServerListItem): string =>
   `${server.extensionId}:${server.serverId}`;
@@ -58,7 +56,7 @@ export function McpServersSection({
             void onRefresh();
           }}
           disabled={isRefreshDisabled}
-          className="px-3 py-1 rounded-sm border border-border-subtle bg-surface hover:bg-surface-hover text-sm text-primary disabled:opacity-50"
+          className={neutralActionButtonClassName}
         >
           {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </button>
@@ -120,7 +118,7 @@ function McpServerCard({ server, isBusy, onToggle }: McpServerCardProps) {
             <Badge
               label={status.label}
               variant={status.variant}
-              className={BADGE_CLASSNAME}
+              className="bg-surface-elevated"
             />
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-tertiary">

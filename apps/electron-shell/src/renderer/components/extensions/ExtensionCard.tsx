@@ -1,5 +1,10 @@
 import React from 'react';
 import type { ExtensionRegistryItem } from 'packages-api-contracts';
+import { Badge } from 'packages-ui-kit';
+import {
+  dangerActionButtonClassName,
+  neutralActionButtonClassName,
+} from '../shared/controlClassNames';
 
 const formatPermission = (scope: string): string =>
   scope.replace(/\./g, ' ');
@@ -35,15 +40,10 @@ export function ExtensionCard({
             <h3 className="text-primary font-semibold truncate">
               {displayName}
             </h3>
-            <span
-              className={`text-xs rounded-full px-2 py-0.5 border ${
-                enabled
-                  ? 'border-status-success text-status-success'
-                  : 'border-border-subtle text-tertiary'
-              }`}
-            >
-              {enabled ? 'Enabled' : 'Disabled'}
-            </span>
+            <Badge
+              label={enabled ? 'Enabled' : 'Disabled'}
+              variant={enabled ? 'success' : 'muted'}
+            />
           </div>
           <p className="text-secondary text-sm mt-1">
             {description}
@@ -59,19 +59,22 @@ export function ExtensionCard({
         <div className="flex flex-col items-end gap-2">
           <button
             onClick={() => onToggleEnabled(extension)}
-            className="px-3 py-1 rounded-sm border border-border-subtle bg-surface hover:bg-surface-hover text-sm text-primary"
+            className={neutralActionButtonClassName}
+            type="button"
           >
             {enabled ? 'Disable' : 'Enable'}
           </button>
           <button
             onClick={() => onShowPermissions(extension)}
-            className="px-3 py-1 rounded-sm border border-border-subtle bg-surface hover:bg-surface-hover text-sm text-primary"
+            className={neutralActionButtonClassName}
+            type="button"
           >
             Permissions
           </button>
           <button
             onClick={() => onUninstall(extension)}
-            className="px-3 py-1 rounded-sm border border-status-error text-status-error hover:bg-surface-hover text-sm"
+            className={dangerActionButtonClassName}
+            type="button"
           >
             Uninstall
           </button>
@@ -80,12 +83,11 @@ export function ExtensionCard({
       {permissions.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {permissions.map((scope) => (
-            <span
+            <Badge
               key={scope}
-              className="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-secondary"
-            >
-              {formatPermission(scope)}
-            </span>
+              label={formatPermission(scope)}
+              variant="muted"
+            />
           ))}
         </div>
       )}

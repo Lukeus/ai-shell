@@ -7,6 +7,7 @@ import { registerFsHandlers } from './ipc/fs';
 import { registerMcpHandlers } from './ipc/mcp';
 import { registerOutputHandlers } from './ipc/output';
 import { registerScmHandlers } from './ipc/scm';
+import { registerSkillsHandlers } from './ipc/skills';
 import { applySddSettings, registerSddHandlers } from './ipc/sdd';
 import { registerSearchHandlers } from './ipc/search';
 import { registerSettingsHandlers } from './ipc/settings';
@@ -35,6 +36,7 @@ export function registerIPCHandlers(): void {
   void applySddSettings(settingsService.getSettings());
   registerConnectionsHandlers();
   registerAgentHandlers();
+  registerSkillsHandlers();
   registerDiagnosticsHandlers();
   registerExtensionHandlers();
   registerMcpHandlers();

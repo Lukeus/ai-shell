@@ -1,5 +1,9 @@
 import React, { useRef } from 'react';
 import { Modal } from 'packages-ui-kit';
+import {
+  primaryActionButtonClassName,
+  secondaryActionButtonClassName,
+} from '../shared/controlClassNames';
 
 /**
  * ConfirmDeleteModal - Portal-rendered modal for delete confirmations.
@@ -55,7 +59,7 @@ export function ConfirmDeleteModal({
       <div className="mt-5 flex justify-end gap-2">
         <button
           onClick={onCancel}
-          className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-secondaryBackground)] bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
+          className={secondaryActionButtonClassName}
           type="button"
         >
           Cancel
@@ -63,7 +67,7 @@ export function ConfirmDeleteModal({
         <button
           ref={confirmRef}
           onClick={onConfirm}
-          className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-background)] bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] hover:bg-[var(--vscode-button-hoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
+          className={primaryActionButtonClassName}
           type="button"
         >
           Delete

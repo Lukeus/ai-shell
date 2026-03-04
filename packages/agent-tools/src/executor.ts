@@ -50,7 +50,7 @@ export class ToolExecutor {
   }
 
   private formatZodError(prefix: string, error: z.ZodError): string {
-    const first = error.errors[0];
+    const first = error.issues?.[0];
     if (!first) {
       return prefix;
     }

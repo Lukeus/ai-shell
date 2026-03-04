@@ -49,6 +49,30 @@ MCP servers are started by the main process and surfaced in the Extensions panel
 enable/disable. To use connections or secrets, define a connection provider and map
 env keys via `env` (see the API reference).
 
+## 2c) Optional: add agent skill contributions
+
+To contribute reusable run presets, add `contributes.agentSkills`:
+
+```json
+{
+  "contributes": {
+    "agentSkills": [
+      {
+        "id": "skill.reviewer",
+        "name": "Reviewer",
+        "description": "Review implementation plans and changes.",
+        "promptTemplate": "Review the solution for regressions and missing tests.",
+        "toolAllowlist": ["repo.search", "workspace.read"],
+        "toolDenylist": ["workspace.write"]
+      }
+    ]
+  }
+}
+```
+
+Skill contributions are read-only in the UI and appear with source `extension`.
+Do not include secrets in skill definitions.
+
 ## 3) Create index.js
 
 ```js
