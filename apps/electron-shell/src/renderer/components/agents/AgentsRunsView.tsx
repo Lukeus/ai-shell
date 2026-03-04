@@ -5,6 +5,7 @@ import { AgentPlanTodos } from './AgentPlanTodos';
 import { AgentRunList } from './AgentRunList';
 import { AgentsRunControls } from './AgentsRunControls';
 import { useConnections } from '../../hooks/useConnections';
+import { useSkills } from '../../hooks/useSkills';
 
 type AgentsRunsViewProps = {
   runs: AgentRunMetadata[];
@@ -14,7 +15,7 @@ type AgentsRunsViewProps = {
   isBusy: boolean;
   errorMessage: string | null;
   onSelectRun: (runId: string) => void;
-  onStartRun: (goal: string, connectionId?: string) => Promise<void>;
+  onStartRun: (goal: string, connectionId?: string, skillId?: string) => Promise<void>;
   onCancelRun: () => Promise<void>;
   onRetryRun: () => Promise<void>;
 };
@@ -50,6 +51,7 @@ export function AgentsRunsView({
   onRetryRun,
 }: AgentsRunsViewProps) {
   const [goal, setGoal] = useState('');
+  const [selectedSkillId, setSelectedSkillId] = useState('');
   const {
     connectionOptions,
     connectionLookup,
@@ -58,14 +60,54 @@ export function AgentsRunsView({
     isLoading,
     error,
   } = useConnections();
+  const {
+    skills,
+    preferences,
+    isLoading: isSkillsLoading,
+    error: skillsError,
+  } = useSkills('workspace');
 
   const routingLabel = useMemo(
     () => resolveRoutingLabel(activeRun, connectionLookup),
     [activeRun, connectionLookup]
   );
 
+  const effectiveSelectedSkillId = useMemo(
+    () =>
+      selectedSkillId &&
+      skills.some((skill) => skill.definition.id === selectedSkillId)
+        ? selectedSkillId
+        : '',
+    [selectedSkillId, skills]
+  );
+
+  const skillOptions = useMemo(() => {
+    const baseOption = [{ value: '', label: 'Auto (last used/default)' }];
+    const mappedSkills = skills
+      .filter((skill) => skill.enabled)
+      .map((skill) => {
+        const tags: string[] = [];
+        if (preferences.lastUsedSkillId === skill.definition.id) {
+          tags.push('last used');
+        }
+        if (preferences.defaultSkillId === skill.definition.id) {
+          tags.push('default');
+        }
+        const suffix = tags.length > 0 ? ` [${tags.join(', ')}]` : '';
+        return {
+          value: skill.definition.id,
+          label: `${skill.definition.name} (${skill.definition.id})${suffix}`,
+        };
+      });
+    return baseOption.concat(mappedSkills);
+  }, [preferences.defaultSkillId, preferences.lastUsedSkillId, skills]);
+
   const handleStart = async () => {
-    await onStartRun(goal, selectedConnectionId || undefined);
+    await onStartRun(
+      goal,
+      selectedConnectionId || undefined,
+      effectiveSelectedSkillId || undefined
+    );
     setGoal('');
   };
 
@@ -77,8 +119,15 @@ export function AgentsRunsView({
         connectionOptions={connectionOptions}
         selectedConnectionId={selectedConnectionId}
         onConnectionChange={setSelectedConnectionId}
+        skillOptions={skillOptions}
+        selectedSkillId={effectiveSelectedSkillId}
+        onSkillChange={setSelectedSkillId}
+        defaultSkillId={preferences.defaultSkillId}
+        lastUsedSkillId={preferences.lastUsedSkillId}
         isConnectionsLoading={isLoading}
+        isSkillsLoading={isSkillsLoading}
         connectionsError={error}
+        skillsError={skillsError}
         isBusy={isBusy}
         activeRunId={activeRunId}
         errorMessage={errorMessage}

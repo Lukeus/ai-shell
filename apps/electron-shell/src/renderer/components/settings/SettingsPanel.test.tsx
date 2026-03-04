@@ -7,6 +7,7 @@ import { SETTINGS_DEFAULTS } from 'packages-api-contracts';
 const mockGetSettings = vi.fn();
 const mockUpdateSettings = vi.fn();
 const mockResetSettings = vi.fn();
+const mockListSkills = vi.fn();
 
 vi.mock('../ThemeProvider', () => ({
   useTheme: () => ({
@@ -21,11 +22,27 @@ beforeEach(() => {
     getSettings: mockGetSettings,
     updateSettings: mockUpdateSettings,
     resetSettings: mockResetSettings,
+    workspace: {
+      getCurrent: vi.fn().mockResolvedValue(null),
+    },
+    skills: {
+      list: mockListSkills,
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      setEnabled: vi.fn(),
+      setDefault: vi.fn(),
+      setLastUsed: vi.fn(),
+    },
   };
 
   // Clear all mocks
-  vi.clearAllMocks();
-});
+    vi.clearAllMocks();
+    mockListSkills.mockResolvedValue({
+      skills: [],
+      preferences: { defaultSkillId: null, lastUsedSkillId: null },
+    });
+  });
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -52,6 +69,7 @@ describe('SettingsPanel', () => {
       expect(screen.getByRole('button', { name: 'Editor' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Terminal' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Skills' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'SDD' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Connections' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Extensions' })).toBeInTheDocument();

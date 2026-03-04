@@ -29,7 +29,9 @@ describe('ResizablePanel', () => {
 
   it('hides panel content when collapsed', () => {
     render(<ResizablePanel {...defaultProps} collapsed={true} />);
-    expect(screen.queryByTestId('panel-content')).not.toBeInTheDocument();
+    // Content stays in DOM but is visually hidden via CSS 'hidden' class
+    const content = screen.getByTestId('panel-content');
+    expect(content.parentElement).toHaveClass('hidden');
   });
 
   it('shows expand button when collapsed', () => {

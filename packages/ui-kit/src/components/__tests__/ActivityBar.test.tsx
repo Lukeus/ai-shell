@@ -32,7 +32,7 @@ describe('ActivityBar', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
     
     const explorerTab = screen.getByRole('tab', { name: 'Explorer' });
-    expect(explorerTab).toHaveClass('border-accent');
+    expect(explorerTab).toHaveClass('border-activity-bar-active-border');
     expect(explorerTab).toHaveClass('text-primary');
   });
 
@@ -56,15 +56,14 @@ describe('ActivityBar', () => {
 
   it('calls onIconClick for multiple different icons', () => {
     render(<ActivityBar activeIcon="explorer" onIconClick={mockOnIconClick} />);
-    
-    fireEvent.click(screen.getByRole('tab', { name: 'Explorer' }));
+
+    // Clicking already-active tab does not fire onChange in Headless UI TabGroup
     fireEvent.click(screen.getByRole('tab', { name: 'Extensions' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Settings' }));
-    
-    expect(mockOnIconClick).toHaveBeenCalledTimes(3);
-    expect(mockOnIconClick).toHaveBeenNthCalledWith(1, 'explorer');
-    expect(mockOnIconClick).toHaveBeenNthCalledWith(2, 'extensions');
-    expect(mockOnIconClick).toHaveBeenNthCalledWith(3, 'settings');
+
+    expect(mockOnIconClick).toHaveBeenCalledTimes(2);
+    expect(mockOnIconClick).toHaveBeenNthCalledWith(1, 'extensions');
+    expect(mockOnIconClick).toHaveBeenNthCalledWith(2, 'settings');
   });
 
   it('supports keyboard navigation with ArrowDown', () => {

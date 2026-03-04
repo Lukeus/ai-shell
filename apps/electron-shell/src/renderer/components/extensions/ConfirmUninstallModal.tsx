@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  primaryActionButtonClassName,
+  secondaryActionButtonClassName,
+} from '../shared/controlClassNames';
 
 interface ConfirmUninstallModalProps {
   extensionName: string;
@@ -64,14 +68,14 @@ export function ConfirmUninstallModal({
         <div className="flex justify-end gap-2 mt-4">
           <button
             onClick={onCancel}
-            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-secondaryBackground)] bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
+            className={secondaryActionButtonClassName}
             type="button"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-background)] bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] hover:bg-[var(--vscode-button-hoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
+            className={primaryActionButtonClassName}
             type="button"
             autoFocus
           >

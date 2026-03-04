@@ -5,7 +5,7 @@ import React, { useCallback, useMemo } from 'react';
  */
 export interface InputProps {
   /** Input type */
-  type: 'text' | 'number';
+  type: 'text' | 'number' | 'password';
   
   /** Current value */
   value: string | number;
@@ -113,10 +113,10 @@ export function Input({
       min={min}
       max={max}
       className={`
-        px-2 py-1.5 rounded-none
-        bg-surface text-primary text-[13px]
-        focus:outline-none focus:ring-2 focus:ring-accent
-        transition-colors duration-200
+        h-[var(--size-control-row)] px-[var(--vscode-space-3)] rounded-none
+        bg-surface text-primary text-[var(--font-size-control)] leading-[var(--line-height-control)]
+        focus:outline-none focus:ring-1 focus:ring-accent
+        transition-colors duration-150
         ${isOutOfRange 
           ? 'border-2 border-status-error focus:border-status-error' 
           : 'border border-border focus:border-accent'

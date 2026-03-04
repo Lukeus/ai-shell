@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { PermissionGrant, PermissionScope } from 'packages-api-contracts';
+import { Badge } from 'packages-ui-kit';
+import {
+  primaryActionButtonClassName,
+  secondaryActionButtonClassName,
+} from '../shared/controlClassNames';
 
 const PERMISSION_DETAILS: Record<PermissionScope, { label: string; description: string }> = {
   'filesystem.read': {
@@ -113,8 +118,13 @@ export function PermissionDialog({
           </div>
           <button
             onClick={onClose}
-            className="text-secondary hover:text-primary"
+            className="
+              inline-flex h-5 w-5 items-center justify-center rounded-none
+              text-secondary hover:text-primary hover:bg-surface-hover
+              focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]
+            "
             aria-label="Close permissions dialog"
+            type="button"
           >
             <span className="codicon codicon-close" aria-hidden="true" />
           </button>
@@ -142,15 +152,10 @@ export function PermissionDialog({
                       <span className="text-primary text-sm font-medium">
                         {details?.label ?? grant.scope}
                       </span>
-                      <span
-                        className={`text-xs rounded-full px-2 py-0.5 border ${
-                          grant.granted
-                            ? 'border-status-success text-status-success'
-                            : 'border-status-error text-status-error'
-                        }`}
-                      >
-                        {grant.granted ? 'Granted' : 'Denied'}
-                      </span>
+                      <Badge
+                        label={grant.granted ? 'Granted' : 'Denied'}
+                        variant={grant.granted ? 'success' : 'danger'}
+                      />
                     </div>
                     <p className="text-secondary text-xs mt-1">
                       {details?.description ?? 'No description available.'}
@@ -168,14 +173,14 @@ export function PermissionDialog({
         <div className="flex justify-between items-center mt-4">
           <button
             onClick={onRevokeAll}
-            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-secondaryBackground)] bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
+            className={secondaryActionButtonClassName}
             type="button"
           >
             Reset Permissions
           </button>
           <button
             onClick={onClose}
-            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-background)] bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] hover:bg-[var(--vscode-button-hoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)]"
+            className={primaryActionButtonClassName}
             type="button"
           >
             Done

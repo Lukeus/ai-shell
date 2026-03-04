@@ -78,7 +78,7 @@ export class SddWorkflowRunner {
    * - Validates the request against {@link SddRunStartRequestSchema}
    * - Defaults to 'spec' step if not specified in the request
    * - Emits events throughout the workflow lifecycle (started, context loaded, step started, completed/canceled/failed)
-   * - Supports steps: 'spec', 'plan', 'tasks', and 'implement'
+   * - Supports steps: 'spec', 'plan', 'tasks', 'implement', and 'review'
    * - Maintains run state in {@link activeRun} and tracks canceled runs in {@link canceledRuns}
    * - Automatically cleans up run state in the finally block
    *
@@ -110,13 +110,10 @@ export class SddWorkflowRunner {
 
       if (step === 'spec' || step === 'plan' || step === 'tasks') {
         await this.handleDocStep(runId, validatedRequest, step, context, docPaths);
-      } else if (step === 'implement') {
-        await this.handleImplementStep(runId, validatedRequest, context);
+      } else if (step === 'implement' || step === 'review') {
+        await this.handleImplementationStep(runId, validatedRequest, step, context);
       } else {
-        this.emitOutputAppended(
-          runId,
-          `SDD step "${step}" is not implemented yet.`
-        );
+        throw new Error(`SDD step "${step}" is not implemented yet.`);
       }
 
       this.emitRunCompleted(runId);
@@ -266,27 +263,29 @@ export class SddWorkflowRunner {
     this.emitApprovalRequired(runId, proposal);
   }
 
-  private async handleImplementStep(
+  private async handleImplementationStep(
     runId: string,
     request: SddRunStartRequest,
+    step: 'implement' | 'review',
     context: SddContext
   ): Promise<void> {
     const targetPath = 'multi-file proposal';
     const prompt = buildSddPrompt({
-      step: 'implement',
+      step,
       featureId: request.featureId,
       goal: request.goal,
       targetPath,
       context: contextToRecord(context),
     });
 
-    const text = await this.generateWithModel(runId, request, 'implement', prompt);
+    const text = await this.generateWithModel(runId, request, step, prompt);
     const content = normalizeModelOutput(text);
     const proposal = parseImplementationOutput(content);
+    const label = step === 'review' ? 'Review' : 'Implementation';
 
     this.emitOutputAppended(
       runId,
-      `Implementation proposal ready (${proposal.summary.filesChanged} files).`
+      `${label} proposal ready (${proposal.summary.filesChanged} files).`
     );
     this.emitProposalReady(runId, proposal);
     this.emitApprovalRequired(runId, proposal);

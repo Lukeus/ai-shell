@@ -60,7 +60,11 @@ export function useMcpServers(): UseMcpServersResult {
   }, []);
 
   useEffect(() => {
-    void fetchServers(true);
+    let isActive = true;
+    if (isActive) {
+      void fetchServers(true);
+    }
+    return () => { isActive = false; };
   }, [fetchServers]);
 
   useEffect(() => {

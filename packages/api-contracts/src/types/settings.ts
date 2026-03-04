@@ -234,7 +234,7 @@ export const SettingsSchema = z.object({
   extensions: ExtensionSettingsSchema,
 
   /** MCP server settings */
-  mcp: McpSettingsSchema.default({}),
+  mcp: McpSettingsSchema.default({ servers: {} }),
 
   /** Agent settings */
   agents: AgentSettingsSchema,
@@ -287,4 +287,6 @@ export const SETTINGS_DEFAULTS: Settings = SettingsSchema.parse({
  * };
  * ```
  */
-export type PartialSettings = z.infer<ReturnType<typeof SettingsSchema.deepPartial>>;
+export type PartialSettings = {
+  [K in keyof Settings]?: Partial<Settings[K]>;
+};

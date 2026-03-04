@@ -50,7 +50,8 @@ export function Menu({
       <MenuButton
         type="button"
         className={`
-          inline-flex items-center gap-2 rounded-sm px-2 py-1 text-sm text-secondary
+          inline-flex items-center gap-2 h-[var(--size-control-row)] rounded-none
+          px-[var(--vscode-space-2)] text-[var(--vscode-font-size-ui)] leading-[var(--vscode-line-height-compact)] text-secondary
           hover:bg-surface-hover hover:text-primary
           focus:outline-none focus:ring-1 focus:ring-accent
           ${buttonClassName}
@@ -94,7 +95,8 @@ export function Menu({
                 type="button"
                 onClick={() => item.onClick?.()}
                 className={({ active, disabled }) => `
-                  flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left
+                  flex w-full items-center gap-2 h-[var(--size-control-row)] px-[var(--vscode-space-3)]
+                  text-[var(--vscode-font-size-ui)] leading-[var(--vscode-line-height-compact)] text-left
                   ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   ${active ? 'bg-selection text-selection-text' : 'text-primary'}
                 `}

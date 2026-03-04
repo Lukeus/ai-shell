@@ -5,19 +5,14 @@
 @source "../../../../../packages/ui-kit/src/**/*.{ts,tsx}";
 
 /* Base styles for body and html */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
 html,
 body,
 #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--vscode-editor-background);
-  color: var(--vscode-foreground);
+  background-color: var(--color-surface-default);
+  color: var(--color-text-primary);
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size-ui);
   line-height: var(--vscode-line-height-ui);
@@ -25,10 +20,24 @@ body,
 }
 
 :root {
-  --editor-bg: var(--vscode-editor-background);
-  --editor-fg: var(--vscode-foreground);
-  --primary-fg: var(--vscode-accent);
-  --secondary-fg: var(--vscode-foreground-secondary);
+  --editor-bg: var(--color-surface-default);
+  --editor-fg: var(--color-text-primary);
+  --primary-fg: var(--color-accent-primary);
+  --secondary-fg: var(--color-text-secondary);
+  --tertiary-fg: var(--color-text-tertiary);
+  --link-fg: var(--color-text-link);
+  --surface-secondary-bg: var(--color-surface-secondary);
+  --surface-elevated-bg: var(--color-surface-elevated);
+  --surface-hover-bg: var(--color-surface-hover);
+  --border-subtle-color: var(--color-border-subtle);
+  --border-focus-color: var(--color-border-focus);
+  --accent-hover-color: var(--color-accent-hover);
+  --control-fg: var(--color-control-foreground);
+  --selection-text-fg: var(--color-selection-text);
+  --status-info-fg: var(--color-status-info);
+  --status-success-fg: var(--color-status-success);
+  --status-warning-fg: var(--color-status-warning);
+  --status-error-fg: var(--color-status-error);
   --error-fg: var(--color-status-error);
 }
 
@@ -44,59 +53,59 @@ body,
 
 @theme {
   /* ===================================================================
-     VS CODE DARK+ TOKENS MAPPED TO TAILWIND
-     All colors, spacing, and sizing now reference vscode-tokens.css
+     SEMANTIC TOKENS MAPPED TO TAILWIND
+     Colors come from themes.css; sizing/spacing stay on VS Code tokens
      =================================================================== */
   
-  /* Surface colors - mapped from VS Code backgrounds */
-  --color-surface: var(--vscode-editor-background);
-  --color-surface-secondary: var(--vscode-sidebar-background);
-  --color-surface-elevated: var(--vscode-activityBar-background);
-  --color-surface-hover: var(--vscode-hover-background);
+  /* Surface colors */
+  --color-surface: var(--color-surface-default);
+  --color-surface-secondary: var(--surface-secondary-bg);
+  --color-surface-elevated: var(--surface-elevated-bg);
+  --color-surface-hover: var(--surface-hover-bg);
   
-  /* Status Bar - mapped from VS Code status bar */
-  --color-status-bar: var(--vscode-statusBar-background);
-  --color-status-bar-foreground: var(--vscode-statusBar-foreground);
-  --color-status-bar-hover: var(--vscode-statusBar-hoverBackground);
+  /* Status Bar */
+  --color-status-bar: var(--color-accent-primary);
+  --color-status-bar-foreground: var(--color-control-foreground);
+  --color-status-bar-hover: var(--color-accent-hover);
 
-  /* Tabs - mapped from VS Code tabs */
-  --color-tab-active: var(--vscode-tab-activeBackground);
-  --color-tab-inactive: var(--vscode-tab-inactiveBackground);
-  --color-tab-border: var(--vscode-tab-border);
-  --color-tab-active-border-top: var(--vscode-tab-activeBorderTop);
+  /* Tabs */
+  --color-tab-active: var(--color-surface-default);
+  --color-tab-inactive: var(--color-surface-secondary);
+  --color-tab-border: var(--color-border-subtle);
+  --color-tab-active-border-top: var(--color-accent-primary);
 
-  /* Activity Bar - mapped from VS Code activity bar */
-  --color-activity-bar: var(--vscode-activityBar-background);
-  --color-activity-bar-active-border: var(--vscode-tab-activeBorderTop);
+  /* Activity Bar */
+  --color-activity-bar: var(--color-surface-elevated);
+  --color-activity-bar-active-border: var(--color-accent-primary);
   
-  /* Border colors - mapped from VS Code borders */
-  --color-border: var(--vscode-border);
-  --color-border-subtle: var(--vscode-border-subtle);
-  --color-border-focus: var(--vscode-focus-border);
+  /* Border colors */
+  --color-border: var(--color-border-default);
+  --color-border-subtle: var(--border-subtle-color);
+  --color-border-focus: var(--border-focus-color);
   
-  /* Text colors - mapped from VS Code foreground */
-  --color-text-primary: var(--vscode-foreground);
-  --color-text-secondary: var(--vscode-foreground-secondary);
-  --color-text-tertiary: var(--vscode-foreground-muted);
-  --color-text-link: var(--vscode-accent);
+  /* Text colors */
+  --color-text-primary: var(--editor-fg);
+  --color-text-secondary: var(--secondary-fg);
+  --color-text-tertiary: var(--tertiary-fg);
+  --color-text-link: var(--link-fg);
   --color-primary: var(--color-text-primary);
   --color-secondary: var(--color-text-secondary);
   --color-tertiary: var(--color-text-tertiary);
   
-  /* Accent colors - mapped from VS Code accent */
-  --color-accent: var(--vscode-accent);
-  --color-accent-hover: var(--vscode-focus-border);
-  --color-control-foreground: var(--vscode-button-foreground);
+  /* Accent colors */
+  --color-accent: var(--color-accent-primary);
+  --color-accent-hover: var(--accent-hover-color);
+  --color-control-foreground: var(--control-fg);
   
-  /* Selection colors - mapped from VS Code selection */
-  --color-selection: var(--vscode-selection-background);
-  --color-selection-text: var(--vscode-foreground);
+  /* Selection colors */
+  --color-selection: var(--color-selection-bg);
+  --color-selection-text: var(--selection-text-fg);
   
-  /* Status colors - keep for semantic usage */
-  --color-status-info: var(--vscode-statusBar-background);
-  --color-status-success: #4ec9b0;
-  --color-status-warning: #d7ba7d;
-  --color-status-error: #f48771;
+  /* Status colors */
+  --color-status-info: var(--status-info-fg);
+  --color-status-success: var(--status-success-fg);
+  --color-status-warning: var(--status-warning-fg);
+  --color-status-error: var(--status-error-fg);
   
   /* Border radius - VS Code uses sharp corners */
   --radius-sm: var(--vscode-border-radius);
@@ -123,6 +132,11 @@ body,
   --size-tab-height: var(--vscode-tab-height);
   --size-statusBar-height: var(--vscode-statusBar-height);
   --size-list-row: var(--vscode-list-rowHeight);
+  --size-control-row: calc(var(--vscode-list-rowHeight) + 3px);
+  --font-size-control: var(--vscode-font-size-ui);
+  --font-size-label: var(--vscode-font-size-small);
+  --font-size-badge: 11px;
+  --line-height-control: var(--vscode-line-height-ui);
 
 }
 

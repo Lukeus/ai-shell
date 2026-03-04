@@ -17,6 +17,7 @@ import { ViewManager } from './view-manager';
 import { ToolManager } from './tool-manager';
 import { ErrorHandler } from './error-handler';
 import { ExtensionManifest, ExtensionContext } from 'packages-api-contracts';
+import type { ExtensionActivationContext } from './extension-loader';
 
 /**
  * Extension Host entry point.
@@ -87,12 +88,13 @@ async function main() {
   rpcClient.onRequest('extension.activate', async (params: unknown) => {
     const { extensionId, context } = params as { extensionId: string; context: ExtensionContext };
     const api = extensionRuntime.createAPI(context);
-    
-    // Temporarily add API to context for extension to use
-    // TODO: Better way to pass API to extension
-    (context as unknown as { api: unknown }).api = api;
-    
-    await activationController.activateExtension(extensionId, context);
+
+    const activationContext: ExtensionActivationContext = {
+      ...context,
+      api,
+    };
+
+    await activationController.activateExtension(extensionId, activationContext);
     return { success: true };
   });
 

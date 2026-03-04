@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  primaryActionButtonClassName,
+  secondaryActionButtonClassName,
+} from '../../shared/controlClassNames';
 
 export interface ConsentDialogProps {
   isOpen: boolean;
@@ -91,7 +95,7 @@ export function ConsentDialog({
             type="button"
             onClick={onDeny}
             disabled={isBusy}
-            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-secondaryBackground)] bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)] disabled:opacity-50"
+            className={secondaryActionButtonClassName}
           >
             Deny
           </button>
@@ -99,7 +103,7 @@ export function ConsentDialog({
             type="button"
             onClick={onAllowOnce}
             disabled={isBusy}
-            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-secondaryBackground)] bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)] disabled:opacity-50"
+            className={secondaryActionButtonClassName}
           >
             Allow once
           </button>
@@ -107,7 +111,7 @@ export function ConsentDialog({
             type="button"
             onClick={onAllowAlways}
             disabled={isBusy}
-            className="px-3 py-1 rounded-sm text-sm border border-[var(--vscode-button-background)] bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] hover:bg-[var(--vscode-button-hoverBackground)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--vscode-focus-border)] disabled:opacity-50"
+            className={primaryActionButtonClassName}
           >
             Always allow
           </button>

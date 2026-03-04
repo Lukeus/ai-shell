@@ -113,6 +113,24 @@ import type {
   SaveAgentDraftResponse,
 } from './types/agent-drafts';
 import type {
+  ListAgentSkillsRequest,
+  ListAgentSkillsResponse,
+  GetAgentSkillRequest,
+  GetAgentSkillResponse,
+  CreateAgentSkillRequest,
+  CreateAgentSkillResponse,
+  UpdateAgentSkillRequest,
+  UpdateAgentSkillResponse,
+  DeleteAgentSkillRequest,
+  DeleteAgentSkillResponse,
+  SetAgentSkillEnabledRequest,
+  SetAgentSkillEnabledResponse,
+  SetDefaultSkillRequest,
+  SetDefaultSkillResponse,
+  SetLastUsedSkillRequest,
+  SetLastUsedSkillResponse,
+} from './types/agent-skills';
+import type {
   CreateConnectionRequest,
   CreateConnectionResponse,
   UpdateConnectionRequest,
@@ -820,6 +838,57 @@ export interface PreloadAPI {
     applyProposal(
       request: ApplyAgentEditProposalRequest
     ): Promise<Result<ApplyAgentEditProposalResponse>>;
+  };
+
+  /**
+   * Agent skills APIs.
+   *
+   * Security: skills are stored in main process only (no secrets).
+   */
+  skills: {
+    /**
+     * Lists skills (optionally filtered by scope).
+     */
+    list(request?: ListAgentSkillsRequest): Promise<ListAgentSkillsResponse>;
+
+    /**
+     * Gets a single skill.
+     */
+    get(request: GetAgentSkillRequest): Promise<GetAgentSkillResponse>;
+
+    /**
+     * Creates a new skill.
+     */
+    create(request: CreateAgentSkillRequest): Promise<CreateAgentSkillResponse>;
+
+    /**
+     * Updates an existing skill.
+     */
+    update(request: UpdateAgentSkillRequest): Promise<UpdateAgentSkillResponse>;
+
+    /**
+     * Deletes a skill.
+     */
+    delete(request: DeleteAgentSkillRequest): Promise<DeleteAgentSkillResponse>;
+
+    /**
+     * Enables or disables a skill.
+     */
+    setEnabled(
+      request: SetAgentSkillEnabledRequest
+    ): Promise<SetAgentSkillEnabledResponse>;
+
+    /**
+     * Sets the default skill.
+     */
+    setDefault(request: SetDefaultSkillRequest): Promise<SetDefaultSkillResponse>;
+
+    /**
+     * Sets the last used skill.
+     */
+    setLastUsed(
+      request: SetLastUsedSkillRequest
+    ): Promise<SetLastUsedSkillResponse>;
   };
 
   /**

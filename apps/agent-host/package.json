@@ -13,15 +13,15 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "packages-broker-client": "workspace:*",
     "packages-agent-runtime": "workspace:*",
-    "packages-api-contracts": "workspace:*"
+    "packages-api-contracts": "workspace:*",
+    "packages-broker-client": "workspace:*"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "eslint": "^9.0.0",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "eslint": "^10.0.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

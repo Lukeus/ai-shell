@@ -11,6 +11,63 @@ import { PermissionService } from '../services/permission-service';
 import type { WorkspaceService } from '../services/WorkspaceService';
 import { updateHostContext } from './host-context';
 
+const BUNDLED_EXTENSION_DIRECTORIES = ['agent-skills'] as const;
+
+const resolveBundledExtensionSourcePath = (extensionDirectory: string): string | null => {
+  const relativePath = path.join('extensions', extensionDirectory);
+  const resourcePath =
+    typeof process.resourcesPath === 'string' ? process.resourcesPath : null;
+  const candidates = [
+    path.resolve(__dirname, '../../../../', relativePath),
+    path.resolve(__dirname, '../../../../../', relativePath),
+    path.resolve(process.cwd(), relativePath),
+    ...(resourcePath
+      ? [
+          path.resolve(resourcePath, relativePath),
+          path.resolve(resourcePath, 'extensions', extensionDirectory),
+        ]
+      : []),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'package.json'))) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+const seedBundledExtensions = (extensionsDir: string): void => {
+  BUNDLED_EXTENSION_DIRECTORIES.forEach((extensionDirectory) => {
+    try {
+      const destinationPath = path.join(extensionsDir, extensionDirectory);
+      if (fs.existsSync(path.join(destinationPath, 'package.json'))) {
+        return;
+      }
+
+      const sourcePath = resolveBundledExtensionSourcePath(extensionDirectory);
+      if (!sourcePath) {
+        console.warn(
+          `[Main] Bundled extension "${extensionDirectory}" not found; skipping seed.`
+        );
+        return;
+      }
+
+      fs.cpSync(sourcePath, destinationPath, {
+        recursive: true,
+        force: false,
+        errorOnExist: false,
+      });
+    } catch (error) {
+      console.error(
+        `[Main] Failed to seed bundled extension "${extensionDirectory}":`,
+        error
+      );
+    }
+  });
+};
+
 type ExtensionInfrastructure = {
   extensionsDir: string;
   extensionRegistry: ExtensionRegistry;
@@ -33,6 +90,8 @@ export const initializeExtensionInfrastructure = (userDataPath: string): Extensi
   if (!fs.existsSync(extensionsDir)) {
     fs.mkdirSync(extensionsDir, { recursive: true });
   }
+
+  seedBundledExtensions(extensionsDir);
 
   const extensionRegistry = new ExtensionRegistry(extensionsDir);
   const extensionRegistryReady = extensionRegistry.initialize().catch((error) => {
@@ -86,7 +145,7 @@ export const initializeExtensionHost = (options: {
     extensionsDir,
   });
 
-  const ensureActivated = (extensionId: string, event: string) =>
+  const ensureActivated = (extensionId: string, event?: string) =>
     extensionActivationService.ensureActivated(extensionId, event);
 
   const extensionCommandService = new ExtensionCommandService(

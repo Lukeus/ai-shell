@@ -1,0 +1,23 @@
+{
+  "id": "e2e.skill-extension",
+  "name": "skill-extension",
+  "version": "1.0.0",
+  "publisher": "e2e",
+  "displayName": "E2E Skill Extension",
+  "description": "Fixture extension that contributes agent skills for E2E tests.",
+  "main": "index.js",
+  "activationEvents": ["onStartup"],
+  "permissions": ["ui"],
+  "contributes": {
+    "agentSkills": [
+      {
+        "id": "skill.fixture.extension",
+        "name": "Fixture Extension Skill",
+        "description": "Contributed by the E2E fixture extension.",
+        "promptTemplate": "Use extension-contributed behavior.",
+        "toolAllowlist": ["repo.search", "workspace.read"],
+        "tags": ["fixture", "extension"]
+      }
+    ]
+  }
+}

@@ -194,7 +194,7 @@ export function useAgentChat({
           goal: trimmed,
           inputs: {
             conversationId,
-            attachments,
+            ...(attachments ? { attachments } : {}),
             history: historySnapshot,
           },
           metadata: {

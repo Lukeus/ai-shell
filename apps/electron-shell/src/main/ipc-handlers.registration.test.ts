@@ -298,6 +298,16 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.AGENT_EDITS_REQUEST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_EDITS_APPLY_PROPOSAL)).toBe(true);
 
+      // Skills handlers (8)
+      expect(handlers.has(IPC_CHANNELS.SKILLS_LIST)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SKILLS_GET)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SKILLS_CREATE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SKILLS_UPDATE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SKILLS_DELETE)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SKILLS_SET_ENABLED)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SKILLS_SET_DEFAULT)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.SKILLS_SET_LAST_USED)).toBe(true);
+
       // Connections handlers (9)
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_PROVIDERS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.CONNECTIONS_LIST)).toBe(true);
@@ -339,8 +349,8 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.OUTPUT_LIST_CHANNELS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.OUTPUT_READ)).toBe(true);
 
-      // Total: 90 handlers
-      expect(handlers.size).toBe(90);
+      // Total: 98 handlers
+      expect(handlers.size).toBe(98);
     });
   });
 });

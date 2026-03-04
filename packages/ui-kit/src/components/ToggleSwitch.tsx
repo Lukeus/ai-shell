@@ -69,7 +69,7 @@ export function ToggleSwitch({ checked, onChange, label, disabled = false }: Tog
       {label && (
         <Label
           className={`
-            text-sm text-primary select-none
+            text-primary select-none leading-[var(--vscode-line-height-compact)] text-[var(--vscode-font-size-ui)]
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           `}
         >

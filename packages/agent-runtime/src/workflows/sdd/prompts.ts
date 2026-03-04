@@ -37,7 +37,7 @@ export const buildSddPrompt = ({
   targetPath,
   context,
 }: PromptOptions): string => {
-  const outputInstruction = step === 'implement'
+  const outputInstruction = step === 'implement' || step === 'review'
     ? [
         'Return a JSON object with this shape:',
         '{ "writes": [ { "path": "path/to/file", "content": "file contents" } ],',
@@ -46,7 +46,7 @@ export const buildSddPrompt = ({
         'Include multiple writes when needed. Use workspace-relative paths.',
       ].join('\n')
     : `Return only the contents for ${targetPath}.`;
-  const targetLine = step === 'implement'
+  const targetLine = step === 'implement' || step === 'review'
     ? 'Target: multi-file proposal'
     : `Target file: ${targetPath}`;
 

@@ -2,6 +2,7 @@ import type { ForgeConfig } from '@electron-forge/shared-types';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
+import path from 'path';
 
 const packagerConfig: ForgeConfig['packagerConfig'] & { asarUnpack: string[] } = {
   asar: true,
@@ -9,6 +10,7 @@ const packagerConfig: ForgeConfig['packagerConfig'] & { asarUnpack: string[] } =
     '**/node-pty/**',
     '**/@homebridge/node-pty-prebuilt-multiarch/**',
   ],
+  extraResource: [path.resolve(__dirname, '../../extensions/agent-skills')],
 };
 
 const config: ForgeConfig = {

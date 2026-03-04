@@ -42,6 +42,15 @@ const mockApi = {
     listProviders: vi.fn(),
     requestSecretAccess: vi.fn(),
   },
+  skills: {
+    list: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    setEnabled: vi.fn(),
+    setDefault: vi.fn(),
+    setLastUsed: vi.fn(),
+  },
   getSettings: vi.fn(),
 };
 
@@ -115,6 +124,23 @@ describe('AgentsPanel', () => {
       ],
     });
     mockApi.connections.requestSecretAccess.mockResolvedValue({ granted: true });
+    mockApi.skills.list.mockResolvedValue({
+      skills: [
+        {
+          definition: {
+            id: 'skill.reviewer',
+            name: 'Reviewer',
+          },
+          source: 'user',
+          scope: 'global',
+          enabled: true,
+        },
+      ],
+      preferences: {
+        defaultSkillId: 'skill.reviewer',
+        lastUsedSkillId: null,
+      },
+    });
     mockApi.getSettings.mockResolvedValue({
       appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
       editor: {
@@ -218,7 +244,7 @@ describe('AgentsPanel', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Runs' }));
 
-    const select = await screen.findByRole('combobox');
+    const select = (await screen.findAllByRole('combobox'))[0];
     fireEvent.change(select, { target: { value: connectionId } });
 
     const input = screen.getByPlaceholderText('Describe the goal...');
@@ -229,6 +255,38 @@ describe('AgentsPanel', () => {
       expect(mockApi.agents.startRun).toHaveBeenCalledWith({
         goal: 'Use Ollama',
         connectionId,
+      });
+    });
+  });
+
+  it('starts a run with a selected skill', async () => {
+    const run = {
+      id: runId,
+      status: 'queued',
+      source: 'user',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-01T00:00:00.000Z',
+    };
+
+    mockApi.agents.listRuns.mockResolvedValue({ runs: [] });
+    mockApi.agents.startRun.mockResolvedValue({ run });
+
+    renderAgentsPanel();
+    fireEvent.click(screen.getByRole('tab', { name: 'Runs' }));
+
+    const selects = await screen.findAllByRole('combobox');
+    const skillSelect = selects[1];
+    fireEvent.change(skillSelect, { target: { value: 'skill.reviewer' } });
+
+    fireEvent.change(screen.getByPlaceholderText('Describe the goal...'), {
+      target: { value: 'Review this plan' },
+    });
+    fireEvent.click(screen.getByText('Start'));
+
+    await waitFor(() => {
+      expect(mockApi.agents.startRun).toHaveBeenCalledWith({
+        goal: 'Review this plan',
+        skillId: 'skill.reviewer',
       });
     });
   });

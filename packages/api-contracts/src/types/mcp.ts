@@ -91,8 +91,8 @@ export type McpServerControlRequest = z.infer<typeof McpServerControlRequestSche
 export const McpToolDefinitionSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  inputSchema: z.record(z.unknown()).optional(),
-  outputSchema: z.record(z.unknown()).optional(),
+  inputSchema: z.record(z.string(), z.unknown()).optional(),
+  outputSchema: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type McpToolDefinition = z.infer<typeof McpToolDefinitionSchema>;

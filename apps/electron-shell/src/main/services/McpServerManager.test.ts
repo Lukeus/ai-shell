@@ -93,7 +93,7 @@ const extension: ExtensionSnapshot = {
 
 const connection: Connection = {
   metadata: {
-    id: '11111111-1111-1111-1111-111111111111',
+    id: '11111111-1111-4111-8111-111111111111',
     providerId: 'openai',
     scope: 'user',
     displayName: 'OpenAI',

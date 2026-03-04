@@ -42,7 +42,9 @@ export function Badge({
 }: BadgeProps) {
   const color = VARIANT_COLORS[variant];
   const baseClasses = `
-    inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide
+    inline-flex items-center rounded-sm border
+    px-[var(--vscode-space-2)] py-[2px]
+    text-[var(--font-size-badge)] leading-[1.15] normal-case tracking-normal
   `;
   const variantClasses = variant === 'muted'
     ? 'text-tertiary border-border-subtle'

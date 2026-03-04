@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ConnectionProviderSchema } from './connections';
+import { AgentSkillDefinitionSchema } from './agent-skills';
 import { McpServerContributionSchema } from './mcp';
 
 /**
@@ -64,9 +65,11 @@ export const ExtensionManifestSchema = z.object({
     tools: z.array(z.object({
       name: z.string(),
       description: z.string(),
-      inputSchema: z.record(z.unknown()),
-      outputSchema: z.record(z.unknown()).optional(),
+      inputSchema: z.record(z.string(), z.unknown()),
+      outputSchema: z.record(z.string(), z.unknown()).optional(),
     })).optional(),
+
+    agentSkills: z.array(AgentSkillDefinitionSchema).optional(),
 
     mcpServers: z.array(McpServerContributionSchema).optional(),
   }).optional(),

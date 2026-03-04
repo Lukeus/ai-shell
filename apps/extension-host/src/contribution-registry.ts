@@ -5,7 +5,14 @@
  * This registry aggregates all contributions for lookup and execution.
  */
 
-import { McpServerContributionSchema, type ConnectionProvider, type ExtensionManifest, type McpServerContribution } from 'packages-api-contracts';
+import {
+  AgentSkillDefinitionSchema,
+  McpServerContributionSchema,
+  type AgentSkillDefinition,
+  type ConnectionProvider,
+  type ExtensionManifest,
+  type McpServerContribution,
+} from 'packages-api-contracts';
 
 /**
  * Command contribution from an extension.
@@ -67,8 +74,18 @@ export type McpServerContributionEntry = McpServerContribution & {
   extensionId: string;
 };
 
+/**
+ * Agent skill contribution from an extension.
+ */
+export type AgentSkillContributionEntry = AgentSkillDefinition & {
+  extensionId: string;
+};
+
 const buildMcpServerKey = (extensionId: string, serverId: string): string =>
   `${extensionId}:${serverId}`;
+
+const buildAgentSkillKey = (extensionId: string, skillId: string): string =>
+  `${extensionId}:${skillId}`;
 
 /**
  * ContributionRegistry tracks all contributions from extensions.
@@ -80,6 +97,7 @@ export class ContributionRegistry {
   private settings = new Map<string, SettingContribution>();
   private connectionProviders = new Map<string, ConnectionProviderContribution>();
   private mcpServers = new Map<string, McpServerContributionEntry>();
+  private agentSkills = new Map<string, AgentSkillContributionEntry>();
 
   /**
    * Register contributions from an extension manifest.
@@ -171,6 +189,30 @@ export class ContributionRegistry {
         console.log(`[ContributionRegistry] Registered ${registeredCount} MCP servers from ${extensionId}`);
       }
     }
+
+    // Register agent skills
+    if (manifest.contributes.agentSkills) {
+      let registeredCount = 0;
+      for (const skill of manifest.contributes.agentSkills) {
+        const parsed = AgentSkillDefinitionSchema.safeParse(skill);
+        if (!parsed.success) {
+          console.warn(
+            `[ContributionRegistry] Invalid agent skill contribution from ${extensionId}:`,
+            parsed.error.flatten()
+          );
+          continue;
+        }
+        const key = buildAgentSkillKey(extensionId, parsed.data.id);
+        this.agentSkills.set(key, {
+          ...parsed.data,
+          extensionId,
+        });
+        registeredCount += 1;
+      }
+      if (registeredCount > 0) {
+        console.log(`[ContributionRegistry] Registered ${registeredCount} agent skills from ${extensionId}`);
+      }
+    }
   }
 
   /**
@@ -218,6 +260,13 @@ export class ContributionRegistry {
     for (const [id, server] of this.mcpServers.entries()) {
       if (server.extensionId === extensionId) {
         this.mcpServers.delete(id);
+      }
+    }
+
+    // Remove agent skills
+    for (const [id, skill] of this.agentSkills.entries()) {
+      if (skill.extensionId === extensionId) {
+        this.agentSkills.delete(id);
       }
     }
 
@@ -306,5 +355,19 @@ export class ContributionRegistry {
    */
   getMcpServer(extensionId: string, serverId: string): McpServerContributionEntry | undefined {
     return this.mcpServers.get(buildMcpServerKey(extensionId, serverId));
+  }
+
+  /**
+   * Get all registered agent skills.
+   */
+  getAllAgentSkills(): AgentSkillContributionEntry[] {
+    return Array.from(this.agentSkills.values());
+  }
+
+  /**
+   * Get agent skill by ID.
+   */
+  getAgentSkill(extensionId: string, skillId: string): AgentSkillContributionEntry | undefined {
+    return this.agentSkills.get(buildAgentSkillKey(extensionId, skillId));
   }
 }

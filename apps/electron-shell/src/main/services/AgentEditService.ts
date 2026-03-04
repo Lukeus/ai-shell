@@ -96,7 +96,7 @@ export class AgentEditService {
       failRun(`Connection not found: ${resolvedConnectionId}`);
     }
 
-    const connectionModel = getConnectionModelRef(connection);
+    const connectionModel = getConnectionModelRef(connection!);
     const overrideModelRef =
       !request.modelRef &&
       overrides.modelRef &&
@@ -106,8 +106,8 @@ export class AgentEditService {
     const effectiveModelRef = request.modelRef ?? overrideModelRef ?? connectionModel;
 
     agentRunStore.updateRunRouting(run.id, {
-      connectionId: resolvedConnectionId,
-      providerId: connection.metadata.providerId,
+      connectionId: resolvedConnectionId!,
+      providerId: connection!.metadata.providerId,
       modelRef: effectiveModelRef,
     });
 
@@ -118,11 +118,11 @@ export class AgentEditService {
 
     const runRequest: AgentRunStartRequest = {
       goal: request.prompt,
-      connectionId: resolvedConnectionId,
+      connectionId: resolvedConnectionId!,
       inputs: {
         conversationId: request.conversationId,
-        attachments: request.attachments,
-        options: request.options,
+        ...(request.attachments ? { attachments: request.attachments } : {}),
+        ...(request.options ? { options: request.options } : {}),
       },
       metadata: {
         workflow: EDIT_WORKFLOW,
@@ -134,7 +134,7 @@ export class AgentEditService {
     this.runContexts.set(run.id, { conversationId: request.conversationId });
 
     try {
-      await agentHostManager.startRun(run.id, runRequest);
+      await agentHostManager!.startRun(run.id, runRequest);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to start edit run.';

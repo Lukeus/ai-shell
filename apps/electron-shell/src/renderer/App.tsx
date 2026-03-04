@@ -16,7 +16,8 @@ import { EditorArea } from './components/editor/EditorArea';
 import { TerminalPanel } from './components/layout/TerminalPanel';
 import { SecondarySidebar } from './components/layout/SecondarySidebar';
 import { TerminalContextProvider, useTerminal } from './contexts/TerminalContext';
-import { CommandPalette, type BuiltInCommand } from './components/command-palette/CommandPalette';
+import { CommandPalette } from './components/command-palette/CommandPalette';
+import type { BuiltInCommand } from './components/command-palette/useCommandPaletteItems';
 
 type SettingsUpdateListener = (event: { detail?: Settings }) => void;
 

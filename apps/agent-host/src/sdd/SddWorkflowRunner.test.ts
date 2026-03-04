@@ -230,6 +230,44 @@ describe('SddWorkflowRunner', () => {
     }
   });
 
+  it('builds a review proposal with multiple files', async () => {
+    const featureId = '151-sdd-workflow';
+    const modelText = JSON.stringify({
+      writes: [
+        { path: 'apps/example/src/review-alpha.ts', content: 'export const reviewAlpha = true;\n' },
+        { path: 'apps/example/src/review-beta.ts', content: 'export const reviewBeta = false;\n' },
+      ],
+    });
+    const toolExecutor = createToolExecutor(buildContextFiles(featureId), modelText);
+    const events: SddRunEvent[] = [];
+    const runner = new SddWorkflowRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+    });
+
+    const runId = randomUUID();
+    await runner.startRun(runId, { featureId, goal: 'Review implementation', step: 'review' });
+
+    const eventTypes = events.map((event) => event.type);
+    expect(eventTypes).toEqual([
+      'started',
+      'contextLoaded',
+      'stepStarted',
+      'outputAppended',
+      'proposalReady',
+      'approvalRequired',
+      'runCompleted',
+    ]);
+    expect(events[2]).toMatchObject({ type: 'stepStarted', step: 'review' });
+
+    const proposalEvent = events.find((event) => event.type === 'proposalReady');
+    expect(proposalEvent?.type).toBe('proposalReady');
+    if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.writes).toHaveLength(2);
+      expect(proposalEvent.proposal.summary.filesChanged).toBe(2);
+    }
+  });
+
   it('emits runCanceled when cancel is requested', async () => {
     const featureId = '151-sdd-workflow';
     const deferred: { resolve: () => void } = { resolve: () => undefined };

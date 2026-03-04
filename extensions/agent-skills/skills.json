@@ -1,0 +1,56 @@
+{
+  "skills": [
+    {
+      "id": "skill.reviewer",
+      "name": "Reviewer",
+      "description": "Review plans and code changes for regressions, missing tests, and policy alignment.",
+      "promptTemplate": "Review the proposed changes with a focus on correctness, security boundaries, and missing tests. Surface blocking issues first.",
+      "toolAllowlist": ["repo.search", "workspace.read"],
+      "toolDenylist": ["workspace.write", "workspace.update"],
+      "tags": ["review", "quality"]
+    },
+    {
+      "id": "skill.implementer",
+      "name": "Implementer",
+      "description": "Implement a scoped task with minimal surface area and test updates.",
+      "promptTemplate": "Implement the requested task directly. Keep diffs small, preserve architecture boundaries, and update tests where behavior changes.",
+      "toolAllowlist": ["repo.search", "workspace.read", "workspace.write", "workspace.update"],
+      "tags": ["implementation"]
+    },
+    {
+      "id": "skill.orchestrator",
+      "name": "Orchestrator",
+      "description": "Coordinate specialist skills and synthesize their outputs into a final response.",
+      "promptTemplate": "Break the goal into specialist tasks. Delegate review-heavy work to Reviewer and implementation-heavy work to Implementer, then synthesize a concise final answer.",
+      "toolAllowlist": ["repo.search", "workspace.read"],
+      "delegation": {
+        "enabled": true,
+        "maxDepth": 2,
+        "maxDelegations": 8,
+        "subagents": [
+          {
+            "name": "reviewer",
+            "description": "Reviews plans and code changes for regressions and missing tests.",
+            "skillId": "skill.reviewer",
+            "toolAllowlist": ["repo.search", "workspace.read"]
+          },
+          {
+            "name": "implementer",
+            "description": "Implements focused code changes with minimal scope.",
+            "skillId": "skill.implementer",
+            "toolAllowlist": ["repo.search", "workspace.read", "workspace.write", "workspace.update"]
+          }
+        ]
+      },
+      "tags": ["orchestration", "delegation"]
+    },
+    {
+      "id": "skill.triage",
+      "name": "Triage",
+      "description": "Investigate failures and identify the root cause with concrete repro steps.",
+      "promptTemplate": "Triage the issue by collecting evidence, narrowing hypotheses, and proposing a minimal fix with validation steps.",
+      "toolAllowlist": ["repo.search", "workspace.read"],
+      "tags": ["debugging", "analysis"]
+    }
+  ]
+}

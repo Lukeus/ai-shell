@@ -36,7 +36,7 @@ export interface VirtualizedListProps<T> {
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
 
   /** Optional ref for the scroll container */
-  scrollRef?: React.RefObject<HTMLDivElement>;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 /**

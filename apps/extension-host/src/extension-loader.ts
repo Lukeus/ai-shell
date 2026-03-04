@@ -5,7 +5,7 @@
  * Extensions are Node.js modules with an exported activate() function.
  */
 
-import { ExtensionManifest } from 'packages-api-contracts';
+import type { ExtensionAPI, ExtensionContext, ExtensionManifest } from 'packages-api-contracts';
 import * as path from 'path';
 import { readFile } from 'fs/promises';
 import * as vm from 'vm';
@@ -14,8 +14,12 @@ import * as vm from 'vm';
  * Extension module interface.
  * Extensions must export an activate function and optionally a deactivate function.
  */
+export type ExtensionActivationContext = ExtensionContext & {
+  api: ExtensionAPI;
+};
+
 export interface ExtensionModule {
-  activate(context: ExtensionContext): void | Promise<void>;
+  activate(context: ExtensionActivationContext): void | Promise<void>;
   deactivate?(): void | Promise<void>;
 }
 

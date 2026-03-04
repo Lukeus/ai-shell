@@ -30,7 +30,11 @@ export function useConnections(): UseConnectionsResult {
   }, []);
 
   useEffect(() => {
-    void refreshConnections();
+    let isActive = true;
+    if (isActive) {
+      void refreshConnections();
+    }
+    return () => { isActive = false; };
   }, [refreshConnections]);
 
   useEffect(() => {

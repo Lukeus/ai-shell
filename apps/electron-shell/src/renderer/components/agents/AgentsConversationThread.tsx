@@ -133,7 +133,7 @@ const renderProposalEntry = (
     applyError,
     onApplyProposal,
     onDiscardProposal,
-  }: Omit<AgentsConversationThreadProps, 'entries'>
+  }: Omit<AgentsConversationThreadProps, 'entries' | 'streamingMessage' | 'streamingStatus'>
 ) => (
   <div key={entry.id} className="flex flex-col gap-2">
     <div className="text-[11px] uppercase tracking-wide text-secondary">

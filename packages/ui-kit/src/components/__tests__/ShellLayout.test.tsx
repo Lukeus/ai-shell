@@ -30,39 +30,49 @@ describe('ShellLayout', () => {
     expect(screen.getByTestId('status-bar')).toBeInTheDocument();
   });
 
-  it('hides primary sidebar when collapsed', () => {
+  it('collapses primary sidebar to minimal width when collapsed', () => {
     const layoutState = {
       ...DEFAULT_LAYOUT_STATE,
       primarySidebarCollapsed: true,
     };
 
-    render(<ShellLayout {...defaultProps} layoutState={layoutState} />);
+    const { container } = render(<ShellLayout {...defaultProps} layoutState={layoutState} />);
 
-    expect(screen.queryByTestId('primary-sidebar')).not.toBeInTheDocument();
+    // Panel stays in DOM but grid column shrinks to 4px
+    expect(screen.getByTestId('primary-sidebar')).toBeInTheDocument();
+    const gridContainer = container.firstChild as HTMLElement;
+    expect(gridContainer.style.gridTemplateColumns).toContain('4px');
     expect(screen.getByTestId('editor-area')).toBeInTheDocument();
   });
 
-  it('hides secondary sidebar when collapsed', () => {
+  it('collapses secondary sidebar to minimal width when collapsed', () => {
     const layoutState = {
       ...DEFAULT_LAYOUT_STATE,
       secondarySidebarCollapsed: true,
     };
 
-    render(<ShellLayout {...defaultProps} layoutState={layoutState} />);
+    const { container } = render(<ShellLayout {...defaultProps} layoutState={layoutState} />);
 
-    expect(screen.queryByTestId('secondary-sidebar')).not.toBeInTheDocument();
+    // Panel stays in DOM but grid column shrinks to 4px
+    expect(screen.getByTestId('secondary-sidebar')).toBeInTheDocument();
+    const gridContainer = container.firstChild as HTMLElement;
+    // Last column should be 4px when secondary sidebar is collapsed
+    expect(gridContainer.style.gridTemplateColumns).toMatch(/4px$/);
     expect(screen.getByTestId('editor-area')).toBeInTheDocument();
   });
 
-  it('hides bottom panel when collapsed', () => {
+  it('collapses bottom panel to minimal height when collapsed', () => {
     const layoutState = {
       ...DEFAULT_LAYOUT_STATE,
       bottomPanelCollapsed: true,
     };
 
-    render(<ShellLayout {...defaultProps} layoutState={layoutState} />);
+    const { container } = render(<ShellLayout {...defaultProps} layoutState={layoutState} />);
 
-    expect(screen.queryByTestId('bottom-panel')).not.toBeInTheDocument();
+    // Panel stays in DOM but grid row shrinks to 4px
+    expect(screen.getByTestId('bottom-panel')).toBeInTheDocument();
+    const gridContainer = container.firstChild as HTMLElement;
+    expect(gridContainer.style.gridTemplateRows).toContain('4px');
     expect(screen.getByTestId('status-bar')).toBeInTheDocument();
   });
 

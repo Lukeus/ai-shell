@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ConnectionDetailViewProps } from './ConnectionDetail.types';
+import { accentActionButtonClassName } from '../../shared/controlClassNames';
 
 export function ConnectionDetailActions({ state, actions }: ConnectionDetailViewProps) {
   return (
@@ -10,7 +11,7 @@ export function ConnectionDetailActions({ state, actions }: ConnectionDetailView
             type="button"
             onClick={actions.onUpdate}
             disabled={state.isBusy || !state.canSubmit}
-            className="px-3 py-2 text-xs font-semibold bg-accent text-[var(--vscode-button-foreground)] rounded-sm hover:bg-accent-hover disabled:opacity-50"
+            className={accentActionButtonClassName}
           >
             Save changes
           </button>
@@ -23,7 +24,7 @@ export function ConnectionDetailActions({ state, actions }: ConnectionDetailView
             type="button"
             onClick={actions.onCreate}
             disabled={state.isBusy || !state.canSubmit}
-            className="px-3 py-2 text-xs font-semibold bg-accent text-[var(--vscode-button-foreground)] rounded-sm hover:bg-accent-hover disabled:opacity-50"
+            className={accentActionButtonClassName}
           >
             Create connection
           </button>

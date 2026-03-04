@@ -64,9 +64,10 @@ export function SettingsCategoryNav({
               <button
                 onClick={() => onCategoryClick(category.id)}
                 className={`
-                  w-full text-left
+                  w-full flex items-center text-left
                   font-medium
                   transition-colors duration-150
+                  px-[var(--vscode-space-3)] pr-[var(--vscode-space-2)]
                   ${isActive
                     ? 'bg-[var(--vscode-list-activeSelectionBackground)] text-primary'
                     : 'text-secondary hover:bg-surface-hover hover:text-primary'
@@ -77,15 +78,7 @@ export function SettingsCategoryNav({
                   fontSize: 'var(--vscode-font-size-ui)',
                 }}
               >
-                <span
-                  className="block truncate"
-                  style={{
-                    paddingLeft: 'var(--vscode-space-3)',
-                    paddingRight: 'var(--vscode-space-2)',
-                  }}
-                >
-                  {category.label}
-                </span>
+                <span className="block truncate">{category.label}</span>
               </button>
             </li>
           );

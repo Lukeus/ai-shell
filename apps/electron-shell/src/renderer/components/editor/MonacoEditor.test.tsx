@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MonacoEditor } from './MonacoEditor';
 
@@ -101,6 +101,14 @@ describe('MonacoEditor', () => {
     content: 'const x = 42;',
   };
 
+  // Warm up the dynamic import cache so tests don't pay the first-import penalty
+  beforeAll(async () => {
+    await import('monaco-editor');
+    for (const modulePath of monacoContribModules) {
+      try { await import(/* @vite-ignore */ modulePath); } catch { /* ignore */ }
+    }
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     if (!window.matchMedia) {
@@ -151,7 +159,7 @@ describe('MonacoEditor', () => {
       // Editor container should be rendered after Monaco loads
       const editorDiv = container.querySelector('div.h-full.w-full');
       expect(editorDiv).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
     const monaco = await import('monaco-editor');
     expect(monaco.editor.create).toHaveBeenCalled();
   });
@@ -169,7 +177,7 @@ describe('MonacoEditor', () => {
           tabSize: 2,
         })
       );
-    });
+    }, { timeout: 3000 });
   });
 
   it('should update editor content when props change', async () => {
@@ -178,7 +186,7 @@ describe('MonacoEditor', () => {
     await waitFor(async () => {
       const monaco = await import('monaco-editor');
       expect(monaco.editor.create).toHaveBeenCalled();
-    });
+    }, { timeout: 3000 });
 
     const monaco = await import('monaco-editor');
     const mockModel = vi.mocked(monaco.editor.createModel).mock.results[0]?.value;

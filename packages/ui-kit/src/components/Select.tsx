@@ -73,11 +73,11 @@ export function Select({
 }: SelectProps) {
   const selectedOption = options.find((option) => option.value === value);
   const commonControlClasses = `
-    px-2 py-1.5 rounded-none
+    h-[var(--size-control-row)] px-[var(--vscode-space-3)] rounded-none
     bg-surface border border-border
-    text-primary text-[13px]
-    focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent
-    transition-colors duration-200
+    text-primary text-[var(--font-size-control)] leading-[var(--line-height-control)]
+    focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent
+    transition-colors duration-150
     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-accent/50'}
   `;
 
@@ -96,7 +96,7 @@ export function Select({
           <ListboxOptions
             className="
               absolute left-0 right-0 mt-1 max-h-60 overflow-auto
-              rounded-none border border-border bg-surface text-[13px]
+              rounded-none border border-border bg-surface text-[13px] leading-[var(--vscode-line-height-compact)]
             "
             style={{
               zIndex: 'var(--vscode-z-dropdown)',
@@ -109,7 +109,7 @@ export function Select({
                 value={option.value}
                 disabled={option.disabled}
                 className={({ active, selected, disabled: optionDisabled }) => `
-                  flex w-full items-center justify-between gap-2 px-2 py-1.5
+                  flex w-full items-center justify-between gap-2 h-[var(--size-control-row)] px-[var(--vscode-space-3)]
                   ${optionDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   ${active ? 'bg-surface-hover text-primary' : 'text-primary'}
                   ${selected ? 'font-semibold' : 'font-normal'}

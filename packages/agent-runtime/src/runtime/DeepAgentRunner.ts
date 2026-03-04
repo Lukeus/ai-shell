@@ -93,7 +93,8 @@ const loadDeepAgents = (() => {
 
 const defaultCreateAgent: DeepAgentFactory = async (params) => {
   const module = await loadDeepAgents();
-  return module.createDeepAgent(params);
+  // Type assertion needed: Zod v4 changed InteropZodObject compatibility with AnnotationRoot
+  return module.createDeepAgent(params as Parameters<typeof module.createDeepAgent>[0]);
 };
 
 type BrokeredModelOptions = {

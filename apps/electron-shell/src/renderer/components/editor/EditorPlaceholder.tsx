@@ -3,10 +3,10 @@ import React from 'react';
 /**
  * EditorPlaceholder - Placeholder content for editor area.
  * 
- * Shows file path and message that Monaco is not yet implemented.
- * Monaco integration deferred to spec 040.
+ * Shows an empty state when no file is selected and a fallback state when a
+ * file path is available but the editor view is unavailable.
  * 
- * P5 (Performance): Monaco NOT loaded (placeholder only)
+ * P5 (Performance): Lightweight fallback, no additional editor runtime
  * P4 (UI design): Tailwind 4 tokens for styling
  */
 
@@ -59,10 +59,10 @@ export function EditorPlaceholder({ filePath }: EditorPlaceholderProps) {
 
         <div className="mt-8 p-4 bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded">
           <p className="text-sm text-[var(--secondary-fg)]">
-            Monaco editor not yet implemented.
+            Editor view unavailable for this file.
           </p>
           <p className="text-xs text-[var(--secondary-fg)] mt-2">
-            Code editor integration will be added in a future update.
+            Reopen the tab or reload the window to recover.
           </p>
         </div>
       </div>
