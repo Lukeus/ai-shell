@@ -18,10 +18,11 @@ vi.mock('electron', () => ({
 vi.mock('fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn((file: string, data: string) => {
-    if (file === mockPaths.storePath) {
+    if (file === `${mockPaths.storePath}.tmp`) {
       savedContent = data;
     }
   }),
+  renameSync: vi.fn(),
   existsSync: vi.fn(),
   mkdirSync: vi.fn(),
 }));

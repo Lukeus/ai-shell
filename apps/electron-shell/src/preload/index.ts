@@ -266,6 +266,8 @@ const api: PreloadAPI = {
       invokeSafe(IPC_CHANNELS.AGENT_CONVERSATIONS_CREATE, request),
     getConversation: (request) =>
       invokeSafe(IPC_CHANNELS.AGENT_CONVERSATIONS_GET, request),
+    deleteConversation: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_CONVERSATIONS_DELETE, request),
     appendMessage: (request) =>
       invokeSafe(IPC_CHANNELS.AGENT_MESSAGES_APPEND, request),
     saveDraft: (request) =>

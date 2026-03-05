@@ -29,6 +29,7 @@ type UseAgentConversationsResult = {
   errorMessage: string | null;
   selectConversation: (conversationId: string) => void;
   createConversation: (title?: string) => Promise<string | null>;
+  deleteConversation: (conversationId: string) => Promise<void>;
   sendMessage: (
     content: string,
     attachments?: AgentContextAttachment[]
@@ -187,6 +188,28 @@ export function useAgentConversations(): UseAgentConversationsResult {
     }
   }, []);
 
+  const deleteConversation = useCallback(async (conversationId: string): Promise<void> => {
+    try {
+      setErrorMessage(null);
+      const result = await window.api.agents.deleteConversation({ conversationId });
+      const { deleted } = unwrapResult(result);
+      if (!deleted) return;
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      if (conversationId === selectedConversationId) {
+        setSelectedConversationId((prev) => {
+          if (prev !== conversationId) return prev;
+          const remaining = conversations.filter((c) => c.id !== conversationId);
+          return remaining.length > 0 ? remaining[0].id : null;
+        });
+        setMessages([]);
+        setEntries([]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete conversation.';
+      setErrorMessage(message);
+    }
+  }, [selectedConversationId, conversations]);
+
   const appendMessage = useCallback(
     async (
       content: string,
@@ -284,6 +307,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
     errorMessage,
     selectConversation,
     createConversation,
+    deleteConversation,
     sendMessage,
     appendMessage,
     startDraft: draftState.startDraft,

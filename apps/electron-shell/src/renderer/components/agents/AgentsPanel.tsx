@@ -88,6 +88,7 @@ export function AgentsPanel() {
             sddEnabled={sddEnabled}
             onSelectConversation={conversations.selectConversation}
             onCreateConversation={() => conversations.createConversation()}
+            onDeleteConversation={conversations.deleteConversation}
             onSendMessage={(content, attachments) =>
               conversations.sendMessage(content, attachments)
             }

@@ -103,6 +103,18 @@ export class AgentConversationStore {
     return conversation;
   }
 
+  public deleteConversation(conversationId: string): boolean {
+    const store = this.loadStore();
+    if (!store.conversations[conversationId]) {
+      return false;
+    }
+    delete store.conversations[conversationId];
+    delete store.messages[conversationId];
+    delete store.entries[conversationId];
+    this.saveStore(store);
+    return true;
+  }
+
   public appendMessage(request: AppendAgentMessageRequest): AgentMessage {
     const store = this.loadStore();
     const conversation = store.conversations[request.conversationId];
@@ -237,7 +249,9 @@ export class AgentConversationStore {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(this.storePath, JSON.stringify(store, null, 2), 'utf-8');
+    const tempPath = `${this.storePath}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), 'utf-8');
+    fs.renameSync(tempPath, this.storePath);
   }
 }
 

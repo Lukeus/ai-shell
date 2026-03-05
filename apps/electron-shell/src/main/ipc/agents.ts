@@ -17,6 +17,8 @@ import {
   GetAgentRunRequestSchema,
   GetAgentConversationRequestSchema,
   GetAgentConversationResponseSchema,
+  DeleteAgentConversationRequestSchema,
+  DeleteAgentConversationResponseSchema,
   IPC_CHANNELS,
   ListAgentConversationsResponseSchema,
   SaveAgentDraftRequestSchema,
@@ -464,6 +466,17 @@ export const registerAgentHandlers = (): void => {
     },
     async (_event, request) =>
       agentConversationStore.getConversation(request.conversationId)
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_CONVERSATIONS_DELETE,
+    {
+      inputSchema: DeleteAgentConversationRequestSchema,
+      outputSchema: DeleteAgentConversationResponseSchema,
+    },
+    async (_event, request) => ({
+      deleted: agentConversationStore.deleteConversation(request.conversationId),
+    })
   );
 
   handleSafe(

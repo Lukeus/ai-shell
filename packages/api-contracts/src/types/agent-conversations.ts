@@ -107,6 +107,22 @@ export type GetAgentConversationResponse = z.infer<
   typeof GetAgentConversationResponseSchema
 >;
 
+export const DeleteAgentConversationRequestSchema = z.object({
+  conversationId: z.string().uuid(),
+});
+
+export type DeleteAgentConversationRequest = z.infer<
+  typeof DeleteAgentConversationRequestSchema
+>;
+
+export const DeleteAgentConversationResponseSchema = z.object({
+  deleted: z.boolean(),
+});
+
+export type DeleteAgentConversationResponse = z.infer<
+  typeof DeleteAgentConversationResponseSchema
+>;
+
 export const AppendAgentMessageRequestSchema = z.object({
   conversationId: z.string().uuid(),
   role: AgentMessageRoleSchema,

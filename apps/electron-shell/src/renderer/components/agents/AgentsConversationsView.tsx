@@ -34,6 +34,7 @@ type AgentsConversationsViewProps = {
   sddEnabled: boolean;
   onSelectConversation: (conversationId: string) => void;
   onCreateConversation: () => Promise<string | null>;
+  onDeleteConversation: (conversationId: string) => Promise<void>;
   onSendMessage: (content: string, attachments: AgentContextAttachment[]) => Promise<void>;
   onRequestEdit: (
     content: string,
@@ -85,6 +86,7 @@ export function AgentsConversationsView({
   sddEnabled,
   onSelectConversation,
   onCreateConversation,
+  onDeleteConversation,
   onSendMessage,
   onRequestEdit,
   onDraftRequest,
@@ -222,6 +224,7 @@ export function AgentsConversationsView({
         isLoading={isLoading}
         onSelect={onSelectConversation}
         onCreate={() => void onCreateConversation()}
+        onDelete={(id) => void onDeleteConversation(id)}
       />
       {errorMessage ? (
         <div className="px-4 py-2 text-[12px] text-error border-b border-border-subtle">
