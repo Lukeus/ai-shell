@@ -58,6 +58,18 @@ describe('IPC Handlers - Diagnostics', () => {
   }
 
   describe('Diagnostics handlers', () => {
+    it('should register DIAGNOSTICS_PUBLISH handler', () => {
+      expect(handlers.has(IPC_CHANNELS.DIAGNOSTICS_PUBLISH)).toBe(true);
+    });
+
+    it('should register DIAGNOSTICS_CLEAR handler', () => {
+      expect(handlers.has(IPC_CHANNELS.DIAGNOSTICS_CLEAR)).toBe(true);
+    });
+
+    it('should register DIAGNOSTICS_LIST handler', () => {
+      expect(handlers.has(IPC_CHANNELS.DIAGNOSTICS_LIST)).toBe(true);
+    });
+
     it('should register DIAG_REPORT_ERROR handler', () => {
       expect(handlers.has(IPC_CHANNELS.DIAG_REPORT_ERROR)).toBe(true);
     });
@@ -87,6 +99,20 @@ describe('IPC Handlers - Diagnostics', () => {
       const handler = getHandler(IPC_CHANNELS.DIAG_GET_LOG_PATH);
       const result = await handler(null, {});
       expect(result).toEqual({ ok: true, value: { path: 'C:\\logs\\ai-shell.log' } });
+    });
+
+    it('should list diagnostics with empty initial state', async () => {
+      const handler = getHandler(IPC_CHANNELS.DIAGNOSTICS_LIST);
+      const result = await handler(null, {});
+      expect(result).toEqual({
+        diagnostics: [],
+        summary: {
+          errorCount: 0,
+          warningCount: 0,
+          infoCount: 0,
+          hintCount: 0,
+        },
+      });
     });
   });
 });

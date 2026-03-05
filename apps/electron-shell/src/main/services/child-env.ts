@@ -32,6 +32,15 @@ const DEFAULT_ALLOWLIST = [
   'LANG',
   'LC_ALL',
   'LC_CTYPE',
+  'HTTPS_PROXY',
+  'HTTP_PROXY',
+  'ALL_PROXY',
+  'NO_PROXY',
+  'https_proxy',
+  'http_proxy',
+  'all_proxy',
+  'no_proxy',
+  'NODE_USE_ENV_PROXY',
 ];
 
 const normalizeKey = (value: string): string => {

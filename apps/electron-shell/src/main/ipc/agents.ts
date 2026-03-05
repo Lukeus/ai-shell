@@ -61,6 +61,7 @@ type AgentSubscriber = {
 };
 
 const agentSubscribers = new Map<number, AgentSubscriber>();
+const trackedDestroyedListenerSenders = new Set<number>();
 const cachedRunRequests = new Map<string, AgentRunStartRequest>();
 let agentHostBindingsReady = false;
 
@@ -68,6 +69,7 @@ let agentHostBindingsReady = false;
 export const _resetAgentHostBindings = (): void => {
   agentHostBindingsReady = false;
   agentSubscribers.clear();
+  trackedDestroyedListenerSenders.clear();
   cachedRunRequests.clear();
 };
 
@@ -87,11 +89,12 @@ const updateRunDelegationMetadata = (
 };
 
 const registerAgentSubscriber = (sender: WebContents, runId?: string): void => {
-  const existing = agentSubscribers.get(sender.id);
   agentSubscribers.set(sender.id, { sender, runId });
-  if (!existing) {
+  if (!trackedDestroyedListenerSenders.has(sender.id)) {
+    trackedDestroyedListenerSenders.add(sender.id);
     sender.once('destroyed', () => {
       agentSubscribers.delete(sender.id);
+      trackedDestroyedListenerSenders.delete(sender.id);
     });
   }
 };

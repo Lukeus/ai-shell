@@ -9,6 +9,7 @@ import { secretsService } from './SecretsService';
 import { consentService } from './ConsentService';
 import { auditService } from './AuditService';
 import { settingsService } from './SettingsService';
+import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
 
 type ModelGatewayDeps = {
   getSettings?: () => Settings;
@@ -39,6 +40,37 @@ type ModelGatewayContext = {
   requesterId: string;
 };
 
+let proxyConfigured = false;
+
+const hasProxyEnv = (): boolean => {
+  const vars = [
+    process.env.HTTPS_PROXY,
+    process.env.HTTP_PROXY,
+    process.env.ALL_PROXY,
+    process.env.https_proxy,
+    process.env.http_proxy,
+    process.env.all_proxy,
+  ];
+  return vars.some((value) => typeof value === 'string' && value.trim().length > 0);
+};
+
+const configureProxyForNodeFetch = (): void => {
+  if (proxyConfigured) {
+    return;
+  }
+  proxyConfigured = true;
+
+  if (!hasProxyEnv()) {
+    return;
+  }
+
+  try {
+    setGlobalDispatcher(new EnvHttpProxyAgent());
+  } catch {
+    // Ignore proxy dispatcher setup failures; fetch() will surface request errors.
+  }
+};
+
 const getStringConfig = (connection: Connection, key: string): string | undefined => {
   const value = connection.config[key];
   return typeof value === 'string' ? value : undefined;
@@ -50,10 +82,28 @@ const fetchWithTimeout = async (
   init: RequestInit,
   timeoutMs: number
 ): Promise<Response> => {
+  configureProxyForNodeFetch();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetchFn(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    const fallbackMessage = error instanceof Error ? error.message : 'fetch failed';
+    const cause =
+      error && typeof error === 'object'
+        ? (error as { cause?: { code?: unknown; message?: unknown } }).cause
+        : undefined;
+    const causeCode = typeof cause?.code === 'string' ? cause.code : undefined;
+    const causeMessage = typeof cause?.message === 'string' ? cause.message : undefined;
+    let origin = url;
+    try {
+      origin = new URL(url).origin;
+    } catch {
+      // Keep full URL fallback when URL parsing fails.
+    }
+
+    const detail = causeCode ?? causeMessage ?? fallbackMessage;
+    throw new Error(`Network request to ${origin} failed: ${detail}`);
   } finally {
     clearTimeout(timeoutId);
   }

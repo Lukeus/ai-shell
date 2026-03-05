@@ -6,7 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "turbo dev --concurrency=20",
+    "dev": "turbo build --filter=packages-api-contracts --filter=packages-ui-kit --filter=packages-broker-main --filter=packages-agent-tools && pnpm --filter apps-electron-shell dev",
+    "dev:all": "turbo dev --concurrency=20",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
@@ -18,7 +19,7 @@
     "@playwright/test": "1.58.2",
     "@typescript-eslint/eslint-plugin": "8.56.1",
     "@typescript-eslint/parser": "8.56.1",
-    "eslint": "^10.0.2",
+    "eslint": "^9.7.0",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
     "playwright": "1.58.2",

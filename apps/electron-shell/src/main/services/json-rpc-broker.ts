@@ -150,10 +150,18 @@ export class JSONRPCBroker {
 
   /**
    * Handles an incoming JSON-RPC message from Extension Host.
+   * Lines that don't start with '{' are treated as log output and forwarded to stderr.
    */
   private async handleMessage(line: string): Promise<void> {
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith('{')) {
+      // Extension Host log output — forward to main process stderr
+      console.error(`[ExtensionHost] ${line}`);
+      return;
+    }
+
     try {
-      const message = JSON.parse(line) as JSONRPCMessage;
+      const message = JSON.parse(trimmed) as JSONRPCMessage;
 
       // Validate JSON-RPC 2.0 format
       if (message.jsonrpc !== '2.0') {
