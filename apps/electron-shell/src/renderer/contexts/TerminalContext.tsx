@@ -170,12 +170,17 @@ export function TerminalContextProvider({ children }: { children: React.ReactNod
    */
   const handleTerminalData = useCallback((event: TerminalDataEvent) => {
     const { sessionId, data } = event;
-    
+    const MAX_OUTPUT_BYTES = 1_048_576; // 1 MB cap per session
+
     // Accumulate output in renderer (P3: never logged in main process)
     setOutputs(prev => {
       const next = new Map(prev);
       const existing = next.get(sessionId) || '';
-      next.set(sessionId, existing + data);
+      let updated = existing + data;
+      if (updated.length > MAX_OUTPUT_BYTES) {
+        updated = updated.slice(updated.length - MAX_OUTPUT_BYTES);
+      }
+      next.set(sessionId, updated);
       return next;
     });
   }, []);

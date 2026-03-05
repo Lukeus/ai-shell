@@ -262,7 +262,7 @@ export class AgentRunStore {
           lowerKey.includes('secret') ||
           lowerKey.includes('token') ||
           lowerKey.includes('password') ||
-          lowerKey.includes('key') && !lowerKey.includes('keyname')
+          (lowerKey.includes('key') && !lowerKey.includes('keyname'))
         ) {
           redacted[key] = '[REDACTED]';
         } else if (typeof value === 'object' && value !== null) {
@@ -287,7 +287,9 @@ export class AgentRunStore {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(this.storePath, JSON.stringify(store, null, 2), 'utf-8');
+    const tempPath = `${this.storePath}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), 'utf-8');
+    fs.renameSync(tempPath, this.storePath);
   }
 }
 

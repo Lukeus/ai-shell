@@ -249,6 +249,9 @@ export const IPC_CHANNELS = {
   /** Get a single agent conversation */
   AGENT_CONVERSATIONS_GET: 'agent:conversations:get',
 
+  /** Delete an agent conversation */
+  AGENT_CONVERSATIONS_DELETE: 'agent:conversations:delete',
+
   /** Append a message to a conversation */
   AGENT_MESSAGES_APPEND: 'agent:messages:append',
 

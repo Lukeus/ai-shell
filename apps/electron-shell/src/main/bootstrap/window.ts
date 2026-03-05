@@ -31,11 +31,9 @@ export const createMainWindow = (options: CreateWindowOptions = {}): BrowserWind
   });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    console.log('[DEBUG] Loading dev server URL:', MAIN_WINDOW_VITE_DEV_SERVER_URL);
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
     const prodPath = path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
-    console.log('[DEBUG] Loading production file:', prodPath);
     mainWindow.loadFile(prodPath);
   }
 

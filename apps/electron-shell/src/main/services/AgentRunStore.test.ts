@@ -17,10 +17,11 @@ vi.mock('electron', () => ({
 vi.mock('fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn((file: string, data: string) => {
-    if (file === 'C:\\mock\\userdata\\agent-runs.json') {
+    if (file === 'C:\\mock\\userdata\\agent-runs.json.tmp') {
       savedContent = data;
     }
   }),
+  renameSync: vi.fn(),
   existsSync: vi.fn(),
   mkdirSync: vi.fn(),
 }));
@@ -48,9 +49,13 @@ describe('AgentRunStore', () => {
 
     expect(created.status).toBe('queued');
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      mockStorePath,
+      `${mockStorePath}.tmp`,
       expect.any(String),
       'utf-8'
+    );
+    expect(fs.renameSync).toHaveBeenCalledWith(
+      `${mockStorePath}.tmp`,
+      mockStorePath
     );
 
     vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);

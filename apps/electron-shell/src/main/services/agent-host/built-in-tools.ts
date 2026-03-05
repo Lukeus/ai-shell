@@ -126,7 +126,7 @@ export const createBuiltInToolsRegistrar = (
     const workspaceReadOutput = z.object({ content: z.string(), encoding: z.string() });
     const workspaceWriteInput = z.object({ path: z.string(), content: z.string() });
     const workspaceWriteOutput = z.object({ success: z.literal(true) });
-    const repoSearchInput = z.object({ query: z.string().min(1), glob: z.string().optional() });
+    const repoSearchInput = z.object({ query: z.string().min(1).max(500), glob: z.string().max(200).optional() });
     const repoSearchOutput = z.object({
       matches: z.array(
         z.object({
@@ -202,14 +202,28 @@ export const createBuiltInToolsRegistrar = (
           args.push('-g', glob);
         }
 
+        const RG_TIMEOUT_MS = 30_000;
+        const RG_MAX_MATCHES = 1000;
         const matches: Array<{ file: string; line: number; text: string }> = [];
+        let truncated = false;
         await new Promise<void>((resolve, reject) => {
           const child = spawn('rg', args, { cwd: workspace.path });
           let stderr = '';
 
+          const timeout = setTimeout(() => {
+            child.kill('SIGTERM');
+            reject(new Error(`ripgrep timed out after ${RG_TIMEOUT_MS}ms`));
+          }, RG_TIMEOUT_MS);
+
           child.stdout.on('data', (data: Buffer) => {
+            if (truncated) return;
             const lines = data.toString().split('\n').filter((line) => line.length > 0);
             for (const line of lines) {
+              if (matches.length >= RG_MAX_MATCHES) {
+                truncated = true;
+                child.kill('SIGTERM');
+                return;
+              }
               try {
                 const parsed = JSON.parse(line) as {
                   type?: string;
@@ -238,11 +252,13 @@ export const createBuiltInToolsRegistrar = (
           });
 
           child.on('error', (error) => {
+            clearTimeout(timeout);
             reject(error);
           });
 
           child.on('close', (code) => {
-            if (code === 0 || code === 1) {
+            clearTimeout(timeout);
+            if (truncated || code === 0 || code === 1) {
               resolve();
               return;
             }

@@ -296,6 +296,7 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.AGENT_CONVERSATIONS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_CONVERSATIONS_CREATE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_CONVERSATIONS_GET)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.AGENT_CONVERSATIONS_DELETE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_MESSAGES_APPEND)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_DRAFTS_SAVE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.AGENT_EDITS_REQUEST)).toBe(true);
@@ -352,8 +353,8 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.OUTPUT_LIST_CHANNELS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.OUTPUT_READ)).toBe(true);
 
-      // Total: 101 handlers
-      expect(handlers.size).toBe(101);
+      // Total: 102 handlers
+      expect(handlers.size).toBe(102);
     });
   });
 });

@@ -105,6 +105,8 @@ import type {
   CreateAgentConversationResponse,
   GetAgentConversationRequest,
   GetAgentConversationResponse,
+  DeleteAgentConversationRequest,
+  DeleteAgentConversationResponse,
   AppendAgentMessageRequest,
   AppendAgentMessageResponse,
 } from './types/agent-conversations';
@@ -812,6 +814,13 @@ export interface PreloadAPI {
     getConversation(
       request: GetAgentConversationRequest
     ): Promise<Result<GetAgentConversationResponse>>;
+
+    /**
+     * Deletes a conversation and all its messages.
+     */
+    deleteConversation(
+      request: DeleteAgentConversationRequest
+    ): Promise<Result<DeleteAgentConversationResponse>>;
 
     /**
      * Appends a message to a conversation.

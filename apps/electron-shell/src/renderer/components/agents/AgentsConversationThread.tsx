@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type {
   AgentConversationEntry,
   AgentConversationMessageEntry,
@@ -27,23 +28,21 @@ type AgentsConversationThreadProps = {
 const formatTimestamp = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return 'Unknown';
+    return '';
   }
-  return date.toLocaleTimeString();
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 };
 
-const buildMessageBubbleClass = (role: AgentConversationMessageEntry['role']) => {
-  const isUser = role === 'user';
-  const isSystem = role === 'system';
-  const bubbleBase =
-    'max-w-[85%] rounded-none border border-border-subtle px-3 py-2.5 text-[13px] leading-relaxed';
-  if (isUser) {
-    return `${bubbleBase} bg-accent text-[var(--vscode-button-foreground)] ml-auto`;
-  }
-  if (isSystem) {
-    return `${bubbleBase} bg-surface text-secondary`;
-  }
-  return `${bubbleBase} bg-[var(--vscode-input-background)] text-primary`;
+const getRoleIcon = (role: AgentConversationMessageEntry['role']) => {
+  if (role === 'user') return 'codicon-person';
+  if (role === 'system') return 'codicon-info';
+  return 'codicon-sparkle';
+};
+
+const getRoleLabel = (role: AgentConversationMessageEntry['role']) => {
+  if (role === 'user') return 'You';
+  if (role === 'system') return 'System';
+  return 'Copilot';
 };
 
 const renderMessageContent = (
@@ -58,22 +57,28 @@ const renderMessageContent = (
 };
 
 const renderMessageEntry = (entry: AgentConversationMessageEntry) => {
-  const isUser = entry.role === 'user';
-  const bubbleClass = buildMessageBubbleClass(entry.role);
+  const icon = getRoleIcon(entry.role);
+  const label = getRoleLabel(entry.role);
   const attachments = entry.attachments ?? [];
-  const attachmentWrapClass = `max-w-[85%] ${isUser ? 'ml-auto' : ''}`;
+  const isUser = entry.role === 'user';
 
   return (
-    <div key={entry.id} className="flex flex-col gap-2">
-      <div className={`text-[11px] uppercase tracking-wide text-secondary ${isUser ? 'text-right' : ''}`}>
-        {entry.role} - {formatTimestamp(entry.createdAt)}
+    <div key={entry.id} className="group flex gap-3 px-4 py-3 hover:bg-surface-hover">
+      <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-sm bg-surface-secondary">
+        <span className={`codicon ${icon} text-[14px] ${isUser ? 'text-secondary' : 'text-accent'}`} aria-hidden="true" />
       </div>
-      <div className="flex flex-col gap-3">
-        <div className={bubbleClass}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="text-[13px] font-semibold text-primary">{label}</span>
+          <span className="text-[11px] text-tertiary opacity-0 group-hover:opacity-100 transition-opacity">
+            {formatTimestamp(entry.createdAt)}
+          </span>
+        </div>
+        <div className="text-[13px] leading-relaxed text-primary">
           {renderMessageContent(entry.content, entry.role, entry.format)}
         </div>
         {attachments.length > 0 ? (
-          <div className={attachmentWrapClass}>
+          <div className="mt-2">
             <AgentContextChips attachments={attachments} />
           </div>
         ) : null}
@@ -85,43 +90,38 @@ const renderMessageEntry = (entry: AgentConversationMessageEntry) => {
 const renderStreamingEntry = (
   streamingMessage: AgentStreamingMessage,
   streamingStatus: AgentStreamingStatus | null
-) => {
-  const bubbleClass = buildMessageBubbleClass('agent');
-  const indicatorClass = streamingMessage.content ? 'mt-2' : undefined;
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="text-[11px] uppercase tracking-wide text-secondary">
-        agent - {formatTimestamp(streamingMessage.startedAt)}
-      </div>
-      <div className="flex flex-col gap-3">
-        <div className={bubbleClass}>
-          {streamingMessage.content
-            ? renderMessageContent(streamingMessage.content, 'agent', streamingMessage.format)
-            : null}
-          <AgentStreamingIndicator status={streamingStatus} className={indicatorClass} />
-        </div>
-      </div>
+) => (
+  <div className="flex gap-3 px-4 py-3">
+    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-sm bg-surface-secondary">
+      <span className="codicon codicon-sparkle text-[14px] text-accent" aria-hidden="true" />
     </div>
-  );
-};
-
-const renderStreamingStatusOnly = (streamingStatus: AgentStreamingStatus) => {
-  const bubbleClass = buildMessageBubbleClass('agent');
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="text-[11px] uppercase tracking-wide text-secondary">
-        agent - {formatTimestamp(streamingStatus.startedAt)}
+    <div className="flex-1 min-w-0">
+      <div className="flex items-baseline gap-2 mb-1">
+        <span className="text-[13px] font-semibold text-primary">Copilot</span>
       </div>
-      <div className="flex flex-col gap-3">
-        <div className={bubbleClass}>
-          <AgentStreamingIndicator status={streamingStatus} />
+      {streamingMessage.content ? (
+        <div className="text-[13px] leading-relaxed text-primary">
+          {renderMessageContent(streamingMessage.content, 'agent', streamingMessage.format)}
         </div>
-      </div>
+      ) : null}
+      <AgentStreamingIndicator status={streamingStatus} className={streamingMessage.content ? 'mt-2' : undefined} />
     </div>
-  );
-};
+  </div>
+);
+
+const renderStreamingStatusOnly = (streamingStatus: AgentStreamingStatus) => (
+  <div className="flex gap-3 px-4 py-3">
+    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-sm bg-surface-secondary">
+      <span className="codicon codicon-sparkle text-[14px] text-accent" aria-hidden="true" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-baseline gap-2 mb-1">
+        <span className="text-[13px] font-semibold text-primary">Copilot</span>
+      </div>
+      <AgentStreamingIndicator status={streamingStatus} />
+    </div>
+  </div>
+);
 
 const renderProposalEntry = (
   entry: AgentConversationProposalEntry,
@@ -135,20 +135,28 @@ const renderProposalEntry = (
     onDiscardProposal,
   }: Omit<AgentsConversationThreadProps, 'entries' | 'streamingMessage' | 'streamingStatus'>
 ) => (
-  <div key={entry.id} className="flex flex-col gap-2">
-    <div className="text-[11px] uppercase tracking-wide text-secondary">
-      proposal - {formatTimestamp(entry.createdAt)}
+  <div key={entry.id} className="flex gap-3 px-4 py-3">
+    <div className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-sm bg-surface-secondary">
+      <span className="codicon codicon-edit text-[14px] text-accent" aria-hidden="true" />
     </div>
-    <AgentEditProposalCard
-      entry={entry}
-      canApply={canApplyProposals}
-      isApplying={isApplying(entry.id)}
-      isDiscarded={isDiscarded(entry.id)}
-      applyResult={applyResult(entry.id)}
-      applyError={applyError(entry.id)}
-      onApply={() => onApplyProposal(entry.id, entry.proposal.proposal, entry.conversationId)}
-      onDiscard={() => onDiscardProposal(entry.id)}
-    />
+    <div className="flex-1 min-w-0">
+      <div className="flex items-baseline gap-2 mb-1">
+        <span className="text-[13px] font-semibold text-primary">Edit Proposal</span>
+        <span className="text-[11px] text-tertiary">
+          {formatTimestamp(entry.createdAt)}
+        </span>
+      </div>
+      <AgentEditProposalCard
+        entry={entry}
+        canApply={canApplyProposals}
+        isApplying={isApplying(entry.id)}
+        isDiscarded={isDiscarded(entry.id)}
+        applyResult={applyResult(entry.id)}
+        applyError={applyError(entry.id)}
+        onApply={() => onApplyProposal(entry.id, entry.proposal.proposal, entry.conversationId)}
+        onDiscard={() => onDiscardProposal(entry.id)}
+      />
+    </div>
   </div>
 );
 
@@ -164,30 +172,43 @@ export function AgentsConversationThread({
   onApplyProposal,
   onDiscardProposal,
 }: AgentsConversationThreadProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [entries.length, !!streamingMessage]);
+
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-      {entries.length === 0 ? (
-        <div className="text-[13px] text-secondary">
-          Start a conversation to capture planning context.
+    <div className="flex-1 overflow-y-auto">
+      {entries.length === 0 && !streamingMessage && !streamingStatus ? (
+        <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+          <span className="codicon codicon-sparkle text-[32px] text-tertiary mb-3" aria-hidden="true" />
+          <div className="text-[13px] text-secondary mb-1">How can I help you?</div>
+          <div className="text-[12px] text-tertiary">
+            Ask a question or request an edit to get started.
+          </div>
         </div>
       ) : (
-        entries.map((entry) => {
-          if (entry.type === 'proposal') {
-            return renderProposalEntry(entry, {
-              canApplyProposals,
-              isApplying,
-              isDiscarded,
-              applyResult,
-              applyError,
-              onApplyProposal,
-              onDiscardProposal,
-            });
-          }
-          return renderMessageEntry(entry);
-        })
+        <div className="divide-y divide-border-subtle">
+          {entries.map((entry) => {
+            if (entry.type === 'proposal') {
+              return renderProposalEntry(entry, {
+                canApplyProposals,
+                isApplying,
+                isDiscarded,
+                applyResult,
+                applyError,
+                onApplyProposal,
+                onDiscardProposal,
+              });
+            }
+            return renderMessageEntry(entry);
+          })}
+          {streamingMessage ? renderStreamingEntry(streamingMessage, streamingStatus) : null}
+          {!streamingMessage && streamingStatus ? renderStreamingStatusOnly(streamingStatus) : null}
+        </div>
       )}
-      {streamingMessage ? renderStreamingEntry(streamingMessage, streamingStatus) : null}
-      {!streamingMessage && streamingStatus ? renderStreamingStatusOnly(streamingStatus) : null}
+      <div ref={bottomRef} />
     </div>
   );
 }
