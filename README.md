@@ -2,6 +2,9 @@
 
 An enterprise-grade Electron application shell with secure process architecture, designed for building AI-powered development tools.
 
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Lukeus/ai-shell)
+
 ## Screen Clippings
 
 ### Settings
