@@ -208,4 +208,30 @@ describe('BrokerMain with VFS tools', () => {
     const allowedResult = await broker.handleAgentToolCall(allowedEnvelope);
     expect(allowedResult.ok).toBe(true);
   });
+
+  it('includes execution failure reason in output when a tool throws', async () => {
+    broker.registerToolDefinition({
+      id: 'tool.fail',
+      description: 'Always fails',
+      inputSchema: z.object({}),
+      outputSchema: z.object({ ok: z.boolean() }),
+      execute: () => {
+        throw new Error('fetch failed');
+      },
+    });
+
+    const runId = randomUUID();
+    const envelope: ToolCallEnvelope = {
+      callId: randomUUID(),
+      toolId: 'tool.fail',
+      requesterId: 'agent-host',
+      runId,
+      input: {},
+    };
+
+    const result = await broker.handleAgentToolCall(envelope);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('TOOL_EXECUTION_FAILED');
+    expect(result.output).toEqual({ reason: 'fetch failed' });
+  });
 });

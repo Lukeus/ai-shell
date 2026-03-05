@@ -140,20 +140,23 @@ export class BrokerMain {
           return this.buildErrorResult(
             validated,
             TOOL_ERROR_CODES.TOOL_NOT_FOUND,
-            this.elapsedMs(startedAt)
+            this.elapsedMs(startedAt),
+            error
           );
         }
         if (error.startsWith('Invalid tool output')) {
           return this.buildErrorResult(
             validated,
             TOOL_ERROR_CODES.INVALID_TOOL_OUTPUT,
-            this.elapsedMs(startedAt)
+            this.elapsedMs(startedAt),
+            error
           );
         }
         return this.buildErrorResult(
           validated,
           TOOL_ERROR_CODES.TOOL_EXECUTION_FAILED,
-          this.elapsedMs(startedAt)
+          this.elapsedMs(startedAt),
+          error
         );
       }
 
@@ -178,11 +181,13 @@ export class BrokerMain {
       }
 
       return ToolCallResultSchema.parse(result);
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Tool execution failed';
       return this.buildErrorResult(
         validated,
         TOOL_ERROR_CODES.TOOL_EXECUTION_FAILED,
-        this.elapsedMs(startedAt)
+        this.elapsedMs(startedAt),
+        message
       );
     }
   }
@@ -206,6 +211,10 @@ export class BrokerMain {
       result.output = {
         denied: true,
         ...(reason ? { reason } : {}),
+      };
+    } else if (reason) {
+      result.output = {
+        reason,
       };
     }
 

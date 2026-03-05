@@ -127,6 +127,15 @@ class BrokeredModel extends BaseLanguageModel<string> {
     return 'brokered';
   }
 
+  /**
+   * DeepAgents expects models to expose bindTools().
+   * This brokered model executes tool calls via the backend/tool layer,
+   * so there is no local tool-binding step; return self for compatibility.
+   */
+  bindTools(_tools: unknown[]): BrokeredModel {
+    return this;
+  }
+
   async invoke(
     input: BaseLanguageModelInput,
     options?: Partial<BaseLanguageModelCallOptions>
@@ -665,7 +674,7 @@ export class DeepAgentRunner {
         if (result.error === 'POLICY_DENIED') {
           return result;
         }
-        throw new Error(result.error ?? 'Tool call failed');
+        throw new Error(this.getToolFailureReason(result) ?? result.error ?? 'Tool call failed');
       }
 
       return result;
@@ -703,6 +712,20 @@ export class DeepAgentRunner {
       type: 'status',
       status,
     });
+  }
+
+  private getToolFailureReason(result: ToolCallResult): string | undefined {
+    if (!result.output || typeof result.output !== 'object' || Array.isArray(result.output)) {
+      return undefined;
+    }
+
+    const reason = (result.output as { reason?: unknown }).reason;
+    if (typeof reason !== 'string') {
+      return undefined;
+    }
+
+    const normalized = reason.trim();
+    return normalized.length > 0 ? normalized : undefined;
   }
 
   private emitError(runContext: RunContext, error: unknown, code?: string): void {

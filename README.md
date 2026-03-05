@@ -105,8 +105,12 @@ The Workspace Explorer provides secure file system navigation and management:
 
 ## Setup
 
-```bash
+```powershell
 # Install dependencies
+pnpm install
+
+# If behind proxy
+$env:ELECTRON_GET_USE_PROXY = "true"
 pnpm install
 
 # Start development server (with hot-reload)

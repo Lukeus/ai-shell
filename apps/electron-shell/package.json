@@ -20,7 +20,7 @@
     "ignore": "7.0.5",
     "minimatch": "10.2.4",
     "monaco-editor": "0.55.1",
-    "node-pty": "npm:@homebridge/node-pty-prebuilt-multiarch@0.13.1",
+    "node-pty": "1.1.0",
     "packages-agent-tools": "workspace:*",
     "packages-api-contracts": "workspace:*",
     "packages-broker-main": "workspace:*",

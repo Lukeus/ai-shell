@@ -200,4 +200,52 @@ describe('ModelGatewayService', () => {
       })
     );
   });
+
+  it('includes network cause details when fetch fails', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(
+      Object.assign(new Error('fetch failed'), {
+        cause: { code: 'UND_ERR_CONNECT_TIMEOUT' },
+      })
+    );
+
+    const service = new ModelGatewayService({
+      getSettings: () => ({
+        appearance: { theme: 'dark', fontSize: 14, iconTheme: 'default', menuBarVisible: true },
+        editor: { fontSize: 14, wordWrap: false, lineNumbers: true, minimap: true, breadcrumbsEnabled: true, tabSize: 2 },
+        terminal: { defaultShell: 'default' },
+        extensions: { autoUpdate: true, enableTelemetry: false },
+        agents: { defaultConnectionId: null },
+        sdd: { enabled: false, blockCommitOnUntrackedCodeChanges: false, customCommands: [] },
+        mcp: { servers: {} },
+      }),
+      listConnections: () => [
+        {
+          ...baseConnection,
+          metadata: {
+            ...baseConnection.metadata,
+            id: '99999999-9999-4999-8999-999999999999',
+            providerId: 'azure-openai',
+            secretRef: 'secret-ref',
+          },
+          config: {
+            endpoint: 'https://example.openai.azure.com',
+            deployment: 'gpt-4o-mini',
+            apiVersion: '2024-02-15-preview',
+          },
+        },
+      ],
+      getSecret: () => 'azure-key',
+      evaluateAccess: () => true,
+      logSecretAccess: vi.fn(),
+      logModelCall: vi.fn(),
+      fetchFn: fetchMock,
+    });
+
+    await expect(
+      service.generate(
+        { prompt: 'Hello', connectionId: '99999999-9999-4999-8999-999999999999' },
+        { runId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', requesterId: 'agent-host' }
+      )
+    ).rejects.toThrow('Network request to https://example.openai.azure.com failed: UND_ERR_CONNECT_TIMEOUT');
+  });
 });

@@ -42,10 +42,6 @@ const seedBundledExtensions = (extensionsDir: string): void => {
   BUNDLED_EXTENSION_DIRECTORIES.forEach((extensionDirectory) => {
     try {
       const destinationPath = path.join(extensionsDir, extensionDirectory);
-      if (fs.existsSync(path.join(destinationPath, 'package.json'))) {
-        return;
-      }
-
       const sourcePath = resolveBundledExtensionSourcePath(extensionDirectory);
       if (!sourcePath) {
         console.warn(
@@ -56,9 +52,11 @@ const seedBundledExtensions = (extensionsDir: string): void => {
 
       fs.cpSync(sourcePath, destinationPath, {
         recursive: true,
-        force: false,
+        force: true,
         errorOnExist: false,
       });
+
+      console.log(`[Main] Synced bundled extension "${extensionDirectory}" to ${destinationPath}`);
     } catch (error) {
       console.error(
         `[Main] Failed to seed bundled extension "${extensionDirectory}":`,

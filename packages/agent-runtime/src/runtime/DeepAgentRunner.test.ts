@@ -75,6 +75,42 @@ describe('DeepAgentRunner', () => {
     expect(statusEvents[statusEvents.length - 1]).toMatchObject({ status: 'failed' });
   });
 
+  it('surfaces detailed tool failure reason from tool result output', async () => {
+    const events: AgentEvent[] = [];
+    const toolExecutor = {
+      executeToolCall: vi.fn(async (envelope: ToolCallEnvelope) => ({
+        callId: envelope.callId,
+        toolId: envelope.toolId,
+        runId: envelope.runId,
+        ok: false,
+        error: 'TOOL_EXECUTION_FAILED',
+        output: { reason: 'fetch failed' },
+        durationMs: 5,
+      })),
+    };
+
+    const runner = new DeepAgentRunner({
+      toolExecutor,
+      onEvent: (event) => events.push(event),
+    });
+
+    const runId = randomUUID();
+    const toolCall = {
+      callId: randomUUID(),
+      toolId: 'model.generate',
+      requesterId: 'agent-host',
+      runId,
+      input: { prompt: 'hello' },
+    };
+
+    await expect(runner.startRun(runId, { goal: 'Generate output' }, [toolCall])).rejects.toThrow(
+      'fetch failed'
+    );
+
+    const errorEvent = events.find((event) => event.type === 'error');
+    expect(errorEvent && errorEvent.type === 'error' ? errorEvent.message : '').toBe('fetch failed');
+  });
+
   it('emits tool-call and tool-result events for VFS operations', async () => {
     const events: AgentEvent[] = [];
     const toolExecutor = {
@@ -239,6 +275,37 @@ describe('DeepAgentRunner', () => {
 
     const types = events.map((event) => event.type);
     expect(types).toEqual(['status', 'tool-call', 'tool-result', 'log', 'status']);
+  });
+
+  it('provides a model that implements bindTools for DeepAgents compatibility', async () => {
+    const toolExecutor = {
+      executeToolCall: vi.fn(async (envelope: ToolCallEnvelope) => ({
+        callId: envelope.callId,
+        toolId: envelope.toolId,
+        runId: envelope.runId,
+        ok: true,
+        output: { text: 'ok' },
+        durationMs: 1,
+      })),
+    };
+
+    const createAgent = vi.fn(({ model }: { model: { bindTools?: unknown } }) => {
+      expect(typeof model.bindTools).toBe('function');
+      return {
+        streamEvents: async function* () {
+          // no-op stream
+        },
+      };
+    });
+
+    const runner = new DeepAgentRunner({
+      toolExecutor,
+      onEvent: () => undefined,
+      createAgent,
+    });
+
+    await runner.startRun(randomUUID(), { goal: 'Test bindTools compatibility' });
+    expect(createAgent).toHaveBeenCalled();
   });
 
   it('emits plan and todo events from write_todos updates', async () => {

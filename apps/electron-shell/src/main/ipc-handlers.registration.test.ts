@@ -262,7 +262,10 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.SCM_UNSTAGE)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.SCM_COMMIT)).toBe(true);
 
-      // Diagnostics handlers (3)
+      // Diagnostics handlers (6)
+      expect(handlers.has(IPC_CHANNELS.DIAGNOSTICS_PUBLISH)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.DIAGNOSTICS_CLEAR)).toBe(true);
+      expect(handlers.has(IPC_CHANNELS.DIAGNOSTICS_LIST)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.DIAG_REPORT_ERROR)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.DIAG_GET_LOG_PATH)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.DIAG_SET_SAFE_MODE)).toBe(true);
@@ -349,8 +352,8 @@ describe('IPC Handlers - Registration', () => {
       expect(handlers.has(IPC_CHANNELS.OUTPUT_LIST_CHANNELS)).toBe(true);
       expect(handlers.has(IPC_CHANNELS.OUTPUT_READ)).toBe(true);
 
-      // Total: 98 handlers
-      expect(handlers.size).toBe(98);
+      // Total: 101 handlers
+      expect(handlers.size).toBe(101);
     });
   });
 });

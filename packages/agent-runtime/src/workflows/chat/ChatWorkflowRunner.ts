@@ -151,7 +151,15 @@ export class ChatWorkflowRunner {
 
     const result = await this.toolExecutor.executeToolCall(envelope);
     if (!result.ok) {
-      throw new Error(result.error ?? 'model.generate failed');
+      const reason =
+        result.output && typeof result.output === 'object' && !Array.isArray(result.output)
+          ? (result.output as { reason?: unknown }).reason
+          : undefined;
+      throw new Error(
+        (typeof reason === 'string' && reason.trim().length > 0
+          ? reason.trim()
+          : result.error) ?? 'model.generate failed'
+      );
     }
 
     const output = result.output as { text?: unknown };
