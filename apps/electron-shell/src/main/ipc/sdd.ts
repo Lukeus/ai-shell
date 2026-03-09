@@ -274,11 +274,20 @@ export const registerSddHandlers = (): void => {
         throw new Error('No workspace open. Open a folder first.');
       }
 
+      const proposal = sddRunCoordinator.resolveProposal(
+        validated.runId,
+        validated.proposal
+      );
+      if (!proposal) {
+        throw new Error('Proposal content is unavailable. Re-run the workflow and try again.');
+      }
+
       try {
         const result = await patchApplyService.applyProposal(
-          validated.proposal,
+          proposal,
           workspace.path
         );
+        sddRunCoordinator.markProposalApplied(validated.runId, result.summary);
         auditService.logSddProposalApply({
           runId: validated.runId,
           status: 'success',
@@ -287,6 +296,7 @@ export const registerSddHandlers = (): void => {
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to apply proposal';
+        sddRunCoordinator.markProposalFailed(validated.runId, message);
         auditService.logSddProposalApply({
           runId: validated.runId,
           status: 'error',

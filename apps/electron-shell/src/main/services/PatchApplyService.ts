@@ -192,10 +192,15 @@ export class PatchApplyService {
     proposal: Proposal,
     workspaceRoot: string
   ): Promise<PatchApplyResult> {
-    if (proposal.patch && proposal.patch.trim().length > 0) {
+    if (proposal.mode === 'patch') {
       return this.applyPatch(proposal.patch, workspaceRoot);
     }
-    return this.applyWrites(proposal.writes ?? [], workspaceRoot);
+
+    if (proposal.mode === 'writes') {
+      return this.applyWrites(proposal.writes, workspaceRoot);
+    }
+
+    throw new Error(`Unsupported proposal mode: ${(proposal as { mode?: string }).mode ?? 'unknown'}`);
   }
 
   private async applyPatch(patchText: string, workspaceRoot: string): Promise<PatchApplyResult> {
@@ -276,7 +281,7 @@ export class PatchApplyService {
   }
 
   private async applyWrites(
-    writes: Proposal['writes'],
+    writes: Extract<Proposal, { mode: 'writes' }>['writes'],
     workspaceRoot: string
   ): Promise<PatchApplyResult> {
     const files: string[] = [];

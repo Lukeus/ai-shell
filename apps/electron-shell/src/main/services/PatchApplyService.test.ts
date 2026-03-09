@@ -22,6 +22,7 @@ describe('PatchApplyService', () => {
 
   it('applies file writes within the workspace', async () => {
     const proposal: Proposal = {
+      mode: 'writes',
       writes: [{ path: 'src/file.txt', content: 'hello' }],
       summary: { filesChanged: 1 },
     };
@@ -48,7 +49,7 @@ describe('PatchApplyService', () => {
     ].join('\n');
 
     const proposal: Proposal = {
-      writes: [],
+      mode: 'patch',
       patch,
       summary: { filesChanged: 1 },
     };
@@ -61,6 +62,7 @@ describe('PatchApplyService', () => {
 
   it('rejects writes outside the workspace', async () => {
     const proposal: Proposal = {
+      mode: 'writes',
       writes: [{ path: '../escape.txt', content: 'nope' }],
       summary: { filesChanged: 1 },
     };

@@ -28,6 +28,7 @@ describe('EditWorkflowRunner', () => {
     const modelText = JSON.stringify({
       summary: 'Update helper',
       proposal: {
+        mode: 'writes',
         writes: [{ path: 'src/helpers/foo.ts', content: 'export const foo = 1;\n' }],
         summary: { filesChanged: 1 },
       },
@@ -54,7 +55,9 @@ describe('EditWorkflowRunner', () => {
     expect(proposalEvent?.type).toBe('edit-proposal');
     if (proposalEvent?.type === 'edit-proposal') {
       expect(proposalEvent.conversationId).toBe(conversationId);
-      expect(proposalEvent.proposal.proposal.writes).toHaveLength(1);
+      expect(proposalEvent.proposal.mode).toBe('writes');
+      expect(proposalEvent.proposal.changeSummary.filesChanged).toBe(1);
+      expect(proposalEvent.proposal.proposal?.writes).toHaveLength(1);
       expect(proposalEvent.proposal.summary).toBe('Update helper');
     }
   });
@@ -86,8 +89,9 @@ describe('EditWorkflowRunner', () => {
     const proposalEvent = events.find((event) => event.type === 'edit-proposal');
     expect(proposalEvent?.type).toBe('edit-proposal');
     if (proposalEvent?.type === 'edit-proposal') {
-      expect(proposalEvent.proposal.proposal.patch).toBe(patch);
-      expect(proposalEvent.proposal.proposal.summary.filesChanged).toBe(1);
+      expect(proposalEvent.proposal.mode).toBe('patch');
+      expect(proposalEvent.proposal.proposal?.patch).toBe(patch);
+      expect(proposalEvent.proposal.proposal?.summary.filesChanged).toBe(1);
     }
   });
 
@@ -95,6 +99,7 @@ describe('EditWorkflowRunner', () => {
     const modelText = JSON.stringify({
       summary: 'Attempted write',
       proposal: {
+        mode: 'writes',
         writes: [{ path: 'src/helpers/bar.ts', content: 'export const bar = 1;\n' }],
         summary: { filesChanged: 1 },
       },

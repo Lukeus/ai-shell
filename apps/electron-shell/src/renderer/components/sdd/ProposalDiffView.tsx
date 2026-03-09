@@ -51,7 +51,7 @@ export function ProposalDiffView({
         )}
       </div>
 
-      {proposal.writes.length > 0 && (
+      {proposal.mode === 'writes' && (
         <div className="flex flex-col gap-3">
           {proposal.writes.map((write) => (
             <div key={write.path} className="flex flex-col gap-2">
@@ -74,7 +74,7 @@ export function ProposalDiffView({
         </div>
       )}
 
-      {proposal.patch && (
+      {proposal.mode === 'patch' && (
         <div className="flex flex-col gap-2">
           <span className="text-primary" style={{ fontSize: 'var(--vscode-font-size-small)' }}>
             Unified diff

@@ -9,9 +9,16 @@ const baseEntry: AgentConversationProposalEntry = {
   conversationId: 'conversation-1',
   type: 'proposal',
   createdAt: '2024-01-01T00:00:00.000Z',
+  state: 'pending',
+  appliedAt: null,
+  discardedAt: null,
+  failedAt: null,
   proposal: {
     summary: 'Update file.ts',
+    mode: 'writes',
+    changeSummary: { filesChanged: 1 },
     proposal: {
+      mode: 'writes',
       writes: [{ path: 'src/file.ts', content: 'console.log(1);' }],
       summary: { filesChanged: 1 },
     },
@@ -50,7 +57,12 @@ describe('AgentEditProposalCard', () => {
         canApply
         isApplying={false}
         isDiscarded={false}
-        applyResult={{ files: ['src/file.ts'], summary: { filesChanged: 1 } }}
+        applyResult={{
+          files: ['src/file.ts'],
+          summary: { filesChanged: 1 },
+          state: 'applied',
+          appliedAt: '2024-01-01T00:00:05.000Z',
+        }}
         applyError={null}
         onApply={() => undefined}
         onDiscard={() => undefined}
@@ -59,5 +71,35 @@ describe('AgentEditProposalCard', () => {
 
     expect(screen.getByText('Applied to 1 files.')).toBeInTheDocument();
     expect(screen.getByText('Applied')).toBeDisabled();
+  });
+
+  it('shows an unavailable notice when proposal content is missing', () => {
+    render(
+      <AgentEditProposalCard
+        entry={{
+          ...baseEntry,
+          proposal: {
+            summary: 'Update file.ts',
+            mode: 'writes',
+            changeSummary: { filesChanged: 1 },
+          },
+          state: 'failed',
+          failedAt: '2024-01-01T00:00:05.000Z',
+          failureMessage: 'Patch conflict',
+        }}
+        canApply
+        isApplying={false}
+        isDiscarded={false}
+        applyResult={null}
+        applyError="Patch conflict"
+        onApply={() => undefined}
+        onDiscard={() => undefined}
+      />
+    );
+
+    expect(
+      screen.getByText('Proposal content is unavailable for this session. Regenerate it to apply.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Retry Apply')).toBeDisabled();
   });
 });

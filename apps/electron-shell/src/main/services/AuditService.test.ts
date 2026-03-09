@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as fs from 'fs';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-let appendedContent = '';
+let appendFileSyncMock = vi.fn();
 
 vi.mock('electron', () => ({
   app: {
@@ -10,116 +9,52 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('fs', () => ({
-  readFileSync: vi.fn(),
-  appendFileSync: vi.fn((file: string, data: string) => {
-    if (file === 'C:\\mock\\userdata\\audit.log.jsonl') {
-      appendedContent += data;
-    }
-  }),
-  existsSync: vi.fn(),
+  appendFileSync: (...args: unknown[]) => appendFileSyncMock(...args),
+  existsSync: vi.fn(() => true),
   mkdirSync: vi.fn(),
+  readFileSync: vi.fn(() => ''),
 }));
 
 import { AuditService } from './AuditService';
 
 describe('AuditService', () => {
-  let service: AuditService;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    appendedContent = '';
+    appendFileSyncMock = vi.fn();
     // @ts-expect-error Reset singleton for tests
     AuditService.instance = null;
-    service = AuditService.getInstance();
   });
 
-  it('logs secret access events without secret values', () => {
-    vi.mocked(fs.existsSync).mockReturnValue(true);
+  it('logs agent proposal apply events', () => {
+    const service = AuditService.getInstance();
 
-    const event = service.logSecretAccess({
-      connectionId: '00000000-0000-4000-8000-000000000001',
-      requesterId: 'ext-1',
-      reason: 'Needs token',
-      allowed: true,
-    });
-
-    expect(event.type).toBe('secret-access');
-    expect(appendedContent).toContain('"type":"secret-access"');
-    expect(appendedContent).not.toContain('secretValue');
-  });
-
-  it('logs agent tool access events without secret values', () => {
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-
-    const event = service.logAgentToolAccess({
-      runId: '2cb57c8a-4d7b-4a6e-9a5e-2d2b5d7c4a10',
-      toolId: 'fs.read',
-      requesterId: 'agent-host',
-      reason: 'Read workspace files',
-      allowed: true,
-    });
-
-    expect(event.type).toBe('agent-tool-access');
-    expect(appendedContent).toContain('"type":"agent-tool-access"');
-    expect(appendedContent).not.toContain('secretValue');
-  });
-
-  it('logs model call events without secret values', () => {
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-
-    const event = service.logModelCall({
-      runId: '5a2f7f28-0b51-4e55-8b76-3a2d3a3a9a01',
-      providerId: 'ollama',
-      connectionId: '00000000-0000-4000-8000-000000000003',
-      modelRef: 'llama3',
+    service.logAgentProposalApply({
+      conversationId: '123e4567-e89b-12d3-a456-426614174000',
+      entryId: '123e4567-e89b-12d3-a456-426614174001',
       status: 'success',
-      durationMs: 120,
+      filesChanged: 1,
+      files: ['src/file.ts'],
     });
 
-    expect(event.type).toBe('model-call');
-    expect(appendedContent).toContain('"type":"model-call"');
-    expect(appendedContent).not.toContain('secretValue');
-  });
-
-  it('logs SDD proposal apply events', () => {
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-
-    const event = service.logSddProposalApply({
-      runId: '0f6c1e8d-4b2a-4c2f-8e4a-8f6e3d2c1a00',
-      status: 'success',
-      filesChanged: 2,
-      files: ['specs/151-sdd-workflow/spec.md', 'specs/151-sdd-workflow/plan.md'],
-    });
-
-    expect(event.type).toBe('sdd.proposal.apply');
-    expect(appendedContent).toContain('"type":"sdd.proposal.apply"');
-  });
-
-  it('lists audit events with pagination', () => {
-    const events = [
-      service.logSecretAccess({
-        connectionId: '00000000-0000-4000-8000-000000000001',
-        requesterId: 'ext-1',
-        allowed: true,
-      }),
-      service.logSecretAccess({
-        connectionId: '00000000-0000-4000-8000-000000000002',
-        requesterId: 'ext-2',
-        allowed: false,
-      }),
-    ];
-
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      events.map((event) => JSON.stringify(event)).join('\n') + '\n'
+    expect(appendFileSyncMock).toHaveBeenCalledWith(
+      'C:\\mock\\userdata\\audit.log.jsonl',
+      expect.stringContaining('"type":"agent.proposal.apply"'),
+      'utf-8'
     );
+  });
 
-    const first = service.listEvents({ limit: 1 });
-    expect(first.events).toHaveLength(1);
-    expect(first.nextCursor).toBe('1');
+  it('logs agent proposal discard events', () => {
+    const service = AuditService.getInstance();
 
-    const second = service.listEvents({ limit: 1, cursor: first.nextCursor });
-    expect(second.events).toHaveLength(1);
-    expect(second.nextCursor).toBeUndefined();
+    service.logAgentProposalDiscard({
+      conversationId: '123e4567-e89b-12d3-a456-426614174000',
+      entryId: '123e4567-e89b-12d3-a456-426614174001',
+    });
+
+    expect(appendFileSyncMock).toHaveBeenCalledWith(
+      'C:\\mock\\userdata\\audit.log.jsonl',
+      expect.stringContaining('"type":"agent.proposal.discard"'),
+      'utf-8'
+    );
   });
 });

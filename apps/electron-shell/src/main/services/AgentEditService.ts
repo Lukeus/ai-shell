@@ -4,13 +4,17 @@ import type {
   AgentEditRequestResponse,
   ApplyAgentEditProposalRequest,
   ApplyAgentEditProposalResponse,
+  DiscardAgentEditProposalRequest,
+  DiscardAgentEditProposalResponse,
   AgentEvent,
   AgentRunStartRequest,
   AgentRunStatus,
+  Proposal,
 } from 'packages-api-contracts';
 import { AgentEventSchema } from 'packages-api-contracts';
 import { agentConversationStore } from './AgentConversationStore';
 import { agentRunStore } from './AgentRunStore';
+import { auditService } from './AuditService';
 import { connectionsService } from './ConnectionsService';
 import { getConnectionModelRef } from './connection-model-ref';
 import { settingsService } from './SettingsService';
@@ -27,6 +31,50 @@ const FINAL_RUN_STATUSES: AgentRunStatus[] = ['completed', 'failed', 'canceled']
 
 export class AgentEditService {
   private readonly runContexts = new Map<string, EditRunContext>();
+
+  private getTrackedProposalEntry(
+    conversationId: string,
+    entryId: string
+  ) {
+    return agentConversationStore.getProposalEntry(conversationId, entryId);
+  }
+
+  private resolveProposalForApply(
+    request: ApplyAgentEditProposalRequest
+  ): Proposal | null {
+    if (request.proposal) {
+      return request.proposal;
+    }
+
+    if (!request.conversationId || !request.entryId) {
+      return null;
+    }
+
+    return agentConversationStore.resolveProposalContent(
+      request.conversationId,
+      request.entryId
+    );
+  }
+
+  private assertProposalStateForApply(state: 'pending' | 'applied' | 'discarded' | 'failed'): void {
+    if (state === 'applied') {
+      throw new Error('Proposal has already been applied.');
+    }
+    if (state === 'discarded') {
+      throw new Error('Discarded proposals cannot be applied.');
+    }
+  }
+
+  private assertProposalStateForDiscard(
+    state: 'pending' | 'applied' | 'discarded' | 'failed'
+  ): void {
+    if (state === 'applied') {
+      throw new Error('Applied proposals cannot be discarded.');
+    }
+    if (state === 'discarded') {
+      throw new Error('Proposal has already been discarded.');
+    }
+  }
 
   private resolveConversationOverrides(conversationId: string): {
     connectionId?: string;
@@ -154,13 +202,101 @@ export class AgentEditService {
       throw new Error('No workspace open. Open a folder to apply edits.');
     }
 
-    const result = await patchApplyService.applyProposal(
-      request.proposal,
-      workspace.path
+    const trackedEntry =
+      request.conversationId && request.entryId
+        ? this.getTrackedProposalEntry(request.conversationId, request.entryId)
+        : null;
+    if (trackedEntry) {
+      this.assertProposalStateForApply(trackedEntry.state);
+    }
+
+    const proposal = this.resolveProposalForApply(request);
+    if (!proposal) {
+      const message = 'Proposal content is unavailable. Regenerate the proposal and try again.';
+      if (request.conversationId && request.entryId) {
+        try {
+          agentConversationStore.markProposalFailed(
+            request.conversationId,
+            request.entryId,
+            message
+          );
+        } catch {
+          // Ignore persistence failures for unavailable proposals.
+        }
+      }
+      throw new Error(message);
+    }
+
+    try {
+      const result = await patchApplyService.applyProposal(
+        proposal,
+        workspace.path
+      );
+      const appliedAt =
+        request.conversationId && request.entryId
+          ? agentConversationStore.markProposalApplied(
+              request.conversationId,
+              request.entryId
+            ).appliedAt ?? new Date().toISOString()
+          : new Date().toISOString();
+      auditService.logAgentProposalApply({
+        conversationId: request.conversationId,
+        entryId: request.entryId,
+        status: 'success',
+        filesChanged: result.summary.filesChanged,
+        files: result.files,
+      });
+      return {
+        files: result.files,
+        summary: result.summary,
+        state: 'applied',
+        appliedAt,
+      };
+    } catch (error) {
+      if (request.conversationId && request.entryId) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to apply proposal.';
+        try {
+          agentConversationStore.markProposalFailed(
+            request.conversationId,
+            request.entryId,
+            message
+          );
+        } catch {
+          // Ignore persistence failures when the apply already failed.
+        }
+      }
+      auditService.logAgentProposalApply({
+        conversationId: request.conversationId,
+        entryId: request.entryId,
+        status: 'error',
+        filesChanged: 0,
+        error: error instanceof Error ? error.message : 'Failed to apply proposal.',
+      });
+      throw error;
+    }
+  }
+
+  public discardProposal(
+    request: DiscardAgentEditProposalRequest
+  ): DiscardAgentEditProposalResponse {
+    const entry = this.getTrackedProposalEntry(
+      request.conversationId,
+      request.entryId
     );
+    this.assertProposalStateForDiscard(entry.state);
+    const discarded = agentConversationStore.markProposalDiscarded(
+      request.conversationId,
+      request.entryId
+    );
+    auditService.logAgentProposalDiscard({
+      conversationId: request.conversationId,
+      entryId: request.entryId,
+    });
+
     return {
-      files: result.files,
-      summary: result.summary,
+      state: 'discarded',
+      discardedAt: discarded.discardedAt ?? new Date().toISOString(),
     };
   }
 

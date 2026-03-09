@@ -264,6 +264,9 @@ export const IPC_CHANNELS = {
   /** Apply an edit proposal */
   AGENT_EDITS_APPLY_PROPOSAL: 'agent:edits:apply-proposal',
 
+  /** Discard an edit proposal */
+  AGENT_EDITS_DISCARD_PROPOSAL: 'agent:edits:discard-proposal',
+
   // Skills management
   /** List skills */
   SKILLS_LIST: 'skills:list',

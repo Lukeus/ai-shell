@@ -1,18 +1,24 @@
 import { useMemo, useState } from 'react';
 import type {
   AgentConversationProposalEntry,
-  ApplyAgentEditProposalResponse,
   Proposal,
 } from 'packages-api-contracts';
 import { ProposalDiffView } from '../sdd/ProposalDiffView';
 import styles from '../../styles/agents/AgentEditProposalCard.module.css';
+
+type PersistedApplyResult = {
+  files: string[];
+  summary: AgentConversationProposalEntry['proposal']['changeSummary'];
+  state: 'applied';
+  appliedAt: string;
+};
 
 type AgentEditProposalCardProps = {
   entry: AgentConversationProposalEntry;
   canApply: boolean;
   isApplying: boolean;
   isDiscarded: boolean;
-  applyResult: ApplyAgentEditProposalResponse | null;
+  applyResult: PersistedApplyResult | null;
   applyError: string | null;
   onApply: () => void;
   onDiscard: () => void;
@@ -20,20 +26,24 @@ type AgentEditProposalCardProps = {
 
 const MAX_EAGER_DIFF_CHARS = 8000;
 
-const buildSummaryLine = (proposal: Proposal): string => {
-  const summaryParts = [`Files changed: ${proposal.summary.filesChanged}`];
-  if (proposal.summary.additions !== undefined) {
-    summaryParts.push(`+${proposal.summary.additions}`);
+const buildSummaryLine = (
+  summary: AgentConversationProposalEntry['proposal']['changeSummary']
+): string => {
+  const summaryParts = [`Files changed: ${summary.filesChanged}`];
+  if (summary.additions !== undefined) {
+    summaryParts.push(`+${summary.additions}`);
   }
-  if (proposal.summary.deletions !== undefined) {
-    summaryParts.push(`-${proposal.summary.deletions}`);
+  if (summary.deletions !== undefined) {
+    summaryParts.push(`-${summary.deletions}`);
   }
   return summaryParts.join(' ');
 };
 
 const estimateDiffSize = (proposal: Proposal): number => {
-  const writeSize = proposal.writes.reduce((total, write) => total + write.content.length, 0);
-  return writeSize + (proposal.patch?.length ?? 0);
+  if (proposal.mode === 'writes') {
+    return proposal.writes.reduce((total, write) => total + write.content.length, 0);
+  }
+  return proposal.patch.length;
 };
 
 export function AgentEditProposalCard({
@@ -46,12 +56,18 @@ export function AgentEditProposalCard({
   onApply,
   onDiscard,
 }: AgentEditProposalCardProps) {
-  const { proposal, summary } = entry.proposal;
-  const summaryLine = useMemo(() => buildSummaryLine(proposal), [proposal]);
-  const diffSize = useMemo(() => estimateDiffSize(proposal), [proposal]);
+  const { proposal, summary, changeSummary } = entry.proposal;
+  const summaryLine = useMemo(() => buildSummaryLine(changeSummary), [changeSummary]);
+  const diffSize = useMemo(() => (proposal ? estimateDiffSize(proposal) : 0), [proposal]);
   const shouldCollapse = diffSize > MAX_EAGER_DIFF_CHARS;
   const [isExpanded, setIsExpanded] = useState(!shouldCollapse);
   const canInteract = !applyResult && !isDiscarded;
+  const canApplyProposal = Boolean(proposal) && canApply && !isApplying && canInteract;
+  const canDiscardProposal = !applyResult && !isDiscarded;
+  const applyLabel =
+    entry.state === 'failed' ? 'Retry Apply' : applyResult ? 'Applied' : 'Apply';
+  const contentUnavailable =
+    !proposal && entry.state !== 'applied' && entry.state !== 'discarded';
 
   return (
     <div className={styles.card}>
@@ -74,7 +90,12 @@ export function AgentEditProposalCard({
       {!canApply ? (
         <div className={styles.notice}>Open a workspace to apply edits.</div>
       ) : null}
-      {shouldCollapse && !isExpanded ? (
+      {contentUnavailable ? (
+        <div className={styles.notice}>
+          Proposal content is unavailable for this session. Regenerate it to apply.
+        </div>
+      ) : null}
+      {proposal && shouldCollapse && !isExpanded ? (
         <button
           type="button"
           onClick={() => setIsExpanded(true)}
@@ -82,22 +103,22 @@ export function AgentEditProposalCard({
         >
           Show diff
         </button>
-      ) : (
+      ) : proposal ? (
         <ProposalDiffView proposal={proposal} />
-      )}
+      ) : null}
       <div className={styles.actions}>
         <button
           type="button"
           onClick={onApply}
-          disabled={!canApply || isApplying || !canInteract}
+          disabled={!canApplyProposal}
           className={styles.applyButton}
         >
-          {isApplying ? 'Applying...' : applyResult ? 'Applied' : 'Apply'}
+          {isApplying ? 'Applying...' : applyLabel}
         </button>
         <button
           type="button"
           onClick={onDiscard}
-          disabled={!canInteract}
+          disabled={!canDiscardProposal}
           className={styles.discardButton}
         >
           Discard

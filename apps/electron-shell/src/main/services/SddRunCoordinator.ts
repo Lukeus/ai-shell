@@ -2,6 +2,8 @@ import { randomUUID } from 'crypto';
 import { BrowserWindow } from 'electron';
 import {
   IPC_CHANNELS,
+  type Proposal,
+  type ProposalSummary,
   SddRunEventSchema,
   type SddRunEvent,
   type SddRunStartRequest,
@@ -25,6 +27,9 @@ type SddRunRecord = {
   };
   createdAt: string;
   updatedAt: string;
+  currentProposal?: Proposal;
+  proposalState?: 'pending' | 'applied' | 'failed';
+  proposalError?: string;
 };
 
 /**
@@ -124,6 +129,36 @@ export class SddRunCoordinator {
     await this.agentHostManager.controlSddRun(request);
   }
 
+  public resolveProposal(runId: string, proposal?: Proposal): Proposal | null {
+    if (proposal) {
+      return proposal;
+    }
+
+    return this.runs.get(runId)?.currentProposal ?? null;
+  }
+
+  public markProposalApplied(runId: string, summary: ProposalSummary): void {
+    this.updateRun(runId, {
+      currentProposal: undefined,
+      proposalState: 'applied',
+      proposalError: undefined,
+    });
+    this.publishEvent({
+      id: randomUUID(),
+      runId,
+      timestamp: new Date().toISOString(),
+      type: 'proposalApplied',
+      summary,
+    });
+  }
+
+  public markProposalFailed(runId: string, message: string): void {
+    this.updateRun(runId, {
+      proposalState: 'failed',
+      proposalError: message,
+    });
+  }
+
   private resolveRouting(
     request: SddRunStartRequest
   ): SddRunRecord['routing'] | null {
@@ -174,19 +209,42 @@ export class SddRunCoordinator {
   private updateRunFromEvent(event: SddRunEvent): void {
     if (event.type === 'started') {
       const now = new Date().toISOString();
+      const existing = this.runs.get(event.runId);
       this.runs.set(event.runId, {
         runId: event.runId,
         featureId: event.featureId,
         step: event.step,
         status: 'running',
-        createdAt: now,
+        routing: existing?.routing,
+        currentProposal: existing?.currentProposal,
+        proposalState: existing?.proposalState,
+        proposalError: existing?.proposalError,
+        createdAt: existing?.createdAt ?? now,
         updatedAt: now,
+      });
+      return;
+    }
+
+    if (event.type === 'proposalReady' || event.type === 'approvalRequired') {
+      this.updateRun(event.runId, {
+        currentProposal: event.proposal,
+        proposalState: 'pending',
+        proposalError: undefined,
       });
       return;
     }
 
     if (event.type === 'stepStarted') {
       this.updateRun(event.runId, { step: event.step });
+      return;
+    }
+
+    if (event.type === 'proposalApplied') {
+      this.updateRun(event.runId, {
+        currentProposal: undefined,
+        proposalState: 'applied',
+        proposalError: undefined,
+      });
       return;
     }
 

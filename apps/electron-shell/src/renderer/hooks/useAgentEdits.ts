@@ -5,23 +5,17 @@ import type {
   AgentEditRequestOptions,
   AgentEvent,
   AgentMessage,
-  ApplyAgentEditProposalResponse,
   Proposal,
   Result,
 } from 'packages-api-contracts';
 import { useConnectionsContext } from '../contexts/ConnectionsContext';
 import { describeMissingConnection, resolveAgentConnection } from '../utils/agentConnections';
 
-type ApplyState =
-  | { status: 'idle' }
-  | { status: 'applying' }
-  | { status: 'applied'; result: ApplyAgentEditProposalResponse }
-  | { status: 'error'; error: string };
-
 type UseAgentEditsOptions = {
   selectedConversationId: string | null;
   createConversation: (title?: string) => Promise<string | null>;
   getConversation: (conversationId: string) => AgentConversation | null;
+  reloadConversation: (conversationId: string) => Promise<void>;
   appendMessage: (
     content: string,
     role: AgentMessage['role'],
@@ -39,12 +33,13 @@ type UseAgentEditsResult = {
     attachments: AgentContextAttachment[],
     options?: AgentEditRequestOptions
   ) => Promise<void>;
-  applyProposal: (entryId: string, proposal: Proposal, conversationId?: string) => Promise<void>;
-  discardProposal: (entryId: string) => void;
+  applyProposal: (
+    entryId: string,
+    conversationId: string,
+    proposal?: Proposal
+  ) => Promise<void>;
+  discardProposal: (entryId: string, conversationId: string) => Promise<void>;
   isApplying: (entryId: string) => boolean;
-  isDiscarded: (entryId: string) => boolean;
-  applyResult: (entryId: string) => ApplyAgentEditProposalResponse | null;
-  applyError: (entryId: string) => string | null;
   handleAgentEvent: (event: AgentEvent) => void;
 };
 
@@ -61,13 +56,13 @@ export function useAgentEdits({
   selectedConversationId,
   createConversation,
   getConversation,
+  reloadConversation,
   appendMessage,
   onError,
 }: UseAgentEditsOptions): UseAgentEditsResult {
   const { requestSecretAccess } = useConnectionsContext();
   const [activeEditRunId, setActiveEditRunId] = useState<string | null>(null);
-  const [applyStateByEntry, setApplyStateByEntry] = useState<Record<string, ApplyState>>({});
-  const [discardedEntries, setDiscardedEntries] = useState<Set<string>>(new Set());
+  const [applyingEntryIds, setApplyingEntryIds] = useState<Set<string>>(new Set());
 
   const resolveConversationConnection = useCallback(
     async (conversationId: string) => {
@@ -155,64 +150,68 @@ export function useAgentEdits({
   );
 
   const applyProposal = useCallback(
-    async (entryId: string, proposal: Proposal, conversationId?: string) => {
-      setApplyStateByEntry((prev) => ({
-        ...prev,
-        [entryId]: { status: 'applying' },
-      }));
+    async (entryId: string, conversationId: string, proposal?: Proposal) => {
+      setApplyingEntryIds((prev) => new Set(prev).add(entryId));
 
       try {
         onError(null);
         const response = await window.api.agents.applyProposal({
-          proposal,
           conversationId,
           entryId,
+          proposal,
         });
-        const data = unwrapResult(response);
-        setApplyStateByEntry((prev) => ({
-          ...prev,
-          [entryId]: { status: 'applied', result: data },
-        }));
+        unwrapResult(response);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Failed to apply proposal.';
-        setApplyStateByEntry((prev) => ({
-          ...prev,
-          [entryId]: { status: 'error', error: message },
-        }));
+        onError(message);
+      } finally {
+        try {
+          await reloadConversation(conversationId);
+        } finally {
+          setApplyingEntryIds((prev) => {
+            const next = new Set(prev);
+            next.delete(entryId);
+            return next;
+          });
+        }
       }
     },
-    [onError]
+    [onError, reloadConversation]
   );
 
-  const discardProposal = useCallback((entryId: string) => {
-    setDiscardedEntries((prev) => new Set([...prev, entryId]));
-  }, []);
+  const discardProposal = useCallback(
+    async (entryId: string, conversationId: string) => {
+      setApplyingEntryIds((prev) => new Set(prev).add(entryId));
+      try {
+        onError(null);
+        const response = await window.api.agents.discardProposal({
+          conversationId,
+          entryId,
+        });
+        unwrapResult(response);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to discard proposal.';
+        onError(message);
+      } finally {
+        try {
+          await reloadConversation(conversationId);
+        } finally {
+          setApplyingEntryIds((prev) => {
+            const next = new Set(prev);
+            next.delete(entryId);
+            return next;
+          });
+        }
+      }
+    },
+    [onError, reloadConversation]
+  );
 
   const isApplying = useCallback(
-    (entryId: string) => applyStateByEntry[entryId]?.status === 'applying',
-    [applyStateByEntry]
-  );
-
-  const isDiscarded = useCallback(
-    (entryId: string) => discardedEntries.has(entryId),
-    [discardedEntries]
-  );
-
-  const applyResult = useCallback(
-    (entryId: string) => {
-      const state = applyStateByEntry[entryId];
-      return state && state.status === 'applied' ? state.result : null;
-    },
-    [applyStateByEntry]
-  );
-
-  const applyError = useCallback(
-    (entryId: string) => {
-      const state = applyStateByEntry[entryId];
-      return state && state.status === 'error' ? state.error : null;
-    },
-    [applyStateByEntry]
+    (entryId: string) => applyingEntryIds.has(entryId),
+    [applyingEntryIds]
   );
 
   const handleAgentEvent = useCallback(
@@ -235,20 +234,14 @@ export function useAgentEdits({
       applyProposal,
       discardProposal,
       isApplying,
-      isDiscarded,
-      applyResult,
-      applyError,
       handleAgentEvent,
     }),
     [
       activeEditRunId,
-      applyError,
       applyProposal,
-      applyResult,
       discardProposal,
       handleAgentEvent,
       isApplying,
-      isDiscarded,
       requestEdit,
     ]
   );

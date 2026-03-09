@@ -20,6 +20,20 @@ type AgentToolAccessLogInput = {
   allowed: boolean;
 };
 
+type AgentProposalApplyLogInput = {
+  conversationId?: string;
+  entryId?: string;
+  status: 'success' | 'error';
+  filesChanged: number;
+  files?: string[];
+  error?: string;
+};
+
+type AgentProposalDiscardLogInput = {
+  conversationId: string;
+  entryId: string;
+};
+
 type ModelCallLogInput = {
   runId: string;
   providerId: string;
@@ -82,6 +96,36 @@ export class AuditService {
       requesterId: input.requesterId,
       reason: input.reason,
       allowed: input.allowed,
+      createdAt: new Date().toISOString(),
+    });
+
+    this.appendEvent(event);
+    return event;
+  }
+
+  public logAgentProposalApply(input: AgentProposalApplyLogInput): AuditEvent {
+    const event = AuditEventSchema.parse({
+      id: randomUUID(),
+      type: 'agent.proposal.apply',
+      conversationId: input.conversationId,
+      entryId: input.entryId,
+      status: input.status,
+      filesChanged: input.filesChanged,
+      files: input.files,
+      error: input.error,
+      createdAt: new Date().toISOString(),
+    });
+
+    this.appendEvent(event);
+    return event;
+  }
+
+  public logAgentProposalDiscard(input: AgentProposalDiscardLogInput): AuditEvent {
+    const event = AuditEventSchema.parse({
+      id: randomUUID(),
+      type: 'agent.proposal.discard',
+      conversationId: input.conversationId,
+      entryId: input.entryId,
       createdAt: new Date().toISOString(),
     });
 

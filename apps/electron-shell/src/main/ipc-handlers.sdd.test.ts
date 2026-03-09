@@ -86,6 +86,9 @@ vi.mock('./services/SddRunCoordinator', () => ({
     attachAgentHost: vi.fn(),
     startRun: vi.fn(),
     controlRun: vi.fn(),
+    resolveProposal: vi.fn(),
+    markProposalApplied: vi.fn(),
+    markProposalFailed: vi.fn(),
   },
 }));
 
@@ -168,6 +171,16 @@ describe('IPC Handlers - SDD', () => {
         path: 'C:\\workspace',
         name: 'workspace',
       });
+      vi.mocked(sddRunCoordinator.resolveProposal).mockReturnValue({
+        mode: 'writes',
+        writes: [
+          {
+            path: 'specs/151-sdd-workflow/spec.md',
+            content: '# Spec\n',
+          },
+        ],
+        summary: { filesChanged: 1 },
+      });
       vi.mocked(patchApplyService.applyProposal).mockResolvedValue({
         files: ['specs/151-sdd-workflow/spec.md'],
         summary: { filesChanged: 1, additions: 1, deletions: 0 },
@@ -177,12 +190,22 @@ describe('IPC Handlers - SDD', () => {
       await handler(null, {
         runId: '123e4567-e89b-12d3-a456-426614174000',
         proposal: {
-          writes: [],
+          mode: 'writes',
+          writes: [
+            {
+              path: 'specs/151-sdd-workflow/spec.md',
+              content: '# Spec\n',
+            },
+          ],
           summary: { filesChanged: 0 },
         },
       });
 
       expect(patchApplyService.applyProposal).toHaveBeenCalled();
+      expect(sddRunCoordinator.markProposalApplied).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174000',
+        expect.objectContaining({ filesChanged: 1 })
+      );
       expect(auditService.logSddProposalApply).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: '123e4567-e89b-12d3-a456-426614174000',
@@ -229,6 +252,16 @@ describe('IPC Handlers - SDD', () => {
         path: 'C:\\workspace',
         name: 'workspace',
       });
+      vi.mocked(sddRunCoordinator.resolveProposal).mockReturnValue({
+        mode: 'writes',
+        writes: [
+          {
+            path: 'specs/151-sdd-workflow/spec.md',
+            content: '# Spec\n',
+          },
+        ],
+        summary: { filesChanged: 1 },
+      });
       vi.mocked(patchApplyService.applyProposal).mockRejectedValue(new Error('boom'));
 
       const handler = getHandler(IPC_CHANNELS.SDD_PROPOSAL_APPLY);
@@ -236,12 +269,22 @@ describe('IPC Handlers - SDD', () => {
         handler(null, {
           runId: '123e4567-e89b-12d3-a456-426614174000',
           proposal: {
-            writes: [],
+            mode: 'writes',
+            writes: [
+              {
+                path: 'specs/151-sdd-workflow/spec.md',
+                content: '# Spec\n',
+              },
+            ],
             summary: { filesChanged: 0 },
           },
         })
       ).rejects.toThrow('boom');
 
+      expect(sddRunCoordinator.markProposalFailed).toHaveBeenCalledWith(
+        '123e4567-e89b-12d3-a456-426614174000',
+        'boom'
+      );
       expect(auditService.logSddProposalApply).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: '123e4567-e89b-12d3-a456-426614174000',
