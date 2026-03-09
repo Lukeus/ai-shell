@@ -2,15 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { ProposalSchema, SddRunEventSchema } from './sdd';
 
 describe('SDD workflow contracts', () => {
-  it('accepts proposals with writes, patch, and summary', () => {
+  it('accepts writes proposals with an explicit mode', () => {
     const proposal = {
+      mode: 'writes',
       writes: [
         {
           path: 'specs/151-sdd-workflow/spec.md',
           content: '# Spec\n',
         },
       ],
-      patch: 'diff --git a/file b/file',
       summary: {
         filesChanged: 1,
         additions: 10,
@@ -19,6 +19,24 @@ describe('SDD workflow contracts', () => {
     };
 
     expect(ProposalSchema.parse(proposal)).toEqual(proposal);
+  });
+
+  it('rejects mixed proposal payloads without an explicit hybrid mode', () => {
+    expect(() =>
+      ProposalSchema.parse({
+        mode: 'writes',
+        writes: [
+          {
+            path: 'specs/151-sdd-workflow/spec.md',
+            content: '# Spec\n',
+          },
+        ],
+        patch: 'diff --git a/file b/file',
+        summary: {
+          filesChanged: 1,
+        },
+      })
+    ).toThrow();
   });
 
   it('accepts workflow events with required fields', () => {
@@ -41,17 +59,17 @@ describe('SDD workflow contracts', () => {
       ...base,
       type: 'proposalReady',
       proposal: {
-        writes: [],
+        mode: 'writes',
+        writes: [
+          {
+            path: 'specs/151-sdd-workflow/spec.md',
+            content: '# Spec\n',
+          },
+        ],
         summary: { filesChanged: 0 },
       },
     };
-    expect(SddRunEventSchema.parse(proposalReady)).toEqual({
-      ...proposalReady,
-      proposal: {
-        ...proposalReady.proposal,
-        writes: [],
-      },
-    });
+    expect(SddRunEventSchema.parse(proposalReady)).toEqual(proposalReady);
 
     const testsCompleted = {
       ...base,

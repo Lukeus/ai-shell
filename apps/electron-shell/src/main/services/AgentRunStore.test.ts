@@ -256,4 +256,41 @@ describe('AgentRunStore', () => {
       expect(input.normalField).toBe('visible');
     }
   });
+
+  it('stores edit-proposal events without proposal content', () => {
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+
+    const run = store.createRun('user');
+    vi.mocked(fs.readFileSync).mockImplementation(() => savedContent);
+
+    store.appendEvent({
+      id: randomUUID(),
+      runId: run.id,
+      timestamp: new Date().toISOString(),
+      type: 'edit-proposal',
+      conversationId: '123e4567-e89b-12d3-a456-426614174000',
+      proposal: {
+        summary: 'Update file',
+        mode: 'writes',
+        changeSummary: { filesChanged: 1 },
+        proposal: {
+          mode: 'writes',
+          writes: [{ path: 'src/file.ts', content: 'secret-ish content' }],
+          summary: { filesChanged: 1 },
+        },
+      },
+    });
+
+    const events = store.listEvents({ runId: run.id }).events;
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe('edit-proposal');
+    if (events[0].type === 'edit-proposal') {
+      expect(events[0].proposal.mode).toBe('writes');
+      expect(events[0].proposal.changeSummary.filesChanged).toBe(1);
+      expect(events[0].proposal.proposal).toBeUndefined();
+    }
+  });
 });

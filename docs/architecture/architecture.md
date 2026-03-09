@@ -86,8 +86,19 @@ sequenceDiagram
 
 - Renderer collects attachments (active file or selection) and sends `window.api.agents.requestEdit`.
 - Main validates the request and starts an agent-host run with `workflow=edit`.
-- Agent-host emits `edit-proposal` events that are persisted as conversation entries; stored attachments omit snippets.
-- Renderer previews the proposal diff and applies edits via `PatchApplyService` with workspace path validation.
+- Agent-host emits `edit-proposal` events using the shared code-generation proposal contract:
+  - `mode: "writes"` for file-write proposals
+  - `mode: "patch"` for unified diff proposals
+- Main persists proposal metadata and lifecycle state (`pending`, `applied`, `discarded`, `failed`) in conversation history.
+- Full proposal bodies stay session-local in main-process memory only; persisted conversation and run stores strip proposal content before writing to disk.
+- Renderer previews the proposal diff when cached content is available and applies edits via `PatchApplyService` with workspace path validation.
+
+### Shared AI Code Generation Contract
+
+- Agents edit and SDD workflow proposals use one proposal schema in `packages/api-contracts`.
+- Mixed `patch` + `writes` payloads are invalid and rejected during runtime parsing.
+- Apply/discard actions are main-process only and recorded in audit logs.
+- Proposal apply results emit lifecycle updates so renderer state can reload from persisted data instead of React-only bookkeeping.
 
 ### Built-in Agent Tools
 

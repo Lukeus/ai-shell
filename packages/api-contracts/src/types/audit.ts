@@ -3,6 +3,8 @@ import { z } from 'zod';
 export const AuditEventTypeSchema = z.enum([
   'secret-access',
   'agent-tool-access',
+  'agent.proposal.apply',
+  'agent.proposal.discard',
   'model-call',
   'sdd.proposal.apply',
 ]);
@@ -53,6 +55,36 @@ export const ModelCallAuditEventSchema = AuditEventBaseSchema.extend({
 
 export type ModelCallAuditEvent = z.infer<typeof ModelCallAuditEventSchema>;
 
+export const AgentProposalApplyAuditStatusSchema = z.enum(['success', 'error']);
+
+export type AgentProposalApplyAuditStatus = z.infer<
+  typeof AgentProposalApplyAuditStatusSchema
+>;
+
+export const AgentProposalApplyAuditEventSchema = AuditEventBaseSchema.extend({
+  type: z.literal('agent.proposal.apply'),
+  conversationId: z.string().uuid().optional(),
+  entryId: z.string().uuid().optional(),
+  status: AgentProposalApplyAuditStatusSchema,
+  filesChanged: z.number().int().nonnegative(),
+  files: z.array(z.string()).optional(),
+  error: z.string().optional(),
+});
+
+export type AgentProposalApplyAuditEvent = z.infer<
+  typeof AgentProposalApplyAuditEventSchema
+>;
+
+export const AgentProposalDiscardAuditEventSchema = AuditEventBaseSchema.extend({
+  type: z.literal('agent.proposal.discard'),
+  conversationId: z.string().uuid(),
+  entryId: z.string().uuid(),
+});
+
+export type AgentProposalDiscardAuditEvent = z.infer<
+  typeof AgentProposalDiscardAuditEventSchema
+>;
+
 export const SddProposalApplyStatusSchema = z.enum(['success', 'error']);
 
 export type SddProposalApplyStatus = z.infer<typeof SddProposalApplyStatusSchema>;
@@ -71,6 +103,8 @@ export type SddProposalApplyAuditEvent = z.infer<typeof SddProposalApplyAuditEve
 export const AuditEventSchema = z.discriminatedUnion('type', [
   SecretAccessAuditEventSchema,
   AgentToolAccessAuditEventSchema,
+  AgentProposalApplyAuditEventSchema,
+  AgentProposalDiscardAuditEventSchema,
   ModelCallAuditEventSchema,
   SddProposalApplyAuditEventSchema,
 ]);

@@ -276,6 +276,8 @@ const api: PreloadAPI = {
       invokeSafe(IPC_CHANNELS.AGENT_EDITS_REQUEST, request),
     applyProposal: (request) =>
       invokeSafe(IPC_CHANNELS.AGENT_EDITS_APPLY_PROPOSAL, request),
+    discardProposal: (request) =>
+      invokeSafe(IPC_CHANNELS.AGENT_EDITS_DISCARD_PROPOSAL, request),
   },
 
   skills: {

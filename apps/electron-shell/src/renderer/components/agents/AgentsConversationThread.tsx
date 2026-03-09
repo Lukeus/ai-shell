@@ -3,7 +3,6 @@ import type {
   AgentConversationEntry,
   AgentConversationMessageEntry,
   AgentConversationProposalEntry,
-  ApplyAgentEditProposalResponse,
   Proposal,
 } from 'packages-api-contracts';
 import type { AgentStreamingMessage, AgentStreamingStatus } from '../../hooks/useAgentChatStreaming';
@@ -19,10 +18,19 @@ type AgentsConversationThreadProps = {
   canApplyProposals: boolean;
   isApplying: (entryId: string) => boolean;
   isDiscarded: (entryId: string) => boolean;
-  applyResult: (entryId: string) => ApplyAgentEditProposalResponse | null;
+  applyResult: (entryId: string) => {
+    files: string[];
+    summary: AgentConversationProposalEntry['proposal']['changeSummary'];
+    state: 'applied';
+    appliedAt: string;
+  } | null;
   applyError: (entryId: string) => string | null;
-  onApplyProposal: (entryId: string, proposal: Proposal, conversationId: string) => void;
-  onDiscardProposal: (entryId: string) => void;
+  onApplyProposal: (
+    entryId: string,
+    conversationId: string,
+    proposal?: Proposal
+  ) => void;
+  onDiscardProposal: (entryId: string, conversationId: string) => void;
 };
 
 const formatTimestamp = (value: string) => {
@@ -153,8 +161,8 @@ const renderProposalEntry = (
         isDiscarded={isDiscarded(entry.id)}
         applyResult={applyResult(entry.id)}
         applyError={applyError(entry.id)}
-        onApply={() => onApplyProposal(entry.id, entry.proposal.proposal, entry.conversationId)}
-        onDiscard={() => onDiscardProposal(entry.id)}
+        onApply={() => onApplyProposal(entry.id, entry.conversationId, entry.proposal.proposal)}
+        onDiscard={() => onDiscardProposal(entry.id, entry.conversationId)}
       />
     </div>
   </div>

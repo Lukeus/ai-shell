@@ -39,11 +39,12 @@ export const buildSddPrompt = ({
 }: PromptOptions): string => {
   const outputInstruction = step === 'implement' || step === 'review'
     ? [
-        'Return a JSON object with this shape:',
-        '{ "writes": [ { "path": "path/to/file", "content": "file contents" } ],',
-        '  "summary": { "filesChanged": 0, "additions": 0, "deletions": 0 },',
-        '  "patch": "optional unified diff patch" }',
-        'Include multiple writes when needed. Use workspace-relative paths.',
+        'Return a JSON object using one of these shapes:',
+        '{ "mode": "writes", "writes": [ { "path": "path/to/file", "content": "file contents" } ],',
+        '  "summary": { "filesChanged": 0, "additions": 0, "deletions": 0 } }',
+        '{ "mode": "patch", "patch": "unified diff patch",',
+        '  "summary": { "filesChanged": 0, "additions": 0, "deletions": 0 } }',
+        'Do not return both writes and patch in the same proposal. Use workspace-relative paths.',
       ].join('\n')
     : `Return only the contents for ${targetPath}.`;
   const targetLine = step === 'implement' || step === 'review'

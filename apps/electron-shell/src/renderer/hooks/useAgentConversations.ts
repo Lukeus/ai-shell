@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import type {
-  AgentConversation,
-  AgentConversationEntry,
-  AgentEvent,
-  AgentMessage,
-  AgentContextAttachment,
-  Result,
-} from 'packages-api-contracts';
+import type { AgentConversation, AgentConversationEntry, AgentContextAttachment, AgentEvent, AgentMessage } from 'packages-api-contracts';
 import { resolveAgentConnection } from '../utils/agentConnections';
+import { isProposalDiscarded as isProposalDiscardedEntry, proposalApplyError as proposalApplyErrorEntry, proposalApplyResult as proposalApplyResultEntry, toMessageEntry, unwrapResult, updateConversationTimestamp, type PersistedProposalApplyResult } from './agentConversationHelpers';
 import { useAgentChat } from './useAgentChat';
 import type { AgentStreamingMessage, AgentStreamingStatus } from './useAgentChatStreaming';
 import { useAgentDrafts } from './useAgentDrafts';
@@ -47,32 +41,11 @@ type UseAgentConversationsResult = {
   applyProposal: ReturnType<typeof useAgentEdits>['applyProposal'];
   discardProposal: ReturnType<typeof useAgentEdits>['discardProposal'];
   isApplyingProposal: ReturnType<typeof useAgentEdits>['isApplying'];
-  isProposalDiscarded: ReturnType<typeof useAgentEdits>['isDiscarded'];
-  proposalApplyResult: ReturnType<typeof useAgentEdits>['applyResult'];
-  proposalApplyError: ReturnType<typeof useAgentEdits>['applyError'];
+  isProposalDiscarded: (entryId: string) => boolean;
+  proposalApplyResult: (entryId: string) => PersistedProposalApplyResult | null;
+  proposalApplyError: (entryId: string) => string | null;
   handleAgentEvent: (event: AgentEvent) => void;
 };
-
-const unwrapResult = <T,>(result: Result<T>): T => {
-  if (!result.ok) {
-    throw new Error(result.error?.message ?? 'Request failed');
-  }
-  return result.value;
-};
-
-const toMessageEntry = (message: AgentMessage): AgentConversationEntry => ({
-  ...message,
-  type: 'message',
-});
-
-const updateConversationTimestamp = (
-  conversations: AgentConversation[],
-  conversationId: string,
-  updatedAt: string
-) =>
-  conversations.map((conversation) =>
-    conversation.id === conversationId ? { ...conversation, updatedAt } : conversation
-  );
 
 export function useAgentConversations(): UseAgentConversationsResult {
   const [conversations, setConversations] = useState<AgentConversation[]>([]);
@@ -99,9 +72,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
     }
   }, [selectedConversationId]);
 
-  useEffect(() => {
-    void refreshConversations();
-  }, [refreshConversations]);
+  useEffect(() => void refreshConversations(), [refreshConversations]);
 
   const loadConversation = useCallback(
     async (conversationId: string) => {
@@ -146,11 +117,13 @@ export function useAgentConversations(): UseAgentConversationsResult {
     [conversations]
   );
 
-  const touchConversation = useCallback((conversationId: string, updatedAt: string) => {
-    setConversations((prev) =>
-      updateConversationTimestamp(prev, conversationId, updatedAt)
-    );
-  }, []);
+  const touchConversation = useCallback(
+    (conversationId: string, updatedAt: string) =>
+      setConversations((prev) =>
+        updateConversationTimestamp(prev, conversationId, updatedAt)
+      ),
+    []
+  );
 
   const resolveConversationConnection = useCallback(
     async (conversationId: string) => {
@@ -169,9 +142,10 @@ export function useAgentConversations(): UseAgentConversationsResult {
     [getConversationById]
   );
 
-  const selectConversation = useCallback((conversationId: string) => {
-    setSelectedConversationId(conversationId);
-  }, []);
+  const selectConversation = useCallback(
+    (conversationId: string) => setSelectedConversationId(conversationId),
+    []
+  );
 
   const createConversation = useCallback(async (title?: string): Promise<string | null> => {
     try {
@@ -258,6 +232,7 @@ export function useAgentConversations(): UseAgentConversationsResult {
     selectedConversationId,
     createConversation,
     getConversation: getConversationById,
+    reloadConversation: loadConversation,
     appendMessage,
     onError: setErrorMessage,
   });
@@ -291,6 +266,21 @@ export function useAgentConversations(): UseAgentConversationsResult {
     [draftState, editState, handleChatEvent, loadConversation, selectedConversationId]
   );
 
+  const isProposalDiscarded = useCallback(
+    (entryId: string) => isProposalDiscardedEntry(entries, entryId),
+    [entries]
+  );
+
+  const proposalApplyResult = useCallback(
+    (entryId: string) => proposalApplyResultEntry(entries, entryId),
+    [entries]
+  );
+
+  const proposalApplyError = useCallback(
+    (entryId: string) => proposalApplyErrorEntry(entries, entryId),
+    [entries]
+  );
+
   return {
     conversations,
     selectedConversationId,
@@ -316,9 +306,9 @@ export function useAgentConversations(): UseAgentConversationsResult {
     applyProposal: editState.applyProposal,
     discardProposal: editState.discardProposal,
     isApplyingProposal: editState.isApplying,
-    isProposalDiscarded: editState.isDiscarded,
-    proposalApplyResult: editState.applyResult,
-    proposalApplyError: editState.applyError,
+    isProposalDiscarded,
+    proposalApplyResult,
+    proposalApplyError,
     handleAgentEvent,
   };
 }

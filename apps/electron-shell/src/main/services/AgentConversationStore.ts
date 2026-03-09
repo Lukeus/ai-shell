@@ -13,16 +13,23 @@ import {
   type AgentEditProposal,
   type AgentMessage,
   type AppendAgentMessageRequest,
+  type Proposal,
 } from 'packages-api-contracts';
 import {
   buildEntriesFromMessagesMap,
   buildMessagesFromEntries,
   buildMessagesFromEntriesMap,
-  normalizeEntries,
 } from './agent-conversation-entries';
+import {
+  hydrateProposalEntry,
+  normalizeConversationEntries,
+  resolveProposalContent,
+  stripProposalContent,
+  toStoredAgentEditProposal,
+} from './agent-edit-proposals';
 
 type AgentConversationStoreData = {
-  version: 2;
+  version: 3;
   conversations: Record<string, AgentConversation>;
   messages: Record<string, AgentMessage[]>;
   entries: Record<string, AgentConversationEntry[]>;
@@ -33,7 +40,7 @@ const MAX_MESSAGES_PER_CONVERSATION = 200;
 const MAX_ENTRIES_PER_CONVERSATION = 250;
 
 const EMPTY_STORE: AgentConversationStoreData = {
-  version: 2,
+  version: 3,
   conversations: {},
   messages: {},
   entries: {},
@@ -49,6 +56,7 @@ const EMPTY_STORE: AgentConversationStoreData = {
 export class AgentConversationStore {
   private static instance: AgentConversationStore | null = null;
   private readonly storePath: string;
+  private readonly proposalCache = new Map<string, Proposal>();
 
   private constructor() {
     this.storePath = path.join(app.getPath('userData'), 'agent-conversations.json');
@@ -79,7 +87,7 @@ export class AgentConversationStore {
     return {
       conversation,
       messages: store.messages[conversationId] ?? [],
-      entries: store.entries[conversationId] ?? [],
+      entries: this.hydrateEntries(store.entries[conversationId] ?? []),
     };
   }
 
@@ -108,6 +116,7 @@ export class AgentConversationStore {
     if (!store.conversations[conversationId]) {
       return false;
     }
+    this.clearProposalCache(store.entries[conversationId] ?? []);
     delete store.conversations[conversationId];
     delete store.messages[conversationId];
     delete store.entries[conversationId];
@@ -155,17 +164,82 @@ export class AgentConversationStore {
     }
 
     const now = new Date().toISOString();
+    const entryId = randomUUID();
+    if (proposal.proposal) {
+      this.proposalCache.set(entryId, proposal.proposal);
+    }
     const entry = AgentConversationProposalEntrySchema.parse({
-      id: randomUUID(),
+      id: entryId,
       conversationId,
       type: 'proposal',
-      proposal,
+      proposal: {
+        ...toStoredAgentEditProposal(proposal),
+        proposal: proposal.proposal,
+      },
       createdAt: now,
     });
 
     this.appendEntry(store, conversation, entry);
     this.saveStore(store);
+    return hydrateProposalEntry(entry, this.proposalCache);
+  }
+
+  public getProposalEntry(
+    conversationId: string,
+    entryId: string
+  ): AgentConversationProposalEntry {
+    const { entries } = this.getConversation(conversationId);
+    const entry = entries.find(
+      (candidate): candidate is AgentConversationProposalEntry =>
+        candidate.type === 'proposal' && candidate.id === entryId
+    );
+    if (!entry) {
+      throw new Error(`Proposal entry not found: ${entryId}`);
+    }
     return entry;
+  }
+
+  public resolveProposalContent(conversationId: string, entryId: string) {
+    const entry = this.getProposalEntry(conversationId, entryId);
+    return resolveProposalContent(entry, this.proposalCache);
+  }
+
+  public markProposalApplied(
+    conversationId: string,
+    entryId: string
+  ): AgentConversationProposalEntry {
+    return this.updateProposalState(conversationId, entryId, {
+      state: 'applied',
+      appliedAt: new Date().toISOString(),
+      discardedAt: null,
+      failedAt: null,
+      failureMessage: undefined,
+    });
+  }
+
+  public markProposalDiscarded(
+    conversationId: string,
+    entryId: string
+  ): AgentConversationProposalEntry {
+    return this.updateProposalState(conversationId, entryId, {
+      state: 'discarded',
+      appliedAt: null,
+      discardedAt: new Date().toISOString(),
+      failedAt: null,
+      failureMessage: undefined,
+    });
+  }
+
+  public markProposalFailed(
+    conversationId: string,
+    entryId: string,
+    message: string
+  ): AgentConversationProposalEntry {
+    return this.updateProposalState(conversationId, entryId, {
+      state: 'failed',
+      failedAt: new Date().toISOString(),
+      failureMessage: message,
+    });
   }
 
   private enforceConversationLimit(store: AgentConversationStoreData): void {
@@ -180,6 +254,7 @@ export class AgentConversationStore {
     );
     const toRemove = sorted.slice(0, excess);
     for (const conversation of toRemove) {
+      this.clearProposalCache(store.entries[conversation.id] ?? []);
       delete store.conversations[conversation.id];
       delete store.messages[conversation.id];
       delete store.entries[conversation.id];
@@ -195,13 +270,13 @@ export class AgentConversationStore {
       }
       const conversations = parsed.conversations ?? {};
       const messages = parsed.messages ?? {};
-      const entries = normalizeEntries(
+      const entries = normalizeConversationEntries(
         parsed.entries ?? buildEntriesFromMessagesMap(messages),
         conversations,
         MAX_ENTRIES_PER_CONVERSATION
       );
       return {
-        version: 2,
+        version: 3,
         conversations,
         messages: buildMessagesFromEntriesMap(entries, MAX_MESSAGES_PER_CONVERSATION),
         entries,
@@ -219,7 +294,8 @@ export class AgentConversationStore {
     const entries = store.entries[entry.conversationId] ?? [];
     entries.push(entry);
     if (entries.length > MAX_ENTRIES_PER_CONVERSATION) {
-      entries.splice(0, entries.length - MAX_ENTRIES_PER_CONVERSATION);
+      const removed = entries.splice(0, entries.length - MAX_ENTRIES_PER_CONVERSATION);
+      this.clearProposalCache(removed);
     }
     store.entries[entry.conversationId] = entries;
 
@@ -244,13 +320,83 @@ export class AgentConversationStore {
     }));
   }
 
+  private hydrateEntries(entries: AgentConversationEntry[]): AgentConversationEntry[] {
+    return entries.map((entry) =>
+      entry.type === 'proposal' ? hydrateProposalEntry(entry, this.proposalCache) : entry
+    );
+  }
+
+  private updateProposalState(
+    conversationId: string,
+    entryId: string,
+    updates: Partial<AgentConversationProposalEntry>
+  ): AgentConversationProposalEntry {
+    const store = this.loadStore();
+    const conversation = store.conversations[conversationId];
+    if (!conversation) {
+      throw new Error(`Conversation not found: ${conversationId}`);
+    }
+
+    const entries = store.entries[conversationId] ?? [];
+    const index = entries.findIndex(
+      (entry) => entry.type === 'proposal' && entry.id === entryId
+    );
+    if (index < 0) {
+      throw new Error(`Proposal entry not found: ${entryId}`);
+    }
+
+    const current = this.hydrateEntries([entries[index]])[0];
+    if (current.type !== 'proposal') {
+      throw new Error(`Conversation entry is not a proposal: ${entryId}`);
+    }
+
+    const updated = AgentConversationProposalEntrySchema.parse({
+      ...current,
+      ...updates,
+    });
+    entries[index] = updated;
+    store.entries[conversationId] = entries;
+    store.messages[conversationId] = buildMessagesFromEntries(
+      entries,
+      MAX_MESSAGES_PER_CONVERSATION
+    );
+    store.conversations[conversationId] = AgentConversationSchema.parse({
+      ...conversation,
+      updatedAt:
+        updated.appliedAt ??
+        updated.discardedAt ??
+        updated.failedAt ??
+        updated.createdAt,
+    });
+    this.saveStore(store);
+    return hydrateProposalEntry(updated, this.proposalCache);
+  }
+
+  private clearProposalCache(entries: AgentConversationEntry[]): void {
+    for (const entry of entries) {
+      if (entry.type === 'proposal') {
+        this.proposalCache.delete(entry.id);
+      }
+    }
+  }
+
   private saveStore(store: AgentConversationStoreData): void {
     const dir = path.dirname(this.storePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     const tempPath = `${this.storePath}.tmp`;
-    fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), 'utf-8');
+    const persistedStore: AgentConversationStoreData = {
+      ...store,
+      version: 3,
+      entries: Object.fromEntries(
+        Object.entries(store.entries).map(([conversationId, entries]) => [
+          conversationId,
+          entries.map((entry) => stripProposalContent(entry)),
+        ])
+      ),
+    };
+    fs.writeFileSync(tempPath, JSON.stringify(persistedStore, null, 2), 'utf-8');
     fs.renameSync(tempPath, this.storePath);
   }
 }

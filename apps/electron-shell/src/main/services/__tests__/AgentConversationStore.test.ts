@@ -132,7 +132,10 @@ describe('AgentConversationStore entries', () => {
 
     const proposal: AgentEditProposal = {
       summary: 'Update file',
+      mode: 'writes',
+      changeSummary: { filesChanged: 1 },
       proposal: {
+        mode: 'writes',
         writes: [{ path: 'src/index.ts', content: 'console.log(1);' }],
         summary: { filesChanged: 1 },
       },
@@ -147,6 +150,62 @@ describe('AgentConversationStore entries', () => {
 
     const entry = payload.entries[conversation.id][0] as { type: string };
     expect(entry.type).toBe('proposal');
+    expect(
+      (payload.entries[conversation.id][0] as {
+        proposal: { proposal?: unknown; mode: string; changeSummary: { filesChanged: number } };
+      }).proposal
+    ).toEqual({
+      mode: 'writes',
+      changeSummary: { filesChanged: 1 },
+      summary: 'Update file',
+    });
     expect(payload.messages[conversation.id]).toHaveLength(0);
+  });
+
+  it('migrates legacy persisted proposal entries to metadata-only records', () => {
+    const conversationId = '123e4567-e89b-12d3-a456-426614174333';
+    const stored = {
+      version: 2,
+      conversations: {
+        [conversationId]: {
+          id: conversationId,
+          title: 'Legacy Proposal',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+      },
+      messages: {
+        [conversationId]: [],
+      },
+      entries: {
+        [conversationId]: [
+          {
+            id: '123e4567-e89b-12d3-a456-426614174334',
+            conversationId,
+            type: 'proposal',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            proposal: {
+              summary: 'Legacy write proposal',
+              proposal: {
+                writes: [{ path: 'src/legacy.ts', content: 'export const legacy = true;\n' }],
+                summary: { filesChanged: 1 },
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    vi.mocked(fs.readFileSync).mockImplementation(() => JSON.stringify(stored));
+
+    const conversation = store.getConversation(conversationId);
+    expect(conversation.entries).toHaveLength(1);
+    expect(conversation.entries[0].type).toBe('proposal');
+    if (conversation.entries[0].type === 'proposal') {
+      expect(conversation.entries[0].state).toBe('pending');
+      expect(conversation.entries[0].proposal.mode).toBe('writes');
+      expect(conversation.entries[0].proposal.changeSummary.filesChanged).toBe(1);
+      expect(conversation.entries[0].proposal.proposal).toBeUndefined();
+    }
   });
 });

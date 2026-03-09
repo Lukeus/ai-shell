@@ -98,6 +98,8 @@ import type {
   AgentEditRequestResponse,
   ApplyAgentEditProposalRequest,
   ApplyAgentEditProposalResponse,
+  DiscardAgentEditProposalRequest,
+  DiscardAgentEditProposalResponse,
 } from './types/agent-edits';
 import type {
   ListAgentConversationsResponse,
@@ -847,6 +849,13 @@ export interface PreloadAPI {
     applyProposal(
       request: ApplyAgentEditProposalRequest
     ): Promise<Result<ApplyAgentEditProposalResponse>>;
+
+    /**
+     * Discards a persisted edit proposal.
+     */
+    discardProposal(
+      request: DiscardAgentEditProposalRequest
+    ): Promise<Result<DiscardAgentEditProposalResponse>>;
   };
 
   /**

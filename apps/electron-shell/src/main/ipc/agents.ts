@@ -10,6 +10,8 @@ import {
   AgentEditRequestResponseSchema,
   ApplyAgentEditProposalRequestSchema,
   ApplyAgentEditProposalResponseSchema,
+  DiscardAgentEditProposalRequestSchema,
+  DiscardAgentEditProposalResponseSchema,
   AppendAgentMessageRequestSchema,
   AppendAgentMessageResponseSchema,
   CreateAgentConversationRequestSchema,
@@ -519,5 +521,14 @@ export const registerAgentHandlers = (): void => {
       outputSchema: ApplyAgentEditProposalResponseSchema,
     },
     async (_event, request) => agentEditService.applyProposal(request)
+  );
+
+  handleSafe(
+    IPC_CHANNELS.AGENT_EDITS_DISCARD_PROPOSAL,
+    {
+      inputSchema: DiscardAgentEditProposalRequestSchema,
+      outputSchema: DiscardAgentEditProposalResponseSchema,
+    },
+    async (_event, request) => agentEditService.discardProposal(request)
   );
 };

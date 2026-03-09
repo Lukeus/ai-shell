@@ -40,12 +40,26 @@ export type AgentConversationMessageEntry = z.infer<
   typeof AgentConversationMessageEntrySchema
 >;
 
+export const AgentProposalStateSchema = z.enum([
+  'pending',
+  'applied',
+  'discarded',
+  'failed',
+]);
+
+export type AgentProposalState = z.infer<typeof AgentProposalStateSchema>;
+
 export const AgentConversationProposalEntrySchema = z.object({
   id: z.string().uuid(),
   conversationId: z.string().uuid(),
   type: z.literal('proposal'),
   proposal: AgentEditProposalSchema,
+  state: AgentProposalStateSchema.default('pending'),
   createdAt: z.string().datetime(),
+  appliedAt: z.string().datetime().nullable().default(null),
+  discardedAt: z.string().datetime().nullable().default(null),
+  failedAt: z.string().datetime().nullable().default(null),
+  failureMessage: z.string().min(1).optional(),
 });
 
 export type AgentConversationProposalEntry = z.infer<

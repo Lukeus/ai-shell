@@ -100,9 +100,12 @@ const formatAttachments = (attachments: AgentContextAttachment[]): string => {
 
 export const EDIT_SYSTEM_PROMPT =
   'You are a code editing assistant. Return ONLY valid JSON. ' +
-  'Use this shape: { "summary": "short description", "proposal": { "writes": [], "patch": "", ' +
+  'Use this shape: { "summary": "short description", "proposal": { "mode": "writes", "writes": [], ' +
+  '"summary": { "filesChanged": 0, "additions": 0, "deletions": 0 } } } or ' +
+  '{ "summary": "short description", "proposal": { "mode": "patch", "patch": "unified diff", ' +
   '"summary": { "filesChanged": 0, "additions": 0, "deletions": 0 } } }. ' +
   'Use workspace-relative paths. Use unified diff format for patch output. ' +
+  'Do not return both writes and patch in the same proposal. ' +
   'Do not apply changes.';
 
 export const buildEditPrompt = ({

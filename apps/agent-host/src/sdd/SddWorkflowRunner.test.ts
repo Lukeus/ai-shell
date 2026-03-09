@@ -115,6 +115,7 @@ describe('SddWorkflowRunner', () => {
     const proposalEvent = events.find((event) => event.type === 'proposalReady');
     expect(proposalEvent?.type).toBe('proposalReady');
     if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.mode).toBe('writes');
       expect(proposalEvent.proposal.writes[0]).toMatchObject({
         path: `specs/${featureId}/spec.md`,
         content: 'Spec output',
@@ -158,6 +159,7 @@ describe('SddWorkflowRunner', () => {
     const proposalEvent = events.find((event) => event.type === 'proposalReady');
     expect(proposalEvent?.type).toBe('proposalReady');
     if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.mode).toBe('writes');
       expect(proposalEvent.proposal.writes[0]).toMatchObject({
         path: `specs/${featureId}/plan.md`,
         content: 'Plan content',
@@ -181,6 +183,7 @@ describe('SddWorkflowRunner', () => {
     const proposalEvent = events.find((event) => event.type === 'proposalReady');
     expect(proposalEvent?.type).toBe('proposalReady');
     if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.mode).toBe('writes');
       expect(proposalEvent.proposal.writes[0]).toMatchObject({
         path: `${featureRoot}/spec.md`,
       });
@@ -207,6 +210,7 @@ describe('SddWorkflowRunner', () => {
   it('builds an implementation proposal with multiple files', async () => {
     const featureId = '151-sdd-workflow';
     const modelText = JSON.stringify({
+      mode: 'writes',
       writes: [
         { path: 'apps/example/src/alpha.ts', content: 'export const alpha = true;\n' },
         { path: 'apps/example/src/beta.ts', content: 'export const beta = false;\n' },
@@ -225,6 +229,7 @@ describe('SddWorkflowRunner', () => {
     const proposalEvent = events.find((event) => event.type === 'proposalReady');
     expect(proposalEvent?.type).toBe('proposalReady');
     if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.mode).toBe('writes');
       expect(proposalEvent.proposal.writes).toHaveLength(2);
       expect(proposalEvent.proposal.summary.filesChanged).toBe(2);
     }
@@ -233,6 +238,7 @@ describe('SddWorkflowRunner', () => {
   it('builds a review proposal with multiple files', async () => {
     const featureId = '151-sdd-workflow';
     const modelText = JSON.stringify({
+      mode: 'writes',
       writes: [
         { path: 'apps/example/src/review-alpha.ts', content: 'export const reviewAlpha = true;\n' },
         { path: 'apps/example/src/review-beta.ts', content: 'export const reviewBeta = false;\n' },
@@ -263,6 +269,7 @@ describe('SddWorkflowRunner', () => {
     const proposalEvent = events.find((event) => event.type === 'proposalReady');
     expect(proposalEvent?.type).toBe('proposalReady');
     if (proposalEvent?.type === 'proposalReady') {
+      expect(proposalEvent.proposal.mode).toBe('writes');
       expect(proposalEvent.proposal.writes).toHaveLength(2);
       expect(proposalEvent.proposal.summary.filesChanged).toBe(2);
     }

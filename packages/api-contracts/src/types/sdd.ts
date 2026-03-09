@@ -256,6 +256,10 @@ export const ProposalFileWriteSchema = z.object({
 
 export type ProposalFileWrite = z.infer<typeof ProposalFileWriteSchema>;
 
+export const ProposalModeSchema = z.enum(['patch', 'writes']);
+
+export type ProposalMode = z.infer<typeof ProposalModeSchema>;
+
 export const ProposalSummarySchema = z.object({
   filesChanged: z.number().int().nonnegative(),
   additions: z.number().int().nonnegative().optional(),
@@ -264,17 +268,32 @@ export const ProposalSummarySchema = z.object({
 
 export type ProposalSummary = z.infer<typeof ProposalSummarySchema>;
 
-export const ProposalSchema = z.object({
-  writes: z.array(ProposalFileWriteSchema).default([]),
-  patch: z.string().optional(),
+export const PatchProposalSchema = z.object({
+  mode: z.literal('patch'),
+  patch: z.string().min(1),
   summary: ProposalSummarySchema,
-});
+}).strict();
+
+export type PatchProposal = z.infer<typeof PatchProposalSchema>;
+
+export const WritesProposalSchema = z.object({
+  mode: z.literal('writes'),
+  writes: z.array(ProposalFileWriteSchema).min(1),
+  summary: ProposalSummarySchema,
+}).strict();
+
+export type WritesProposal = z.infer<typeof WritesProposalSchema>;
+
+export const ProposalSchema = z.discriminatedUnion('mode', [
+  PatchProposalSchema,
+  WritesProposalSchema,
+]);
 
 export type Proposal = z.infer<typeof ProposalSchema>;
 
 export const SddProposalApplyRequestSchema = z.object({
   runId: z.string().uuid(),
-  proposal: ProposalSchema,
+  proposal: ProposalSchema.optional(),
 });
 
 export type SddProposalApplyRequest = z.infer<typeof SddProposalApplyRequestSchema>;

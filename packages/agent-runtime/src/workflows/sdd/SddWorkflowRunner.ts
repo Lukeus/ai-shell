@@ -15,9 +15,10 @@ import { SDD_SYSTEM_PROMPT, buildSddPrompt } from './prompts';
 import type { SddDocPathResolver, SddDocPaths } from './sdd-paths';
 import { resolveSddDocPaths } from './sdd-paths';
 import { contextToRecord, createContextLoader } from './sdd-context';
-import { buildDocProposal, normalizeModelOutput, parseImplementationOutput, resolveTargetPath } from './sdd-proposal';
+import { buildDocProposal, parseImplementationOutput, resolveTargetPath } from './sdd-proposal';
 import { assertConstitutionAligned, assertStepAllowed } from './sdd-validation';
 import type { SddContext, SddContextLoader, SddToolExecutor } from './sdd-types';
+import { normalizeCodegenModelOutput } from '../codegen/proposal-parser';
 
 type RunState = {
   runId: string;
@@ -255,7 +256,7 @@ export class SddWorkflowRunner {
     });
 
     const text = await this.generateWithModel(runId, request, step, prompt);
-    const content = normalizeModelOutput(text);
+    const content = normalizeCodegenModelOutput(text);
     const proposal = buildDocProposal(targetPath, content);
 
     this.emitOutputAppended(runId, `Proposal ready for ${targetPath}.`);
@@ -279,7 +280,7 @@ export class SddWorkflowRunner {
     });
 
     const text = await this.generateWithModel(runId, request, step, prompt);
-    const content = normalizeModelOutput(text);
+    const content = normalizeCodegenModelOutput(text);
     const proposal = parseImplementationOutput(content);
     const label = step === 'review' ? 'Review' : 'Implementation';
 

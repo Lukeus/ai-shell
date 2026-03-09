@@ -13,6 +13,7 @@ import {
   type ListAgentTraceRequest,
   type ListAgentTraceResponse,
 } from 'packages-api-contracts';
+import { toStoredAgentEditProposal } from './agent-edit-proposals';
 
 type AgentRunStoreData = {
   version: 1;
@@ -206,10 +207,20 @@ export class AgentRunStore {
       if (!parsed || typeof parsed !== 'object') {
         return { ...EMPTY_STORE };
       }
+      const events = Object.fromEntries(
+        Object.entries(parsed.events ?? {}).map(([runId, eventList]) => [
+          runId,
+          Array.isArray(eventList)
+            ? eventList
+                .map((event) => this.sanitizeStoredEvent(event))
+                .filter((event): event is AgentEvent => Boolean(event))
+            : [],
+        ])
+      );
       return {
         version: 1,
         runs: parsed.runs ?? {},
-        events: parsed.events ?? {},
+        events,
       };
     } catch {
       return { ...EMPTY_STORE };
@@ -243,7 +254,9 @@ export class AgentRunStore {
     if (event.type === 'edit-proposal') {
       return {
         ...event,
-        proposal: this.redactSensitiveData(event.proposal) as typeof event.proposal,
+        proposal: toStoredAgentEditProposal(
+          this.redactSensitiveData(event.proposal) as typeof event.proposal
+        ),
       };
     }
 
@@ -280,6 +293,14 @@ export class AgentRunStore {
     }
 
     return data;
+  }
+
+  private sanitizeStoredEvent(event: unknown): AgentEvent | null {
+    const parsed = AgentEventSchema.safeParse(event);
+    if (!parsed.success) {
+      return null;
+    }
+    return this.redactEvent(parsed.data);
   }
 
   private saveStore(store: AgentRunStoreData): void {

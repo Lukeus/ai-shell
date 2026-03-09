@@ -5,7 +5,6 @@ import type {
   AgentConversationEntry,
   AgentDraft,
   AgentEditRequestOptions,
-  ApplyAgentEditProposalResponse,
   Proposal,
 } from 'packages-api-contracts';
 import { useEditorContext } from '../../hooks/useEditorContext';
@@ -44,11 +43,24 @@ type AgentsConversationsViewProps = {
   onDraftRequest: (featureId: string, prompt: string) => Promise<void>;
   onSaveDraft: (allowOverwrite?: boolean) => Promise<void>;
   onRunSdd: (draft: AgentDraft, goal: string) => Promise<void>;
-  onApplyProposal: (entryId: string, proposal: Proposal, conversationId: string) => Promise<void>;
-  onDiscardProposal: (entryId: string) => void;
+  onApplyProposal: (
+    entryId: string,
+    conversationId: string,
+    proposal?: Proposal
+  ) => Promise<void>;
+  onDiscardProposal: (entryId: string, conversationId: string) => Promise<void>;
   isApplyingProposal: (entryId: string) => boolean;
   isProposalDiscarded: (entryId: string) => boolean;
-  proposalApplyResult: (entryId: string) => ApplyAgentEditProposalResponse | null;
+  proposalApplyResult: (entryId: string) => {
+    files: string[];
+    summary: {
+      filesChanged: number;
+      additions?: number;
+      deletions?: number;
+    };
+    state: 'applied';
+    appliedAt: string;
+  } | null;
   proposalApplyError: (entryId: string) => string | null;
 };
 
