@@ -69,16 +69,20 @@ export function useLayoutState(): [LayoutState, (state: LayoutState) => void] {
     }, DEBOUNCE_DELAY_MS);
   }, []);
 
-  // Cleanup: flush pending writes on unmount
+  // Track the latest state in a ref so the unmount cleanup can flush it
+  // without re-running the effect on every state change.
+  const latestStateRef = useRef<LayoutState>(state);
+  latestStateRef.current = state;
+
+  // Cleanup: flush pending writes on unmount only
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current !== null) {
         clearTimeout(debounceTimerRef.current);
-        // Flush final state immediately on unmount
-        setLayoutState(LAYOUT_STATE_KEY, state);
+        setLayoutState(LAYOUT_STATE_KEY, latestStateRef.current);
       }
     };
-  }, [state]);
+  }, []);
 
   return [state, setStateWithPersistence];
 }
