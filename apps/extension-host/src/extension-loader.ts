@@ -83,7 +83,6 @@ const loadExtensionModule = async (
   const sandbox = createSandbox(manifest.id);
   const script = new vm.Script(wrapperSource, {
     filename: mainPath,
-    displayErrors: true,
   });
 
   const module = { exports: {} as Record<string, unknown> };
