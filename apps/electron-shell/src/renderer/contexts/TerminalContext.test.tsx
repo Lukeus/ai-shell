@@ -404,30 +404,44 @@ describe('TerminalContext', () => {
     expect(result.current.outputs.get(mockSession1.sessionId)).toBe('');
   });
 
-  it.skip('should persist active session to localStorage', async () => {
+  it('should persist active session to localStorage', async () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     mockTerminalList.mockResolvedValue({
       sessions: [mockSession1, mockSession2],
     });
 
     const { result } = renderHook(() => useTerminal(), { wrapper });
 
+    // Wait for sessions to load and initial active session to be set
     await waitFor(() => {
       expect(result.current.sessions.length).toBe(2);
+      expect(result.current.activeSessionId).toBe(mockSession1.sessionId);
     });
 
+    // Clear spy to only capture subsequent writes
+    setItemSpy.mockClear();
+
+    // Switch to second session
     act(() => {
       result.current.setActiveSession(mockSession2.sessionId);
     });
 
-    // Wait for the active session to actually change and persist
+    // Verify the state update took effect
     await waitFor(() => {
       expect(result.current.activeSessionId).toBe(mockSession2.sessionId);
-      const stored = localStorage.getItem('terminal:state:global');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        expect(parsed.activeSessionId).toBe(mockSession2.sessionId);
-      }
-    }, { timeout: 3000 });
+    });
+
+    // Persistence effect should have written the updated activeSessionId.
+    // Find the last setItem call with a terminal key.
+    const terminalCalls = setItemSpy.mock.calls.filter(
+      ([key]) => typeof key === 'string' && key.startsWith('terminal:state:')
+    );
+    expect(terminalCalls.length).toBeGreaterThan(0);
+    const lastCall = terminalCalls[terminalCalls.length - 1];
+    const stored = JSON.parse(lastCall[1] as string);
+    expect(stored.activeSessionId).toBe(mockSession2.sessionId);
+
+    setItemSpy.mockRestore();
   });
 
   it('should use workspace-scoped localStorage key', async () => {
@@ -451,7 +465,7 @@ describe('TerminalContext', () => {
     });
   });
 
-  it.skip('should handle errors gracefully when creating session', async () => {
+  it('should handle errors gracefully when creating session', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockTerminalCreate.mockRejectedValue(new Error('Failed to create terminal'));
 
@@ -461,19 +475,13 @@ describe('TerminalContext', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    try {
-      await act(async () => {
-        await result.current.createSession({ cwd: '/test/workspace' });
+    await act(async () => {
+      await result.current.createSession({ cwd: '/test/workspace' }).catch(() => {
+        // Expected rejection — createSession re-throws after setting error state
       });
-    } catch (error) {
-      // Expected to throw
-      expect(error).toEqual(new Error('Failed to create terminal'));
-    }
+    });
 
-    await waitFor(() => {
-      expect(result.current.error).toBe('Failed to create terminal');
-    }, { timeout: 3000 });
-    
+    expect(result.current.error).toBe('Failed to create terminal');
     consoleError.mockRestore();
   });
 
