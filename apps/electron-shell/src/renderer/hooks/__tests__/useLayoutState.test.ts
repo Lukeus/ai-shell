@@ -71,7 +71,7 @@ describe('useLayoutState', () => {
     expect(consoleWarnSpy).toHaveBeenCalled();
   });
 
-  it.skip('writes to localStorage on state change (debounced)', () => {
+  it('writes to localStorage on state change (debounced)', () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useLayoutState());
 
@@ -152,7 +152,7 @@ describe('useLayoutState', () => {
     vi.useRealTimers();
   });
 
-  it.skip('clears pending debounce timer on subsequent updates', () => {
+  it('clears pending debounce timer on subsequent updates', () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useLayoutState());
 

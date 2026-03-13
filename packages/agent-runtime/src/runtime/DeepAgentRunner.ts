@@ -15,7 +15,7 @@ import {
   type ToolCallResult,
 } from 'packages-api-contracts';
 import { AgentMemoryStore } from 'packages-agent-memory';
-import type { BackendProtocol, CreateDeepAgentParams } from 'deepagents';
+import type { BackendProtocol, CreateDeepAgentParams, SubAgent } from 'deepagents';
 import { HumanMessage } from '@langchain/core/messages';
 import {
   BaseLanguageModel,
@@ -47,6 +47,13 @@ type TodoItem = {
   status: TodoStatus;
 };
 
+type SubagentInfo = {
+  skillId: string;
+  delegationId: string;
+  depth: number;
+  startedAt: number;
+};
+
 type RunContext = {
   runId: string;
   abortController: AbortController;
@@ -54,6 +61,7 @@ type RunContext = {
   allowlist?: Set<string>;
   policyOverride?: AgentPolicyConfig;
   todoMap: Map<string, string>;
+  subagentMap: Map<string, SubagentInfo>;
   canceledReason?: string;
 };
 
@@ -284,6 +292,19 @@ export class DeepAgentRunner {
 
     const allowlist = this.buildAllowlist(request);
     const memoryStore = new AgentMemoryStore(request.config?.memory ?? {});
+    const subagentMap = new Map<string, SubagentInfo>();
+    const delegation = request.config?.delegation;
+    if (delegation?.enabled && delegation.subagents) {
+      for (const sa of delegation.subagents) {
+        subagentMap.set(sa.name, {
+          skillId: sa.skillId,
+          delegationId: '',
+          depth: 0,
+          startedAt: 0,
+        });
+      }
+    }
+
     const runContext: RunContext = {
       runId,
       abortController: new AbortController(),
@@ -291,6 +312,7 @@ export class DeepAgentRunner {
       allowlist,
       policyOverride: request.config?.policy,
       todoMap: new Map(),
+      subagentMap,
     };
 
     this.activeRuns.set(runId, runContext);
@@ -339,10 +361,12 @@ export class DeepAgentRunner {
     const model = this.createModel(runContext, request);
     const backend = this.createBrokerBackend(runContext);
     const tools = this.buildCustomTools(runContext);
+    const subagents = this.buildSubagents(request);
     const agent = await this.createAgent({
       model,
       backend,
       tools,
+      ...(subagents.length > 0 ? { subagents } : {}),
     });
 
     const stream = agent.streamEvents(
@@ -415,6 +439,27 @@ export class DeepAgentRunner {
         }
       )
     );
+  }
+
+  private buildSubagents(request: AgentRunStartRequest): SubAgent[] {
+    const delegation = request.config?.delegation;
+    if (!delegation?.enabled || !delegation.subagents || delegation.subagents.length === 0) {
+      return [];
+    }
+
+    return delegation.subagents.map((definition) => {
+      const systemPrompt = [
+        `You are a delegated subagent named "${definition.name}".`,
+        definition.description,
+        `Skill: ${definition.skillId}`,
+      ].join('\n');
+
+      return {
+        name: definition.name,
+        description: definition.description,
+        systemPrompt,
+      };
+    });
   }
 
   private createBrokerBackend(runContext: RunContext): BackendProtocol {
@@ -542,6 +587,10 @@ export class DeepAgentRunner {
     }
 
     if (event.event === 'on_tool_start' || event.event === 'on_tool_end') {
+      if (event.name === 'task') {
+        this.handleDelegationEvent(runContext, event);
+        return;
+      }
       if (event.name !== 'write_todos') {
         return;
       }
@@ -549,6 +598,70 @@ export class DeepAgentRunner {
       const todos = this.parseTodoInput(candidate);
       if (todos.length > 0) {
         this.emitTodoEvents(runContext, todos);
+      }
+    }
+  }
+
+  private handleDelegationEvent(runContext: RunContext, event: StreamEvent): void {
+    const input = event.data?.input ?? event.data?.output;
+    if (!input || typeof input !== 'object') {
+      return;
+    }
+
+    const subagentType = (input as Record<string, unknown>).subagent_type;
+    if (typeof subagentType !== 'string') {
+      return;
+    }
+
+    const info = runContext.subagentMap.get(subagentType);
+    if (!info) {
+      return;
+    }
+
+    if (event.event === 'on_tool_start') {
+      info.delegationId = this.idProvider();
+      info.startedAt = Date.now();
+      this.emitEvent(runContext, {
+        id: this.idProvider(),
+        runId: runContext.runId,
+        timestamp: this.now(),
+        type: 'delegation-started',
+        delegationId: info.delegationId,
+        subagentName: subagentType,
+        subagentSkillId: info.skillId,
+        depth: info.depth,
+      });
+    } else if (event.event === 'on_tool_end') {
+      const output = event.data?.output;
+      const failed = output && typeof output === 'object' && (output as Record<string, unknown>).error;
+
+      if (failed) {
+        const message = typeof (output as Record<string, unknown>).error === 'string'
+          ? (output as Record<string, unknown>).error as string
+          : 'Subagent delegation failed';
+        this.emitEvent(runContext, {
+          id: this.idProvider(),
+          runId: runContext.runId,
+          timestamp: this.now(),
+          type: 'delegation-failed',
+          delegationId: info.delegationId,
+          subagentName: subagentType,
+          subagentSkillId: info.skillId,
+          depth: info.depth,
+          message,
+        });
+      } else {
+        this.emitEvent(runContext, {
+          id: this.idProvider(),
+          runId: runContext.runId,
+          timestamp: this.now(),
+          type: 'delegation-completed',
+          delegationId: info.delegationId,
+          subagentName: subagentType,
+          subagentSkillId: info.skillId,
+          depth: info.depth,
+          durationMs: info.startedAt > 0 ? Date.now() - info.startedAt : undefined,
+        });
       }
     }
   }
